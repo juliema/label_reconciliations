@@ -75,8 +75,9 @@ def expandNFNClassifications(workflow_id, classifications_file, subjects_file):
 
     # expand only the workflows that we know how to expand
     df = df.loc[df['workflow_id'] == workflow_id, :]
-    df['extended_user_id'] = df[['user_name', 'user_id']].apply(extendedUserID, axis=1)
-    df.drop(['user_name', 'user_id', 'user_ip'], axis=1, inplace=True)
+    # df['extended_user_id'] = df[['user_name', 'user_id']].apply(extendedUserID, axis=1)
+    # df.drop(['user_name', 'user_id', 'user_ip'], axis=1, inplace=True)
+    df.drop(['user_id', 'user_ip'], axis=1, inplace=True)
 
     # bring the last column to be the first
     cols = df.columns.tolist()
