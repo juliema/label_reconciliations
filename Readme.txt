@@ -6,7 +6,7 @@ Steps:
 2. createexpandedjsonJMA.py - expands the raw json format
 
 From here Two options:
-  ``` raw_data_to_providers.ipynb - takes the expanded file to a raw data format for providers```
+  ```raw_data_to_providers.ipynb - takes the expanded file to a raw data format for providers```
   
   OR
 
