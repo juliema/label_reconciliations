@@ -1,5 +1,6 @@
 ## This repo  has all the code for taking raw transcript data from Notes From Nature - through reconciliations
 
+https://docs.google.com/document/d/1DqhWNsy9UAEgkRnIU7VHrdQL4oQzIm2pjrPULGKK21M/edit#heading=h.967a32z3bwbb
 
 Steps:
 1. Raw data donwload 'classifications' and 'subject' file
