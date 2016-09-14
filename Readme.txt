@@ -2,16 +2,16 @@
 
 
 Steps:
-1. Raw data donwload 'classifications' file
-2. createexpandedjsonJMA.py - expands the raw json format
+1. Raw data donwload 'classifications' and 'subject' file
+2. createexpandedjsonJMA.py - expands the raw json format for a specific workflow
 
-From here Two options:
-  ```raw_data_to_providers.ipynb - takes the expanded file to a raw data format for providers```
-  
+Next Two options:
+  a. Create a raw data output for providers with all the transcripts:
+      1. raw_data_to_providers.ipynb - takes the expanded file to a raw data format for providers
   OR
 
-b. Take it into Reconciliations, there are two reconciliation steps:
-      ```reconciliations.ipynb   - reconciles the controlled vocabulary text
-      ```fuzzy_matching.ipynb    - reconciles the free text fields
+b. Do Reconciliations. There are two reconciliation steps:
+      1. reconciliations.ipynb   - reconciles the controlled vocabulary text
+      2. fuzzy_matching.ipynb    - reconciles the free text fields
       
     
