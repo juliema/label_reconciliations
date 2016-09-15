@@ -84,8 +84,13 @@ def expandNFNClassifications(workflow_id, classifications_file, subjects_file):
     cols = cols[-1:] + cols[:-1]
     df = df[cols]
 
-    df = pd.merge(df, subjects_df[['subject_id', 'locations']], how='left', left_on='subject_ids', right_on='subject_id')
+    subjects_df['locations'] = subjects_df['locations'].apply(json.dumps)
 
+    df = pd.merge(df, subjects_df[['subject_id', 'locations']], how='left', left_on='subject_ids', right_on='subject_id')
+    print(subjects_df.dtypes)
+    
+    print(df['locations'][0:10])
+    print(subjects_df['locations'][0:10])
     # apply a json.loads function on the whole annotations column
     df['annotation_json'] = df['annotations'].map(lambda x: json.loads(x))
 
@@ -108,7 +113,7 @@ def expandNFNClassifications(workflow_id, classifications_file, subjects_file):
 
     extract_annotations(df)
     # delete the unnecessary columns
-    df.drop(['annotation_json', 'subject_id', 'locations', 'metadata_json', 'subject_json'], axis=1, inplace=True)
+    df.drop(['annotation_json', 'subject_id', 'metadata_json', 'subject_json'], axis=1, inplace=True)
 
     # reordering the columns so that all the elements are grouped in the same task
     original_cols = list(df.ix[:, 0:df.columns.get_loc('classification_finished_at') + 1].columns.values)
