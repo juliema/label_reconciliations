@@ -12,6 +12,10 @@ def extract_json_value(subject_json, column=''):
         return list(subject_json.values())[0][column]
 
 
+def extract_json_value_loc(subject_json):
+    return ';'.join(list(subject_json.values()))
+
+
 def extract_json_date(metadata_json, column=''):
     return parser.parse(metadata_json[column]).strftime('%d-%b-%Y %H:%M:%S')
 
@@ -75,8 +79,6 @@ def expandNFNClassifications(workflow_id, classifications_file, subjects_file):
 
     # expand only the workflows that we know how to expand
     df = df.loc[df['workflow_id'] == workflow_id, :]
-    # df['extended_user_id'] = df[['user_name', 'user_id']].apply(extendedUserID, axis=1)
-    # df.drop(['user_name', 'user_id', 'user_ip'], axis=1, inplace=True)
     df.drop(['user_id', 'user_ip'], axis=1, inplace=True)
 
     # bring the last column to be the first
@@ -84,13 +86,25 @@ def expandNFNClassifications(workflow_id, classifications_file, subjects_file):
     cols = cols[-1:] + cols[:-1]
     df = df[cols]
 
-    subjects_df['locations'] = subjects_df['locations'].apply(json.dumps)
+    subjects_df['locations_json'] = subjects_df['locations'].map(lambda x: json.loads(x))
+    subjects_df['locations'] = subjects_df['locations_json'].apply(extract_json_value_loc)
+    subjects_df = subjects_df[['subject_id', 'locations']]
+    # subjects_df.set_index('subject_id', inplace=True)
 
-    df = pd.merge(df, subjects_df[['subject_id', 'locations']], how='left', left_on='subject_ids', right_on='subject_id')
-    print(subjects_df.dtypes)
-    
-    print(df['locations'][0:10])
-    print(subjects_df['locations'][0:10])
+    df['subject_id'] = df['subject_ids'].map(lambda x: ','.join(set(x.split(';'))))
+    df['locations'] = None
+    # df = pd.merge(df, subjects_df[['subject_id', 'locations']], how='left', left_on='subject_id', right_on='subject_id')
+    # A bug in pandas 0.18.1 prevents me from doing the above: https://github.com/pydata/pandas/issues/8596
+    for index, row in df.iterrows():
+        sub_id = row['subject_id']
+        # locs = subjects_df.where( == sub_id])
+        print(sub_id)
+        break
+
+    print(subjects_df.head())
+    print(df.head())
+    sys.exit()
+
     # apply a json.loads function on the whole annotations column
     df['annotation_json'] = df['annotations'].map(lambda x: json.loads(x))
 
@@ -113,7 +127,8 @@ def expandNFNClassifications(workflow_id, classifications_file, subjects_file):
 
     extract_annotations(df)
     # delete the unnecessary columns
-    df.drop(['annotation_json', 'subject_id', 'metadata_json', 'subject_json'], axis=1, inplace=True)
+    # df.drop(['annotation_json', 'subject_id', 'metadata_json', 'subject_json'], axis=1, inplace=True)
+    df.drop(['annotation_json', 'metadata_json', 'subject_json'], axis=1, inplace=True)
 
     # reordering the columns so that all the elements are grouped in the same task
     original_cols = list(df.ix[:, 0:df.columns.get_loc('classification_finished_at') + 1].columns.values)
