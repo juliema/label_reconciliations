@@ -116,8 +116,7 @@ def expandNFNClassifications(workflow_id, classifications_file, subjects_file):
 
     extract_annotations(df)
     # delete the unnecessary columns
-    # df.drop(['annotation_json', 'subject_id', 'metadata_json', 'subject_json'], axis=1, inplace=True)
-    df.drop(['annotation_json', 'metadata_json', 'subject_json'], axis=1, inplace=True)
+    df.drop(['annotation_json', 'metadata_json', 'subject_json', 'subject_id', 'first_subject_id'], axis=1, inplace=True)
 
     # reordering the columns so that all the elements are grouped in the same task
     original_cols = list(df.ix[:, 0:df.columns.get_loc('classification_finished_at') + 1].columns.values)
