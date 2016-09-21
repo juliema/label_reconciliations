@@ -75,10 +75,12 @@ def extract_annotations(df):
 def expandNFNClassifications(workflow_id, classifications_file, subjects_file):
     print("Reading classifications csv file for NfN...")
     df = pd.read_csv(classifications_file)
+    df['subject_ids'] = df.subject_ids.map(lambda x: int(x.split(';')[0]))
+
     subjects_df = pd.read_csv(subjects_file)
 
     # expand only the workflows that we know how to expand
-    df = df.loc[df['workflow_id'] == workflow_id, :]
+    df = df.loc[df.workflow_id == workflow_id, :]
     df.drop(['user_id', 'user_ip'], axis=1, inplace=True)
 
     # bring the last column to be the first
@@ -88,11 +90,8 @@ def expandNFNClassifications(workflow_id, classifications_file, subjects_file):
 
     subjects_df['locations_json'] = subjects_df.locations.map(lambda x: json.loads(x))
     subjects_df['locations'] = subjects_df.locations_json.apply(extract_json_value_loc)
-    subjects_df = subjects_df[['subject_id', 'locations']]
 
-    df['first_subject_id'] = df.subject_ids.map(lambda x: int(x.split(';')[0]))
-
-    df = pd.merge(df, subjects_df[['subject_id', 'locations']], how='left', left_on='first_subject_id', right_on='subject_id')
+    df = pd.merge(df, subjects_df[['subject_id', 'locations']], how='left', left_on='subject_ids', right_on='subject_id')
 
     # apply a json.loads function on the whole annotations column
     df['annotation_json'] = df['annotations'].map(lambda x: json.loads(x))
@@ -116,7 +115,7 @@ def expandNFNClassifications(workflow_id, classifications_file, subjects_file):
 
     extract_annotations(df)
     # delete the unnecessary columns
-    df.drop(['annotation_json', 'metadata_json', 'subject_json', 'subject_id', 'first_subject_id'], axis=1, inplace=True)
+    df.drop(['annotation_json', 'metadata_json', 'subject_json', 'subject_id'], axis=1, inplace=True)
 
     # reordering the columns so that all the elements are grouped in the same task
     original_cols = list(df.ix[:, 0:df.columns.get_loc('classification_finished_at') + 1].columns.values)
@@ -140,14 +139,14 @@ def args():
     except:
         help('Workflow ID should be a number.')
     if not os.path.isfile(sys.argv[2]):
-        help('Cannot read classifications file"{}".'.format(sys.argv[2]))
+        help('Cannot read classifications file "{}".'.format(sys.argv[2]))
     if not os.path.isfile(sys.argv[3]):
         help('Cannot read subjects file "{}".'.format(sys.argv[3]))
     return workflow_id, sys.argv[2], sys.argv[3]
 
 
 def help(msg=''):
-    print('Usage: python createNFNexpansion <workflow ID> <classifications file> <subjects file>')
+    print('Usage: python createNFNexpansion.py <workflow ID> <classifications file> <subjects file>')
     if msg:
         print(msg)
     sys.exit()
