@@ -86,24 +86,13 @@ def expandNFNClassifications(workflow_id, classifications_file, subjects_file):
     cols = cols[-1:] + cols[:-1]
     df = df[cols]
 
-    subjects_df['locations_json'] = subjects_df['locations'].map(lambda x: json.loads(x))
-    subjects_df['locations'] = subjects_df['locations_json'].apply(extract_json_value_loc)
+    subjects_df['locations_json'] = subjects_df.locations.map(lambda x: json.loads(x))
+    subjects_df['locations'] = subjects_df.locations_json.apply(extract_json_value_loc)
     subjects_df = subjects_df[['subject_id', 'locations']]
-    # subjects_df.set_index('subject_id', inplace=True)
 
-    df['subject_id'] = df['subject_ids'].map(lambda x: ','.join(set(x.split(';'))))
-    df['locations'] = None
-    # df = pd.merge(df, subjects_df[['subject_id', 'locations']], how='left', left_on='subject_id', right_on='subject_id')
-    # A bug in pandas 0.18.1 prevents me from doing the above: https://github.com/pydata/pandas/issues/8596
-    for index, row in df.iterrows():
-        sub_id = row['subject_id']
-        # locs = subjects_df.where( == sub_id])
-        print(sub_id)
-        break
+    df['first_subject_id'] = df.subject_ids.map(lambda x: int(x.split(';')[0]))
 
-    print(subjects_df.head())
-    print(df.head())
-    sys.exit()
+    df = pd.merge(df, subjects_df[['subject_id', 'locations']], how='left', left_on='first_subject_id', right_on='subject_id')
 
     # apply a json.loads function on the whole annotations column
     df['annotation_json'] = df['annotations'].map(lambda x: json.loads(x))
