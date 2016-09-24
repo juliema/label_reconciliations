@@ -16,7 +16,7 @@ def extract_json_date(metadata_json, column=''):
 
 
 def header_label(task_id, label, task_type):
-    return '({}{}) {}'.format(task_id, task_type, label)
+    return '{}{:0>3}{}: {}'.format(task_id[0], task_id[1:], task_type, label)
 
 
 def extract_an_annotaion(df, task, task_id, index):
