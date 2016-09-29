@@ -15,7 +15,7 @@ ExactScore = namedtuple('ExactScore', 'value count')
 FuzzyRatio = namedtuple('FuzzyRatio', 'score value')
 FuzzySet = namedtuple('FuzzySet', 'score value tokens')
 
-ARGS = {'FUZZY_RATIO_THRESHOLD': 100, 'FUZZY_SET_THRESHOLD,': 25}
+ARGS = None
 
 
 def reconcile_select(group):
@@ -94,9 +94,9 @@ def reconcile():
     grouped_cols = grouped_cols[-1:] + grouped_cols[:-1]
     grouped = grouped[grouped_cols]
 
-    # Reconcile dates !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    # Reconcile dates ??????????????????????????????????????
 
-    # get rid of unused columns in the original dataframe
+    # Get rid of unused columns in the original dataframe
     drop_cols = [c for c in df.columns if not c.startswith('subject_')]
     drop_cols = [c for c in drop_cols if not c.startswith('workflow_')]
     drop_cols = [c for c in drop_cols if c not in ['gold_standard', 'expert']]
@@ -117,13 +117,13 @@ if __name__ == "__main__":
     parser.add_argument('-i', '--input', required=True, help='The raw extracts CSV file to reconcile')
     parser.add_argument('-o', '--output', required=True, help='Write the reconciled extracts to this file')
     parser.add_argument(
-        '-r', '--fuzzy-ratio-threshold', default=ARGS['FUZZY_RATIO_THRESHOLD'], type=int,
-        help=('Use this to adjust the cutoff for fuzzy ratio matching (0-100, default={}). '
-              'See https://github.com/seatgeek/fuzzywuzzy.').format(ARGS['FUZZY_RATIO_THRESHOLD']))
+        '-r', '--fuzzy-ratio-threshold', default=100, type=int,
+        help=('Sets the cutoff for fuzzy ratio matching (0-100, default=100). '
+              'See https://github.com/seatgeek/fuzzywuzzy.'))
     parser.add_argument(
-        '-s', '--fuzzy-set-threshold', default=ARGS['FUZZY_SET_THRESHOLD,'], type=int,
-        help=('Use this to adjust the cutoff for fuzzy set matching (0-100, default={}). '
-              'See https://github.com/seatgeek/fuzzywuzzy.').format(ARGS['FUZZY_SET_THRESHOLD,']))
+        '-s', '--fuzzy-set-threshold', default=25, type=int,
+        help=('Sets the cutoff for fuzzy set matching (0-100, default=25). '
+              'See https://github.com/seatgeek/fuzzywuzzy.'))
     ARGS = parser.parse_args()
 
     reconcile()
