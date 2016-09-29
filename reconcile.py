@@ -1,111 +1,129 @@
-import os
 import re
-import sys
 import json
 import difflib
+import argparse
 import pandas as pd
 from collections import Counter, namedtuple
 from itertools import combinations
 from fuzzywuzzy import fuzz
 
 PLACE_HOLDERS = ['placeholder']
+NO_MATCHES = '<NO MATCHES>'
+GROUP_BY = 'subject_ids'
 
-# For working with Counter's arrray of tuples
-Count = namedtuple('Count', 'value count')
+ExactScore = namedtuple('ExactScore', 'value count')
+FuzzyRatio = namedtuple('FuzzyRatio', 'score value')
+FuzzySet = namedtuple('FuzzySet', 'score value tokens')
 
-# For working with simple inplace fuzzy matches
-PartialRatio = namedtuple('PartialRatio', 'score longer_value shorter_value')
+ARGS = {'FUZZY_RATIO_THRESHOLD': 100, 'FUZZY_SET_THRESHOLD,': 25}
 
 
 def reconcile_select(group):
-    # Replace placeholders with blanks
     group = [g if g.lower() not in PLACE_HOLDERS else '' for g in group]
-
-    # Look for identical matches and order them by how common they are
-    counts = [Count(c[0], c[1]) for c in Counter(group).most_common()]
-
-    # Look at the counts for the non-blank entries
-    filled = [c for c in counts if c.value]
-
-    # Return the first non-blank entry or blank if they're all blank
-    return filled[0].value if len(filled) else ''
+    counts = [ExactScore(c[0], c[1]) for c in Counter(group).most_common()]
+    return counts[0].value if counts[0].count > 1 else NO_MATCHES
 
 
 def top_partial_ratio(group):
-    # Create a list of tuples [(score, longer_value, shorter_value)]
-    ratios = []
+    scores = []
     for c in combinations(group, 2):
         score = fuzz.partial_ratio(c[0], c[1])
-        (longer_value, shorter_value) = (c[0], c[1]) if len(c[0]) >= len(c[1]) else (c[1], c[0])
-        ratios.append(PartialRatio(score, longer_value, shorter_value))
-
-    # Sort by score descending, then by length of the longer_value descending
-    ordered = sorted(ratios, key=lambda r: '{:0>6} {:0>6}'.format(r.score, len(r.longer_value)), reverse=True)
+        value = c[0] if len(c[0]) >= len(c[1]) else c[1]
+        scores.append(FuzzyRatio(score, value))
+    ordered = sorted(scores, reverse=True, key=lambda s: '{:0>6} {:0>6}'.format(s.score, len(s.value)))
     return ordered[0]
 
 
 def top_token_set_ratio(group):
-    ratios = []
-    # for c in combinations
+    scores = []
+    for c in combinations(group, 2):
+        score = fuzz.token_set_ratio(c[0], c[1])
+        tokens0 = len(c[0].split())
+        tokens1 = len(c[1].split())
+        if tokens0 > tokens1:
+            value = c[0]
+            tokens = tokens0
+        elif tokens0 < tokens1:
+            value = c[1]
+            tokens = tokens1
+        else:
+            tokens = tokens0
+            value = c[0] if len(c[0]) <= len(c[1]) else c[1]
+        scores.append(FuzzySet(score, value, tokens))
+    ordered = sorted(scores, reverse=True,
+                     key=lambda s: '{:0>6} {:0>6} {:0>6}'.format(s.score, s.tokens, 1000000 - len(s.value)))
+    return ordered[0]
 
 
 def reconcile_text(group):
+    global ARGS
+
     # Normalize spaces and EOLs
     group = ['\n'.join([' '.join(ln.split()) for ln in g.splitlines()]) for g in group]
 
     # Look for identical matches and order them by how common they are
-    counts = [Count(c[0], c[1]) for c in Counter(group).most_common()]
-
-    # Look at the counts for the non-blank entries
-    filled = [c for c in counts if c.value]
-
-    # If everything is blank we're done
-    if not len(filled):
+    counts = [ExactScore(c[0], c[1]) for c in Counter(group).most_common()]
+    if not counts[0].value and len(counts) == 1:
         return ''
-
-    # If the most common value is not blank and its count > 1 then return it
-    # Or if there is only one non-blank value
-    if filled[0].count > 1 or len(filled) == 1:
-        return filled[0].value
+    if counts[0].count > 1:
+        return counts[0].value
 
     # Check for simple inplace fuzzy matches
     top = top_partial_ratio(group)
-    if top.score == 100:  # The threshold could be tweaked here. Maybe make it an argument?
-        return top.longer_value
+    if top.score == ARGS.fuzzy_ratio_threshold:
+        return top.value
 
-    # Now look for the best token match take the longest token length with with the shortest string length
+    # Now look for the best token match
+    top = top_token_set_ratio(group)
+    return top.value if top.score > ARGS.fuzzy_set_threshold else NO_MATCHES
 
-    return None
 
+def reconcile():
+    global ARGS
+    df = pd.read_csv(ARGS.input)
 
-def reconcile(raw_extracts_file):
-    df = pd.read_csv(raw_extracts_file)
-    # df = df.loc[:9, :]
     select_cols = {c: reconcile_select for c in df.columns if re.match(r'T\d+s:', c)}
     text_cols = {c: reconcile_text for c in df.columns if re.match(r'T\d+t:', c)}
     aggregate_cols = dict(list(select_cols.items()) + list(text_cols.items()))
-    grouped = df.fillna('').groupby('subject_ids').aggregate(aggregate_cols)
+
+    grouped = df.fillna('').groupby(GROUP_BY, as_index=False).aggregate(aggregate_cols)
+
+    # Reshape the reconciled dataframe to sort the columns and put the subject_ids first
     grouped.sort_index(axis=1, inplace=True)
-    print(grouped.head())
-    # Reconcile dates
-    # Output reconciled data
+    grouped_cols = grouped.columns.tolist()
+    grouped_cols = grouped_cols[-1:] + grouped_cols[:-1]
+    grouped = grouped[grouped_cols]
 
+    # Reconcile dates !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-def args():
-    if len(sys.argv) < 2:
-        help()
-    if not os.path.isfile(sys.argv[1]):
-        help('Cannot read raw extracts file "{}".'.format(sys.argv[1]))
-    return sys.argv[1]
+    # get rid of unused columns in the original dataframe
+    drop_cols = [c for c in df.columns if not c.startswith('subject_')]
+    drop_cols = [c for c in drop_cols if not c.startswith('workflow_')]
+    drop_cols = [c for c in drop_cols if c not in ['gold_standard', 'expert']]
+    df.drop(drop_cols, axis=1, inplace=True)
 
+    # We can now drop duplicate rows in the orginal dataframe
+    df.drop_duplicates(keep='first', inplace=True)
+    if df.shape[0] != grouped.shape[0]:
+        raise ValueError('The raw extracts file may have been edited.')
 
-def help(msg=''):
-    print('Usage: python reconcile.py <raw extracts file>')
-    if msg:
-        print(msg)
-    sys.exit()
+    merged = grouped.merge(df, left_on=GROUP_BY, right_on=GROUP_BY)
+
+    merged.to_csv(ARGS.output, sep=',', index=False, encoding='utf-8')
 
 
 if __name__ == "__main__":
-    raw_extracts_file = args()
-    reconcile(raw_extracts_file)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-i', '--input', required=True, help='The raw extracts CSV file to reconcile')
+    parser.add_argument('-o', '--output', required=True, help='Write the reconciled extracts to this file')
+    parser.add_argument(
+        '-r', '--fuzzy-ratio-threshold', default=ARGS['FUZZY_RATIO_THRESHOLD'], type=int,
+        help=('Use this to adjust the cutoff for fuzzy ratio matching (0-100, default={}). '
+              'See https://github.com/seatgeek/fuzzywuzzy.').format(ARGS['FUZZY_RATIO_THRESHOLD']))
+    parser.add_argument(
+        '-s', '--fuzzy-set-threshold', default=ARGS['FUZZY_SET_THRESHOLD,'], type=int,
+        help=('Use this to adjust the cutoff for fuzzy set matching (0-100, default={}). '
+              'See https://github.com/seatgeek/fuzzywuzzy.').format(ARGS['FUZZY_SET_THRESHOLD,']))
+    ARGS = parser.parse_args()
+
+    reconcile()

@@ -1,7 +1,6 @@
-import os
 import re
-import sys
 import json
+import argparse
 import pandas as pd
 import dateutil
 
@@ -65,12 +64,12 @@ def extract_metata_json(df):
     df.drop('metadata_json', axis=1, inplace=True)
 
 
-def expand(workflow_id, classifications_file, subjects_file):
+def expand(workflow_id, classifications, subjects, output):
     print("Reading classifications csv file for NfN...")
 
-    subjects_df = pd.read_csv(subjects_file)
+    subjects_df = pd.read_csv(subjects)
 
-    df = pd.read_csv(classifications_file)
+    df = pd.read_csv(classifications)
     # We need to do this by workflow because each one's annotations have a different structure
     df = df.loc[df.workflow_id == workflow_id, :]
 
@@ -96,30 +95,16 @@ def expand(workflow_id, classifications_file, subjects_file):
     print("The new columns:")
     print(df.columns.values)
 
-    df.to_csv('expanded_values_{}.csv'.format(workflow_id), sep=',', index=False, encoding='utf-8')
-
-
-def args():
-    if len(sys.argv) < 4:
-        help()
-    try:
-        workflow_id = int(sys.argv[1])
-    except:
-        help('Workflow ID should be a number.')
-    if not os.path.isfile(sys.argv[2]):
-        help('Cannot read classifications file "{}".'.format(sys.argv[2]))
-    if not os.path.isfile(sys.argv[3]):
-        help('Cannot read subjects file "{}".'.format(sys.argv[3]))
-    return workflow_id, sys.argv[2], sys.argv[3]
-
-
-def help(msg=''):
-    print('Usage: python createNFNexpansion.py <workflow ID> <classifications file> <subjects file>')
-    if msg:
-        print(msg)
-    sys.exit()
+    df.to_csv(output, sep=',', index=False, encoding='utf-8')
 
 
 if __name__ == "__main__":
-    workflow_id, classifications_file, subjects_file = args()
-    expand(workflow_id, classifications_file, subjects_file)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-w', '--workflow', required=True, help='The workflow ID to extract')
+    parser.add_argument('-c', '--classifications', required=True, help='The classifications CSV file')
+    parser.add_argument('-s', '--subjects', required=True, help='The subjects CSV file')
+    parser.add_argument('-o', '--output', help='Write the raw extracts to this CSV file')
+    args = parser.parse_args()
+    args.output = args.output if args.output else 'expanded_values_{}.csv'.format(args.workflow)
+
+    expand(args.workflow, args.classifications, args.subjects, args.output)
