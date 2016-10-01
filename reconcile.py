@@ -108,7 +108,7 @@ def reconcile():
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', '--input', required=True, help='The raw extracts CSV file to reconcile')
-    parser.add_argument('-o', '--output', required=True, help='Write the reconciled extracts to this file')
+    parser.add_argument('-o', '--output', required=True, help='Write the reconciled extracts to this CSV file')
     parser.add_argument(
         '-r', '--fuzzy-ratio-threshold', default=100, type=int,
         help=('Sets the cutoff for fuzzy ratio matching (0-100, default=100). '
