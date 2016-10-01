@@ -18,6 +18,12 @@ FuzzySet = namedtuple('FuzzySet', 'score value tokens')
 ARGS = None
 
 
+def reconcile_same(group):
+    group = [g for g in group]
+    # TODO: Check for inconsistencies???????????????????????????
+    return group[0]
+
+
 def reconcile_select(group):
     group = [g if g.lower() not in PLACE_HOLDERS else '' for g in group]
     counts = [ExactScore(c[0], c[1]) for c in Counter(group).most_common()]
@@ -84,32 +90,19 @@ def reconcile():
 
     select_cols = {c: reconcile_select for c in df.columns if re.match(r'T\d+s:', c)}
     text_cols = {c: reconcile_text for c in df.columns if re.match(r'T\d+t:', c)}
-    aggregate_cols = dict(list(select_cols.items()) + list(text_cols.items()))
+    subject_cols = {c: reconcile_same for c in df.columns
+                    if c.startswith('subject_') and c not in ['subject_data', 'subject_id', 'subject_ids']}
+    aggregate_cols = dict(list(select_cols.items()) + list(text_cols.items()) + list(subject_cols.items()))
 
     grouped = df.fillna('').groupby(GROUP_BY, as_index=False).aggregate(aggregate_cols)
 
     # Reshape the reconciled dataframe to sort the columns and put the subject_ids first
-    grouped.sort_index(axis=1, inplace=True)
-    grouped_cols = grouped.columns.tolist()
-    grouped_cols = grouped_cols[-1:] + grouped_cols[:-1]
-    grouped = grouped[grouped_cols]
+    grouped = grouped.reindex_axis([grouped.columns[0]] + sorted(grouped.columns[1:]), axis=1)
+    grouped.rename(columns={'subject_ids': 'subject_id'}, inplace=True)
 
-    # Reconcile dates ??????????????????????????????????????
+    # TODO: Reconcile dates parts into one date object ??????????????????????????????????????
 
-    # Get rid of unused columns in the original dataframe
-    drop_cols = [c for c in df.columns if not c.startswith('subject_')]
-    drop_cols = [c for c in drop_cols if not c.startswith('workflow_')]
-    drop_cols = [c for c in drop_cols if c not in ['gold_standard', 'expert']]
-    df.drop(drop_cols, axis=1, inplace=True)
-
-    # We can now drop duplicate rows in the orginal dataframe
-    df.drop_duplicates(keep='first', inplace=True)
-    if df.shape[0] != grouped.shape[0]:
-        raise ValueError('The raw extracts file may have been edited.')
-
-    merged = grouped.merge(df, left_on=GROUP_BY, right_on=GROUP_BY)
-
-    merged.to_csv(ARGS.output, sep=',', index=False, encoding='utf-8')
+    grouped.to_csv(ARGS.output, sep=',', index=False, encoding='utf-8')
 
 
 if __name__ == "__main__":

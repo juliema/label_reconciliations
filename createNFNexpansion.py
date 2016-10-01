@@ -100,7 +100,7 @@ def expand(workflow_id, classifications, subjects, output):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('-w', '--workflow', required=True, help='The workflow ID to extract')
+    parser.add_argument('-w', '--workflow', type=int, required=True, help='The workflow ID to extract')
     parser.add_argument('-c', '--classifications', required=True, help='The classifications CSV file')
     parser.add_argument('-s', '--subjects', required=True, help='The subjects CSV file')
     parser.add_argument('-o', '--output', help='Write the raw extracts to this CSV file')
