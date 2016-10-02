@@ -1,6 +1,5 @@
 import re
 import json
-import difflib
 import argparse
 import pandas as pd
 from collections import Counter, namedtuple
