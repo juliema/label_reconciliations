@@ -79,7 +79,7 @@ def expand(workflow_id, classifications, subjects, output):
     df = df[cols]
 
     # Make key data types match in the two data frames
-    df['subject_ids'] = df.subject_ids.map(lambda x: int(x.split(';')[0]))
+    df['subject_ids'] = df.subject_ids.map(lambda x: int(str(x).split(';')[0]))
 
     # Get subject info we need from the subjects_df
     df = pd.merge(df, subjects_df[['subject_id', 'locations']], how='left',
