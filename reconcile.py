@@ -1,4 +1,5 @@
 import re
+import sys
 import json
 import argparse
 import pandas as pd
@@ -14,24 +15,32 @@ ExactScore = namedtuple('ExactScore', 'value count')
 FuzzyRatio = namedtuple('FuzzyRatio', 'score value')
 FuzzySet = namedtuple('FuzzySet', 'score value tokens')
 
+EXPLAINATIONS = None
 ARGS = None
 
 
-def reconcile_same(group):
-    group = [g for g in group]
+def output(value, data, type, matchs=None, count=None, score=None):
+    print(data.name)
+    sys.exit()
+    return value
+
+
+def reconcile_same(data):
+    group = [d for d in data]
     # TODO: Check for inconsistencies???????????????????????????
     return group[0]
 
 
-def reconcile_select(group):
-    group = [g if g.lower() not in PLACE_HOLDERS else '' for g in group]
+def reconcile_select(data):
+    group = [d if d.lower() not in PLACE_HOLDERS else '' for d in data]
     counts = [ExactScore(c[0], c[1]) for c in Counter(group).most_common()]
-    return counts[0].value if counts[0].count > 1 else NO_MATCHES
+    value = counts[0].value if counts[0].count > 1 else NO_MATCHES
+    return output(value, data, 'exact')
 
 
-def top_partial_ratio(group):
+def top_partial_ratio(data):
     scores = []
-    for c in combinations(group, 2):
+    for c in combinations(data, 2):
         score = fuzz.partial_ratio(c[0], c[1])
         value = c[0] if len(c[0]) >= len(c[1]) else c[1]
         scores.append(FuzzyRatio(score, value))
@@ -39,9 +48,9 @@ def top_partial_ratio(group):
     return ordered[0]
 
 
-def top_token_set_ratio(group):
+def top_token_set_ratio(data):
     scores = []
-    for c in combinations(group, 2):
+    for c in combinations(data, 2):
         score = fuzz.token_set_ratio(c[0], c[1])
         tokens0 = len(c[0].split())
         tokens1 = len(c[1].split())
@@ -99,8 +108,6 @@ def reconcile():
     grouped = grouped.reindex_axis([grouped.columns[0]] + sorted(grouped.columns[1:]), axis=1)
     grouped.rename(columns={'subject_ids': 'subject_id'}, inplace=True)
 
-    # TODO: Reconcile dates parts into one date object ??????????????????????????????????????
-
     grouped.to_csv(ARGS.output, sep=',', index=False, encoding='utf-8')
 
 
@@ -108,14 +115,13 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', '--input', required=True, help='The raw extracts CSV file to reconcile')
     parser.add_argument('-o', '--output', required=True, help='Write the reconciled extracts to this CSV file')
-    parser.add_argument(
-        '-r', '--fuzzy-ratio-threshold', default=100, type=int,
-        help=('Sets the cutoff for fuzzy ratio matching (0-100, default=100). '
-              'See https://github.com/seatgeek/fuzzywuzzy.'))
-    parser.add_argument(
-        '-s', '--fuzzy-set-threshold', default=25, type=int,
-        help=('Sets the cutoff for fuzzy set matching (0-100, default=25). '
-              'See https://github.com/seatgeek/fuzzywuzzy.'))
+    parser.add_argument('-r', '--fuzzy-ratio-threshold', default=100, type=int,
+                        help='Sets the cutoff for fuzzy ratio matching (0-100, default=100). '
+                             'See https://github.com/seatgeek/fuzzywuzzy.')
+    parser.add_argument('-s', '--fuzzy-set-threshold', default=50, type=int,
+                        help='Sets the cutoff for fuzzy set matching (0-100, default=50). '
+                             'See https://github.com/seatgeek/fuzzywuzzy.')
+    parser.add_argument('-e', '--explaination', help='Write reconcilliation explainations to this file')
     ARGS = parser.parse_args()
 
     reconcile()
