@@ -132,6 +132,7 @@ def reconcile():
     text_cols = {c: reconcile_text for c in df.columns if re.match(r'T\d+t:', c)}
     subject_cols = {c: reconcile_same for c in df.columns if c.startswith('subject_') and c != GROUP_BY}
     aggregate_cols = dict(list(select_cols.items()) + list(text_cols.items()) + list(subject_cols.items()))
+    aggregate_cols['locations'] = reconcile_same
     aggregate_cols = {k: v for k, v in aggregate_cols.items() if k not in UNWANTED_COLUMNS}
 
     # Aggregate using the per column functions setup above
@@ -164,7 +165,7 @@ if __name__ == "__main__":
     parser.add_argument('-s', '--fuzzy-set-threshold', default=50, type=int,
                         help='Sets the cutoff for fuzzy set matching (0-100, default=50). '
                              'See https://github.com/seatgeek/fuzzywuzzy.')
-    parser.add_argument('-e', '--explanations', help='Write reconcilliation explanations to this file')
+    parser.add_argument('-e', '--explanations', help='Write reconciliation explanations to this file')
     ARGS = parser.parse_args()
 
     reconcile()
