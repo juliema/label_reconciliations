@@ -7,73 +7,87 @@ from collections import Counter, namedtuple
 from itertools import combinations
 from fuzzywuzzy import fuzz
 
-PLACE_HOLDERS = ['placeholder']
-NO_MATCHES = '<NO MATCHES>'
-GROUP_BY = 'subject_ids'
+PLACE_HOLDERS = ['placeholder']  # Replace these placeholders with an empty string
+NO_MATCHES = '<NO MATCHES>'      # A flag for unmatched data
+GROUP_BY = 'subject_ids'         # We group on this column
 
+# Type of matching
+EXACT_MATCH = 'exact'
+NORMALIZED_EXACT_MATCH = 'exact_normalized'
+PARTIAL_RATIO_MATCH = 'partial_ratio'
+TOKEN_SET_RATIO_MATCH = 'token_set_ratio'
+
+# Useful for naming data fields, rather than numbers
 ExactScore = namedtuple('ExactScore', 'value count')
-FuzzyRatio = namedtuple('FuzzyRatio', 'score value')
-FuzzySet = namedtuple('FuzzySet', 'score value tokens')
+FuzzyRatioScore = namedtuple('FuzzyRatioScore', 'score value')
+FuzzySetScore = namedtuple('FuzzySetScore', 'score value tokens')
 
-EXPLAINATIONS = None
+EXPLAINATIONS = None  # Explanations dataframe (Holds data on how the data were reconciled)
 ARGS = None
 
 
-def output(value, data, type, matchs=None, count=None, score=None):
-    print(data.name)
+def output(best, type, group=None, matches=None, score=None):
+    print(group.name)
     sys.exit()
     return value
 
 
-def reconcile_same(data):
-    group = [d for d in data]
-    # TODO: Check for inconsistencies???????????????????????????
-    return group[0]
+def normalize_text(group):
+    return ['\n'.join([' '.join(ln.split()) for ln in g.splitlines()]) for g in group]
 
 
-def reconcile_select(data):
-    group = [d if d.lower() not in PLACE_HOLDERS else '' for d in data]
-    counts = [ExactScore(c[0], c[1]) for c in Counter(group).most_common()]
-    value = counts[0].value if counts[0].count > 1 else NO_MATCHES
-    return output(value, data, 'exact')
+def top_exact(values):
+    counts = [ExactScore(c[0], c[1]) for c in Counter(values).most_common()]
+    return counts[0] if counts[0].count > 1 else None
 
 
-def top_partial_ratio(data):
+def top_partial_ratio(group):
     scores = []
-    for c in combinations(data, 2):
+    for c in combinations(group, 2):
         score = fuzz.partial_ratio(c[0], c[1])
         value = c[0] if len(c[0]) >= len(c[1]) else c[1]
-        scores.append(FuzzyRatio(score, value))
+        scores.append(FuzzyRatioScore(score, value))
     ordered = sorted(scores, reverse=True, key=lambda s: '{:0>6} {:0>6}'.format(s.score, len(s.value)))
     return ordered[0]
 
 
-def top_token_set_ratio(data):
+def top_token_set_ratio(group):
     scores = []
-    for c in combinations(data, 2):
+    for c in combinations(group, 2):
         score = fuzz.token_set_ratio(c[0], c[1])
-        tokens0 = len(c[0].split())
-        tokens1 = len(c[1].split())
-        if tokens0 > tokens1:
+        tokens_0 = len(c[0].split())
+        tokens_1 = len(c[1].split())
+        if tokens_0 > tokens_1:
             value = c[0]
-            tokens = tokens0
-        elif tokens0 < tokens1:
+            tokens = tokens_0
+        elif tokens_0 < tokens_1:
             value = c[1]
-            tokens = tokens1
+            tokens = tokens_1
         else:
-            tokens = tokens0
+            tokens = tokens_0
             value = c[0] if len(c[0]) <= len(c[1]) else c[1]
-        scores.append(FuzzySet(score, value, tokens))
+        scores.append(FuzzySetScore(score, value, tokens))
     ordered = sorted(scores, reverse=True,
                      key=lambda s: '{:0>6} {:0>6} {:0>6}'.format(s.score, s.tokens, 1000000 - len(s.value)))
     return ordered[0]
 
 
+def reconcile_same(group):
+    values = [g for g in group]
+    return values[0]
+
+
+def reconcile_select(group):
+    values = [g if g.lower() not in PLACE_HOLDERS else '' for g in group]
+    top = top_exact(values)
+    best = best.value if best else NO_MATCHES
+    return output(best, EXACT_MATCH)
+
+
 def reconcile_text(group):
     global ARGS
 
-    # Normalize spaces and EOLs
-    group = ['\n'.join([' '.join(ln.split()) for ln in g.splitlines()]) for g in group]
+    group = normalize_text(group)
 
     # Look for identical matches and order them by how common they are
     counts = [ExactScore(c[0], c[1]) for c in Counter(group).most_common()]
@@ -121,7 +135,7 @@ if __name__ == "__main__":
     parser.add_argument('-s', '--fuzzy-set-threshold', default=50, type=int,
                         help='Sets the cutoff for fuzzy set matching (0-100, default=50). '
                              'See https://github.com/seatgeek/fuzzywuzzy.')
-    parser.add_argument('-e', '--explaination', help='Write reconcilliation explainations to this file')
+    parser.add_argument('-e', '--explanation', help='Write reconcilliation explanations to this file')
     ARGS = parser.parse_args()
 
     reconcile()
