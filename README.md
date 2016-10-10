@@ -4,7 +4,7 @@ https://docs.google.com/document/d/1DqhWNsy9UAEgkRnIU7VHrdQL4oQzIm2pjrPULGKK21M/
 
 Steps:
 
-1. Raw data donwload of the Notes from Nature 'classifications' and 'subject' files.
+1. Raw data download of the Notes from Nature 'classifications' and 'subject' files.
 
 2. createNFNexpansion.py - expands the raw json format for a specific workflow.
 
