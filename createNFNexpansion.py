@@ -91,7 +91,8 @@ def expand(workflow_id, classifications, subjects, output):
     extract_annotations_json(df)
     extract_subject_json(df)
 
-    df.sort(['subject_ids', 'classification_id'], inplace=True)
+    df.rename(columns={'subject_ids': 'subject_id'}, inplace=True)
+    df.sort_values(['subject_id', 'classification_id'], inplace=True)
     print("The new columns:")
     print(df.columns.values)
 
