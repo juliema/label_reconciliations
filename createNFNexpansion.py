@@ -85,12 +85,11 @@ def expand(workflow_id, classifications, subjects, output):
     df = pd.merge(df, subjects_df[['subject_id', 'locations']], how='left',
                   left_on='subject_ids', right_on='subject_id')
 
-    df.drop(['user_id', 'user_ip', 'subject_id'], axis=1, inplace=True)
-
     extract_metata_json(df)
     extract_annotations_json(df)
     extract_subject_json(df)
 
+    df.drop(['user_id', 'user_ip', 'subject_id'], axis=1, inplace=True)
     df.rename(columns={'subject_ids': 'subject_id'}, inplace=True)
     df.sort_values(['subject_id', 'classification_id'], inplace=True)
     print("The new columns:")
