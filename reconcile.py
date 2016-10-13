@@ -4,6 +4,7 @@ import json
 import argparse
 import dateutil
 import pandas as pd
+import xml.etree.ElementTree as et
 from functools import reduce
 from collections import Counter, namedtuple
 from itertools import combinations
@@ -257,10 +258,106 @@ def reconcile(unreconciled_df):
         reconciled_df[c + '_explanation'], reconciled_df[c] = reconciled_df[c].str.split(SEPARATOR, n=1).str
 
     reconciled_df = reconciled_df.reindex_axis(sorted(reconciled_df.columns), axis=1)
+
     explanations_df = reconciled_df.loc[:, [c for c in reconciled_df.columns if c.endswith('_explanation')]]
+    explanations_cols = {c: c.replace('_explanation', '') for c in explanations_df.columns}
+    explanations_df.rename(columns=explanations_cols, inplace=True)
+
     reconciled_df.drop([c for c in reconciled_df.columns if c.endswith('_explanation')], axis=1, inplace=True)
 
     return reconciled_df, explanations_df
+
+
+def format_name(name):
+    return re.sub(r'^T\d+[st]:\s*', '', name)
+
+
+def output_dataframe(df, file_name):
+    columns = {c: format_name(c) for c in df.columns}
+    new_df = df.rename(columns=columns)
+    new_df.to_csv(file_name, sep=',', encoding='utf-8')
+
+
+def summary(unreconciled_df, reconciled_df, explanations_df):
+    html = et.fromstring('''
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title />
+    <style>
+      .hide { display: none; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1 id="title" />
+      <div><label>Number of Subjects:</label><span id="subjects" /></div>
+      <div><label>Number of Transcripts:</label><span id="transcripts" /></div>
+      <div><label>Transcripts per Subject:</label><span id="ratio" /></div>
+    </header>
+    <section id="stats">
+      <h2>Reconciled Data</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Field</th>
+            <th>Number Reconciled</th>
+            <th>Number with One Transcript</th>
+            <th>Number of All Blanks</th>
+          </tr>
+        </thead>
+        <tbody />
+      </table>
+    </section>
+    <section id="problems">
+      <h2>Problem Records</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>Subject ID</th>
+            <th>Field</th>
+            <th>Reason</th>
+          </tr>
+        </thead>
+        <tbody />
+      </table>
+    </section>
+    <footer>
+      <div id="date" />
+    </footer>
+  </body>
+</html>
+    ''')
+    workflow_name = unreconciled_df.loc[0, 'workflow_name'] if 'workflow_name' in unreconciled_df.columns else ''
+    workflow_name = re.sub(r'^[^_]*_', '', workflow_name)
+
+    html.find('.head/title').text = 'Summary of {}'.format(ARGS.workflow_id)
+
+    html.find(".//h1[@id='title']").text = 'Summary of "{}" ({})'.format(workflow_name, ARGS.workflow_id)
+    html.find(".//span[@id='subjects']").text = '{:,}'.format(reconciled_df.shape[0])
+    html.find(".//span[@id='transcripts']").text = '{:,}'.format(unreconciled_df.shape[0])
+    html.find(".//span[@id='ratio']").text = '{:.2f}'.format(unreconciled_df.shape[0] / reconciled_df.shape[0])
+
+    tbody = html.find(".//section[@id='stats']/table/tbody")
+    for col in [c for c in reconciled_df.columns if re.match(r'T\d+[st]:', c)]:
+        tr = et.Element('tr')
+        td = et.Element('td')
+        td.text = format_name(col)
+        tr.append(td)
+        td = et.Element('td')
+        td.text = '0'
+        tr.append(td)
+        td = et.Element('td')
+        td.text = '0'
+        tr.append(td)
+        td = et.Element('td')
+        td.text = '0'
+        tr.append(td)
+        tbody.append(tr)
+
+    with open(ARGS.summary, 'wb') as out_file:
+        out_file.write('<!DOCTYPE html>\n'.encode())
+        out_file.write(et.tostring(html))
 
 
 def parse_command_line():
@@ -296,7 +393,7 @@ def parse_command_line():
                         help='Do not create a reconciliation explanations file.')
     parser.add_argument('-m', '--summary',
                         help='Write a summary of the reconciliation to this file. '
-                             '(default=reconciled_<workflow-id>_summary.txt).')
+                             '(default=reconciled_<workflow-id>_summary.html).')
     parser.add_argument('-M', '--no-summary', action='store_true',
                         help='Do not write a summary file.')
     args = parser.parse_args()
@@ -305,7 +402,7 @@ def parse_command_line():
     if not args.explanations:
         args.explanations = 'reconciled_{}_explanations.csv'.format(args.workflow_id)
     if not args.summary:
-        args.summary = 'reconciled_{}_summary.txt'.format(args.workflow_id)
+        args.summary = 'reconciled_{}_summary.html'.format(args.workflow_id)
     if args.no_reconciled and not args.unreconciled:
         print('The --no-reconciled option (-R) requires the --unreconciled (-u) option.')
         sys.exit()
@@ -321,17 +418,17 @@ if __name__ == "__main__":
     unreconciled_df = expand(ARGS.workflow_id, ARGS.input_classifications, ARGS.input_subjects)
 
     if ARGS.unreconciled:
-        unreconciled_df.to_csv(ARGS.unreconciled, sep=',', index=False, encoding='utf-8')
+        output_dataframe(unreconciled_df, ARGS.unreconciled)
 
     if ARGS.no_reconciled:
         sys.exit()
 
     reconciled_df, explanations_df = reconcile(unreconciled_df)
 
-    reconciled_df.to_csv(ARGS.reconciled, sep=',', encoding='utf-8')
+    output_dataframe(reconciled_df, ARGS.reconciled)
 
     if ARGS.explanations:
-        explanations_df.to_csv(ARGS.explanations, sep=',', encoding='utf-8')
+        output_dataframe(explanations_df, ARGS.explanations)
 
-    # if ARGS.summary:
-    #     summary_df.to_csv(ARGS.summary, sep=',', encoding='utf-8')
+    if ARGS.summary:
+        summary(unreconciled_df, reconciled_df, explanations_df)
