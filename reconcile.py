@@ -5,6 +5,7 @@ import argparse
 import dateutil
 import pandas as pd
 import xml.etree.ElementTree as et
+from datetime import datetime
 from functools import reduce
 from collections import Counter, namedtuple
 from itertools import combinations
@@ -16,18 +17,6 @@ NO_MATCHES = '<NO MATCHES>'      # A flag for unmatched data
 GROUP_BY = 'subject_id'          # We group on this column
 SEPARATOR = ':'                  # Used to separate match flags from values
 
-
-class match_types:
-    all_blank = '<All are blank>'
-    one_transcript = '<Only one transcript>'
-
-    exact = 'Exact match'
-    select_no_match = '<No match on select>'
-
-    normalized_exact = 'Normalized exact match'
-    partial_ratio = 'Partial ratio match'
-    token_set_ratio = 'Token set ratio match'
-    text_no_match = '<No match on text>'
 
 # Useful for naming tuple items, rather than using indexes into tuples
 ExactScore = namedtuple('ExactScore', 'value count')
@@ -93,8 +82,10 @@ def extract_subject_json(unreconciled_df):
 
 def extract_metata_json(unreconciled_df):
     unreconciled_df['metadata_json'] = unreconciled_df['metadata'].map(lambda x: json.loads(x))
-    unreconciled_df['classification_started_at'] = unreconciled_df['metadata_json'].apply(extract_json_date, column='started_at')
-    unreconciled_df['classification_finished_at'] = unreconciled_df['metadata_json'].apply(extract_json_date, column='finished_at')
+    unreconciled_df['classification_started_at'] = unreconciled_df['metadata_json'].apply(
+        extract_json_date, column='started_at')
+    unreconciled_df['classification_finished_at'] = unreconciled_df['metadata_json'].apply(
+        extract_json_date, column='finished_at')
     unreconciled_df.drop('metadata_json', axis=1, inplace=True)
 
 
@@ -173,76 +164,112 @@ def reconcile_same(group):
     return values[0]
 
 
-def output(match_type, value, values=None, filled=None, score=None):
-    if match_type in [match_types.exact, match_types.normalized_exact]:
-        total = len(values)
-        blanks = total - reduce((lambda x, y: x + y.count), filled, 0)
-        word = 'blank' if blanks == 1 else 'blanks'
-        return '{} {}/{} with {} {}{}{}'.format(match_type, filled[0].count, total, blanks, word, SEPARATOR, value)
-    elif match_type in [match_types.select_no_match, match_types.text_no_match]:
-        total = len(values)
-        blanks = total - reduce((lambda x, y: x + y.count), filled, 0)
-        return '{} {}/{} with {} blanks{}{}'.format(match_type, 0, total, blanks, SEPARATOR, value)
-    elif match_type in [match_types.all_blank]:
-        total = len(values)
-        return '{} {}/{}{}{}'.format(match_type, total, total, SEPARATOR, value)
-    elif match_type in [match_types.one_transcript]:
-        total = len(values)
-        return '{} {}/{}{}{}'.format(match_type, 1, total, SEPARATOR, value)
-    elif match_type in [match_types.partial_ratio, match_types.token_set_ratio]:
-        return '{} score={}{}{}'.format(match_type, score, SEPARATOR, value)
-    print('Error unknown match type.')
-    sys.exit()
+def explain_values(values, filled):
+    record_count = len(values)
+    blank_count = record_count - reduce((lambda x, y: x + y.count), filled, 0)
+    return record_count, blank_count
+
+
+TOTAL_PLURALS = {'records': 'records', 'All': 'All', 'are': 'are'}
+TOTAL_SINGULARS = {'records': 'record', 'All': 'The', 'are': 'is'}
+BLANK_PLURALS = {'blanks': 'blanks'}
+BLANK_SINGULARS = {'blanks': 'blank'}
+
+
+def format_explanation(form, value='', record_count=None, blank_count=None,
+                       match_count=None, match_type=None, score=None):
+    form += '{separator}{value}'
+    std_words = dict(value=value, separator=SEPARATOR, record_count=record_count, blank_count=blank_count,
+                     match_count=match_count, match_type=match_type, score=score)
+    total_words = TOTAL_SINGULARS.copy() if record_count == 1 else TOTAL_PLURALS.copy()
+    blank_words = BLANK_SINGULARS.copy() if blank_count == 1 else BLANK_PLURALS.copy()
+    words = dict(list(total_words.items()) + list(blank_words.items()) + list(std_words.items()))
+    return form.format(**words)
+
+
+def explain_all_blank(values):
+    record_count = len(values)
+    return format_explanation('{All} {record_count} {records} {are} blank', record_count=record_count)
+
+
+def explain_one_transcript(value, values, filled):
+    record_count, blank_count = explain_values(values, filled)
+    form = 'Only 1 transcript in {record_count} {records}'
+    return format_explanation(form, value=value, record_count=record_count)
+
+
+def explain_no_match(values, filled, match_type):
+    record_count, blank_count = explain_values(values, filled)
+    form = 'No {match_type} match on {record_count} {records} with {blank_count} {blanks}'
+    return format_explanation(form, record_count=record_count, blank_count=blank_count, match_type=match_type)
+
+
+def explain_exact_match(value, values, filled, match_type):
+    record_count, blank_count = explain_values(values, filled)
+    form = '{match_type} match, {match_count} of {record_count} {records} with {blank_count} {blanks}'
+    return format_explanation(form, value=value, record_count=record_count, match_count=filled[0].count,
+                              blank_count=blank_count, match_type=match_type)
+
+
+def explain_fuzzy_match(value, values, filled, score, match_type):
+    record_count, blank_count = explain_values(values, filled)
+    form = '{match_type} match on {record_count} {records} with {blank_count} {blanks}, score={score}'
+    return format_explanation(form, record_count=record_count, blank_count=blank_count,
+                              match_type=match_type, score=score)
+
+
+def only_filled_values(values):
+    return [ExactScore(c[0], c[1]) for c in Counter([v for v in values if v]).most_common()]
 
 
 def reconcile_select(group):
     values = [str(g) if str(g).lower() not in PLACE_HOLDERS else '' for g in group]
-    filled = [ExactScore(c[0], c[1]) for c in Counter([v for v in values if v]).most_common()]
+    filled = only_filled_values(values)
 
     if not filled:
-        return output(match_types.all_blank, '', values=values, filled=filled)
+        return explain_all_blank(values)
 
     if filled[0].count > 1:
-        return output(match_types.exact, filled[0].value, values=values, filled=filled)
+        return explain_exact_match(filled[0].value, values, filled, 'Exact')
 
     if len(filled) == 1:
-        return output(match_types.one_transcript, filled[0].value, values=values, filled=filled)
+        return explain_one_transcript(filled[0].value, values, filled)
 
-    return output(match_types.select_no_match, NO_MATCHES, values=values, filled=filled)
+    return explain_no_match(values, filled, 'select')
 
 
 def reconcile_text(group):
     global ARGS
 
     values = normalize_text(group)
-    filled = [ExactScore(c[0], c[1]) for c in Counter([v for v in values if v]).most_common()]
+    filled = only_filled_values(values)
 
     if not filled:
-        return output(match_types.all_blank, '', values=values, filled=filled)
+        return explain_all_blank(values)
 
     if filled[0].count > 1:
-        return output(match_types.normalized_exact, filled[0].value, values=values, filled=filled)
+        return explain_exact_match(filled[0].value, values, filled, 'Normalized exact')
 
     if len(filled) == 1:
-        return output(match_types.one_transcript, filled[0].value, values=values, filled=filled)
+        return explain_one_transcript(filled[0].value, values, filled)
 
     # Check for simple inplace fuzzy matches
     top = top_partial_ratio(group)
     if top.score >= ARGS.fuzzy_ratio_threshold:
-        return output(match_types.partial_ratio, top.value, score=top.score)
+        return explain_fuzzy_match(top.value, values, filled, top.score, 'Partial ratio')
 
     # Now look for the best token match
     top = top_token_set_ratio(group)
     if top.score >= ARGS.fuzzy_set_threshold:
-        return output(match_types.token_set_ratio, top.value, score=top.score)
+        return explain_fuzzy_match(top.value, values, filled, top.score, 'Token set ratio')
 
-    return output(match_types.text_no_match, NO_MATCHES, values=values, filled=filled)
+    return explain_no_match(values, filled, 'text')
 
 
 def reconcile(unreconciled_df):
     # How to aggregate the columns based on each column's type which is determined by the column name
-    select_cols = {c: reconcile_select for c in unreconciled_df.columns if re.match(r'T\d+s:', c)}
-    text_cols = {c: reconcile_text for c in unreconciled_df.columns if re.match(r'T\d+t:', c)}
+    select_cols = {c: reconcile_select for c in unreconciled_df.columns if re.match(r'^T\d+s:', c)}
+    text_cols = {c: reconcile_text for c in unreconciled_df.columns if re.match(r'^T\d+t:', c)}
     subject_cols = {c: reconcile_same for c in unreconciled_df.columns if c.startswith('subject_') and c != GROUP_BY}
     aggregate_cols = dict(list(select_cols.items()) + list(text_cols.items()) + list(subject_cols.items()))
     aggregate_cols['locations'] = reconcile_same  # We want this column that is not in any of the above categories
@@ -285,12 +312,38 @@ def summary(unreconciled_df, reconciled_df, explanations_df):
     <meta charset="utf-8" />
     <title />
     <style>
-      .hide { display: none; }
+      header h1 { text-align: center; }
+      header div { width: 320px; margin-bottom: 4px; }
+      header div label { text-align: right; display: inline-block; width: 200px; }
+      header div span { float: right; }
+      section { margin-top: 2em; margin-bottom: 1em; }
+      th { padding: 2px 4px; }
+      #stats thead tr:nth-child(1) th:nth-child(2) { background: lightgray; }
+      #stats thead tr:nth-child(2) th { text-decoration: underline; }
+      #stats thead tr:nth-child(2) th:nth-child(1) { text-align: left; }
+      #stats thead tr:nth-child(2) th:nth-child(2) { text-align: left; }
+      #stats tr td:nth-child(3), #stats tr th:nth-child(3) { text-align: right; }
+      #stats tr td:nth-child(4), #stats tr th:nth-child(4) { text-align: right; }
+      #stats tr td:nth-child(5), #stats tr th:nth-child(5) { text-align: right; }
+      #stats tr td:nth-child(6), #stats tr th:nth-child(6) { text-align: right; }
+      #stats tr td:nth-child(7), #stats tr th:nth-child(7) { text-align: right; }
+      #stats tr td:nth-child(8), #stats tr th:nth-child(8) { text-align: right; }
+      #stats tr td:nth-child(1){ padding-left: 4px; }
+      #stats tr td:nth-child(2){ padding-left: 4px; }
+      #stats tr td:nth-child(3){ padding-right: 12px; }
+      #stats tr td:nth-child(4){ padding-right: 12px; }
+      #stats tr td:nth-child(5){ padding-right: 12px; }
+      #stats tr td:nth-child(6){ padding-right: 12px; }
+      #stats tr td:nth-child(7){ padding-right: 12px; }
+      #stats tr td:nth-child(8){ padding-right: 12px; }
+      #problems th { text-align: left; text-decoration: underline; }
+      #problems td { padding-left: 4px; }
     </style>
   </head>
   <body>
     <header>
       <h1 id="title" />
+      <div><label>Date:</label><span id="date" /></div>
       <div><label>Number of Subjects:</label><span id="subjects" /></div>
       <div><label>Number of Transcripts:</label><span id="transcripts" /></div>
       <div><label>Transcripts per Subject:</label><span id="ratio" /></div>
@@ -300,10 +353,19 @@ def summary(unreconciled_df, reconciled_df, explanations_df):
       <table>
         <thead>
           <tr>
+            <th colspan="2"></th>
+            <th colspan="5">Reconciled</th>
+            <th colspan="1"></th>
+          </tr>
+          <tr>
             <th>Field</th>
-            <th>Number Reconciled</th>
-            <th>Number with One Transcript</th>
-            <th>Number of All Blanks</th>
+            <th>Type</th>
+            <th>Exact Matches</th>
+            <th>Fuzzy Matches</th>
+            <th>All Blank</th>
+            <th>One Transcript</th>
+            <th>Total</th>
+            <th>No Matches</th>
           </tr>
         </thead>
         <tbody />
@@ -322,9 +384,6 @@ def summary(unreconciled_df, reconciled_df, explanations_df):
         <tbody />
       </table>
     </section>
-    <footer>
-      <div id="date" />
-    </footer>
   </body>
 </html>
     ''')
@@ -334,26 +393,86 @@ def summary(unreconciled_df, reconciled_df, explanations_df):
     html.find('.head/title').text = 'Summary of {}'.format(ARGS.workflow_id)
 
     html.find(".//h1[@id='title']").text = 'Summary of "{}" ({})'.format(workflow_name, ARGS.workflow_id)
+    html.find(".//span[@id='date']").text = datetime.strftime(datetime.now(), '%Y-%m-%d %H:%M')
     html.find(".//span[@id='subjects']").text = '{:,}'.format(reconciled_df.shape[0])
     html.find(".//span[@id='transcripts']").text = '{:,}'.format(unreconciled_df.shape[0])
     html.find(".//span[@id='ratio']").text = '{:.2f}'.format(unreconciled_df.shape[0] / reconciled_df.shape[0])
 
+    # These depend on the patterns put into explanations_df FIXME
+    no_match_pattern = r'^No (?:select|text) match on'
+    exact_match_pattern = r'^(?:Exact|Normalized exact) match'
+    fuzz_match_pattern = r'^(?:Partial|Token set) ratio match'
+    all_blank_pattern = r'^(?:All|The) \d+ record'
+    onesies_pattern = r'^Only 1 transcript in'
+
     tbody = html.find(".//section[@id='stats']/table/tbody")
-    for col in [c for c in reconciled_df.columns if re.match(r'T\d+[st]:', c)]:
+    for col in [c for c in explanations_df.columns]:
+        name = format_name(col)
+        col_type = 'select' if re.match(r'^T\d+s:', col) else 'text'
+        num_no_match = explanations_df[explanations_df[col].str.contains(no_match_pattern)].shape[0]
+        num_exact_match = explanations_df[explanations_df[col].str.contains(exact_match_pattern)].shape[0]
+        num_fuzzy_match = explanations_df[explanations_df[col].str.contains(fuzz_match_pattern)].shape[0]
+        num_all_blank = explanations_df[explanations_df[col].str.contains(all_blank_pattern)].shape[0]
+        num_onesies = explanations_df[explanations_df[col].str.contains(onesies_pattern)].shape[0]
+        num_reconciled = explanations_df.shape[0] - num_no_match
+
         tr = et.Element('tr')
+
         td = et.Element('td')
-        td.text = format_name(col)
+        td.text = name
         tr.append(td)
+
         td = et.Element('td')
-        td.text = '0'
+        td.text = col_type
         tr.append(td)
+
         td = et.Element('td')
-        td.text = '0'
+        td.text = '{:,}'.format(num_exact_match)
         tr.append(td)
+
         td = et.Element('td')
-        td.text = '0'
+        td.text = '{:,}'.format(num_fuzzy_match) if col_type == 'text' else ''
         tr.append(td)
+
+        td = et.Element('td')
+        td.text = '{:,}'.format(num_all_blank)
+        tr.append(td)
+
+        td = et.Element('td')
+        td.text = '{:,}'.format(num_onesies)
+        tr.append(td)
+
+        td = et.Element('td')
+        td.text = '{:,}'.format(num_reconciled)
+        tr.append(td)
+
+        td = et.Element('td')
+        td.text = '{:,}'.format(num_no_match)
+        tr.append(td)
+
         tbody.append(tr)
+
+    tbody = html.find(".//section[@id='problems']/table/tbody")
+    pattern = '|'.join([no_match_pattern, onesies_pattern])
+    for col, series in explanations_df.iteritems():
+        name = format_name(col)
+        problems = series[series.str.contains(pattern)]
+        for subject_id, reason in problems.iteritems():
+            tr = et.Element('tr')
+
+            td = et.Element('td')
+            td.text = str(subject_id)
+            tr.append(td)
+
+            td = et.Element('td')
+            td.text = name
+            tr.append(td)
+
+            td = et.Element('td')
+            td.text = reason
+            tr.append(td)
+
+            tbody.append(tr)
 
     with open(ARGS.summary, 'wb') as out_file:
         out_file.write('<!DOCTYPE html>\n'.encode())
