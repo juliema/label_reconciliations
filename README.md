@@ -10,7 +10,7 @@ Jane | 1234 | Canada | Canis lupus | south Lonely Point | Peter
 Jack | 1234 | Canada | Canis lupus | south of Lonely Point | Alvin
 Jill | 1234 | Canada | Canis loopy | 5 mi. south of Lonely Point|
 
-We use set of measures and heuristics to collapse these three transcripts into a single best transcript like so.
+We use a set of measures and heuristics to collapse these three transcripts into a single best transcript like so.
 
 subject_id | Country | Species Name | Location | Collector
 ---------- | ------- | ------------ | -------- | ---------
