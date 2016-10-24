@@ -41,5 +41,5 @@ python3 reconcile.py -c ./notes-from-nature-classifications.csv -s ./notes-from-
 ```
 We need, at a minimum, three pieces of information:
 - The workflow ID of the work flow you want to extract. Because each workflow is different we currently cannot extract them all at the same time.
-- The location of the raw Noted from Nature classifications CSV file.
-- The location of the raw Noted from Nature subjects CSV file.
+- The location of the raw Notes from Nature classifications CSV file.
+- The location of the raw Notes from Nature subjects CSV file.
