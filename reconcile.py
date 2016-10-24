@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 import re
 import sys
 import json
@@ -313,7 +315,7 @@ def summary(unreconciled_df, reconciled_df, explanations_df):
     <title />
     <style>
       header h1 { text-align: center; }
-      header div { width: 320px; margin-bottom: 4px; }
+      header div { width: 360px; margin-bottom: 4px; }
       header div label { text-align: right; display: inline-block; width: 200px; }
       header div span { float: right; }
       section { margin-top: 2em; margin-bottom: 1em; }
