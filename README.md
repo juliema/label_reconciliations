@@ -40,6 +40,6 @@ The easiest way to run the program with the defauts is:
 python3 reconcile.py -c ./notes-from-nature-classifications.csv -s ./notes-from-nature-subjects.csv -w 2554
 ```
 We need, at a minimum, three pieces of information:
-- The workflow ID of the work flow you want to extract. Because each workflow is different we currently cannot extract them all at the same time.
+- The workflow ID of the workflow you want to extract. Because each workflow is different we currently cannot extract them all at the same time.
 - The location of the raw Notes from Nature classifications CSV file.
 - The location of the raw Notes from Nature subjects CSV file.
