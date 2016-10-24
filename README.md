@@ -4,17 +4,17 @@ reconcile.py takes a group of raw Notes from Nature transcripts for each subject
 
 To get an idea of what this program does let's say that we asked three volunteers to transcribe a label with a country, a species name, a location, and a collector. The country is selected from a drop-down list and the species name, location, and collector are free form text fields. If the result of the input is like so:
 
-Volunteer|subject_id|Country|Species Name|Location|Collector
----------|----------
-Jane|1234|Canada|Canis lupus|south Lonely Point|Peter
-Jack|1234|Canada|Canis lupus|south of Lonely Point|Alvin
-Jill|1234|Canada|Canis loopy|5 mi. south of Lonely Point|
+Volunteer | subject_id | Country | Species Name | Location | Collector
+--------- | ---------- | ------- | ------------ | -------- | ---------
+Jane | 1234 | Canada | Canis lupus | south Lonely Point | Peter
+Jack | 1234 | Canada | Canis lupus | south of Lonely Point | Alvin
+Jill | 1234 | Canada | Canis loopy | 5 mi. south of Lonely Point|
 
 We use set of measures and heuristics to collapse these three transcripts into a single best transcript like so.
 
-subject_id|Country|Species Name|Location|Collector
----------|-------|------------|--------
-1234|Canada|Canis lupus|5 mi. south of Lonely Point|[NO MATCHES]
+subject_id | Country | Species Name | Location | Collector
+---------- | ------- | ------------ | -------- | ---------
+1234 | Canada | Canis lupus | 5 mi. south of Lonely Point | [NO MATCHES]
 
 ### Other Program Features
 
@@ -22,9 +22,9 @@ subject_id|Country|Species Name|Location|Collector
 
 - Many researchers will want to know how the program determined the "best" match. By default the program will output an explanations file. This file contains a reason for for why each match was chosen. It similar to:
 
-subject_id|Country|Species Name|Location|Collector
----------|-------|------------|--------
-1234|Exact match, 3 of 3 records with 0 blanks|Normalized exact match, 2 of 3 records with 0 blanks|Token set ratio match on 3 records with 0 blanks, score=95|No text match on 3 records with 1 blank
+subject_id | Country | Species Name | Location | Collector
+---------- | ------- | ------------ | -------- | ---------
+1234 | Exact match, 3 of 3 records with 0 blanks | Normalized exact match, 2 of 3 records with 0 blanks | Token set ratio match on 3 records with 0 blanks, score=95 | No text match on 3 records with 1 blank
 
 - By default, we also output a summary report. This shows you how may of each type of matches occurred for each field. It also provides a list of all of the no matches and potentially problematic matches.
 
