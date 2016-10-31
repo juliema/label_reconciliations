@@ -376,13 +376,7 @@ def summary(unreconciled_df, reconciled_df, explanations_df):
     <section id="problems">
       <h2>Problem Records</h2>
       <table>
-        <thead>
-          <tr>
-            <th>Subject ID</th>
-            <th>Field</th>
-            <th>Reason</th>
-          </tr>
-        </thead>
+        <thead />
         <tbody />
       </table>
     </section>
@@ -454,26 +448,32 @@ def summary(unreconciled_df, reconciled_df, explanations_df):
 
         tbody.append(tr)
 
+    thead = html.find(".//section[@id='problems']/table/thead")
+    tr = et.Element('tr')
+    th = et.Element('th')
+    th.text = explanations_df.index.name
+    tr.append(th)
+    for col in explanations_df.columns:
+        th = et.Element('th')
+        th.text = format_name(col)
+        tr.append(th)
+    thead.append(tr)
+
     tbody = html.find(".//section[@id='problems']/table/tbody")
     pattern = '|'.join([no_match_pattern, onesies_pattern])
-    for col, series in explanations_df.iteritems():
-        name = format_name(col)
-        problems = series[series.str.contains(pattern)]
-        for subject_id, reason in problems.iteritems():
-            tr = et.Element('tr')
-
+    for subject_id, cols in explanations_df.iterrows():
+        tr = et.Element('tr')
+        td = et.Element('td')
+        td.text = str(subject_id)
+        tr.append(td)
+        keep = False
+        for col in cols:
             td = et.Element('td')
-            td.text = str(subject_id)
+            if re.search(pattern, col):
+                keep = True
+                td.text = col
             tr.append(td)
-
-            td = et.Element('td')
-            td.text = name
-            tr.append(td)
-
-            td = et.Element('td')
-            td.text = reason
-            tr.append(td)
-
+        if keep:
             tbody.append(tr)
 
     with open(ARGS.summary, 'wb') as out_file:
