@@ -383,8 +383,13 @@ def summary(unreconciled_df, reconciled_df, explanations_df):
   </body>
 </html>
     ''')
-    workflow_name = unreconciled_df.loc[0, 'workflow_name'] if 'workflow_name' in unreconciled_df.columns else ''
-    workflow_name = re.sub(r'^[^_]*_', '', workflow_name)
+    
+    try:
+        workflow_name = unreconciled_df.loc[0, 'workflow_name'] if 'workflow_name' in unreconciled_df.columns else ''
+        workflow_name = re.sub(r'^[^_]*_', '', workflow_name)
+    except KeyError:
+        print ("Workflow ID {} not found in classifications file.".format(ARGS.workflow_id))
+        sys.exit(1)
 
     html.find('.head/title').text = 'Summary of {}'.format(ARGS.workflow_id)
 
