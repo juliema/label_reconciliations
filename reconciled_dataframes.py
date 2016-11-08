@@ -3,18 +3,16 @@ from functools import reduce
 from collections import Counter, namedtuple
 from itertools import combinations
 from fuzzywuzzy import fuzz
+import pandas as pd
 import utils
 
 ARGS = None
 PLACE_HOLDERS = ['placeholder']  # Replace these placeholders with an empty string
 GROUP_BY = 'subject_id'          # We group on this column
-SEPARATOR = ':'                  # Used to separate match flags from values TODO use namedtuple
-
 
 ExactScore = namedtuple('ExactScore', 'value count')
 FuzzyRatioScore = namedtuple('FuzzyRatioScore', 'score value')
 FuzzySetScore = namedtuple('FuzzySetScore', 'score value tokens')
-ReconciledValue = namedtuple('ReconciledValue', 'flag best_value')
 
 UNWANTED_COLUMNS = ['subject_data', 'subject_retired', 'subject_subjectId']
 
@@ -71,10 +69,9 @@ BLANK_PLURALS = {'blanks': 'blanks'}
 BLANK_SINGULARS = {'blanks': 'blank'}
 
 
-def format_explanation(form, value='', record_count=None, blank_count=None,
+def format_explanation(form, record_count=None, blank_count=None,
                        match_count=None, match_type=None, score=None):
-    form += '{separator}{value}'
-    std_words = dict(value=value, separator=SEPARATOR, record_count=record_count, blank_count=blank_count,
+    std_words = dict(record_count=record_count, blank_count=blank_count,
                      match_count=match_count, match_type=match_type, score=score)
     total_words = TOTAL_SINGULARS.copy() if record_count == 1 else TOTAL_PLURALS.copy()
     blank_words = BLANK_SINGULARS.copy() if blank_count == 1 else BLANK_PLURALS.copy()
@@ -84,33 +81,33 @@ def format_explanation(form, value='', record_count=None, blank_count=None,
 
 def explain_all_blank(values):
     record_count = len(values)
-    return format_explanation('{All} {record_count} {records} {are} blank', record_count=record_count)
+    return (format_explanation('{All} {record_count} {records} {are} blank', record_count=record_count), '')
 
 
 def explain_one_transcript(value, values, filled):
     record_count, blank_count = explain_values(values, filled)
     form = 'Only 1 transcript in {record_count} {records}'
-    return format_explanation(form, value=value, record_count=record_count)
+    return (format_explanation(form, record_count=record_count), value)
 
 
 def explain_no_match(values, filled, match_type):
     record_count, blank_count = explain_values(values, filled)
     form = 'No {match_type} match on {record_count} {records} with {blank_count} {blanks}'
-    return format_explanation(form, record_count=record_count, blank_count=blank_count, match_type=match_type)
+    return (format_explanation(form, record_count=record_count, blank_count=blank_count, match_type=match_type), '')
 
 
 def explain_exact_match(value, values, filled, match_type):
     record_count, blank_count = explain_values(values, filled)
     form = '{match_type} match, {match_count} of {record_count} {records} with {blank_count} {blanks}'
-    return format_explanation(form, value=value, record_count=record_count, match_count=filled[0].count,
-                              blank_count=blank_count, match_type=match_type)
+    return (format_explanation(form, record_count=record_count, match_count=filled[0].count,
+                               blank_count=blank_count, match_type=match_type), value)
 
 
 def explain_fuzzy_match(value, values, filled, score, match_type):
     record_count, blank_count = explain_values(values, filled)
     form = '{match_type} match on {record_count} {records} with {blank_count} {blanks}, score={score}'
-    return format_explanation(form, record_count=record_count, blank_count=blank_count,
-                              match_type=match_type, score=score)
+    return (format_explanation(form, record_count=record_count, blank_count=blank_count,
+                               match_type=match_type, score=score), value)
 
 
 def only_filled_values(values):
@@ -183,9 +180,10 @@ def create_reconciled_dataframes(unreconciled_df, args):
     # Aggregate using the per column functions setup above
     reconciled_df = unreconciled_df.fillna('').groupby(GROUP_BY).aggregate(best_value_methods)
 
-    # Split the combined reconciled value and flag into separate columns
+    # Split the combined reconciled value and explanation tuple into separate columns
     for c in list(method_for_text_columns.keys()) + list(method_for_select_columns.keys()):
-        reconciled_df[c + '_explanation'], reconciled_df[c] = reconciled_df[c].str.split(SEPARATOR, n=1).str
+        reconciled_df[c + '_explanation'] = reconciled_df[c].apply(lambda t: t[0])
+        reconciled_df[c] = reconciled_df[c].apply(lambda t: t[1])
 
     reconciled_df = reconciled_df.reindex_axis(sorted(reconciled_df.columns), axis=1)
 
