@@ -2,3 +2,4 @@
 junk.*
 .~lock*
 temp/
+__pycache__/
