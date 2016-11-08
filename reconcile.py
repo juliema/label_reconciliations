@@ -64,6 +64,9 @@ if __name__ == "__main__":
     args = parse_command_line()
 
     unreconciled_df = create_unreconciled_dataframe(args.workflow_id, args.input_classifications, args.input_subjects)
+    if unreconciled_df.shape[0] == 0:
+        print('Workflow {} has no data.'.format(args.workflow_id))
+        sys.exit()
 
     if args.unreconciled:
         utils.output_dataframe(unreconciled_df, args.unreconciled)
