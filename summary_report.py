@@ -1,4 +1,5 @@
 import re
+import sys
 import xml.etree.ElementTree as et
 from datetime import datetime
 from collections import Counter, namedtuple
@@ -84,6 +85,15 @@ HTML_TEMPLATE = '''
 
 def create_summary_report(unreconciled_df, reconciled_df, explanations_df, args):
     html = et.fromstring(HTML_TEMPLATE)
+    try:
+        workflow_name = unreconciled_df.loc[0, 'workflow_name']
+        workflow_name = re.sub(r'^[^_]*_', '', workflow_name)
+    except KeyError:
+        print('Workflow ID {} not found in classifications file.'.format(args.workflow_id))
+        sys.exit(1)
+
+    html.find('.head/title').text = 'Summary of {}'.format(ARGS.workflow_id)
+    html.find('.head/title').text = 'Summary of {}'.format(ARGS.workflow_id)
     workflow_name = unreconciled_df.loc[0, 'workflow_name'] if 'workflow_name' in unreconciled_df.columns else ''
     workflow_name = re.sub(r'^[^_]*_', '', workflow_name)
 
