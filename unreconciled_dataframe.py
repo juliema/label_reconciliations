@@ -36,8 +36,7 @@ def extract_an_annotaion(unreconciled_df, task, task_id, index):
         value = task.get('value')
         unreconciled_df.loc[index, header] = value
     else:
-        print('Error: Could not parse the annotations.')
-        sys.exit()
+        raise ValueError()
 
 
 def extract_annotations_json(unreconciled_df):
@@ -45,7 +44,11 @@ def extract_annotations_json(unreconciled_df):
     for index, row in unreconciled_df.iterrows():
         for task in row['annotation_json']:
             task_id = task['task']
-            extract_an_annotaion(unreconciled_df, task, task_id, index)
+            try:
+                extract_an_annotaion(unreconciled_df, task, task_id, index)
+            except ValueError:
+                print('Bad transcription for classification {}'.format(row['classification_id']))
+                break
     unreconciled_df.drop('annotation_json', axis=1, inplace=True)
 
 

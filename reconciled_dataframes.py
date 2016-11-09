@@ -18,12 +18,12 @@ UNWANTED_COLUMNS = ['subject_data', 'subject_retired', 'subject_subjectId']
 
 
 def normalize_text(group):
-    return ['\n'.join([' '.join(ln.split()) for ln in g.splitlines()]) for g in group]
+    return ['\n'.join([' '.join(ln.split()) for ln in str(g).splitlines()]) for g in group]
 
 
-def top_partial_ratio(group):
+def top_partial_ratio(values):
     scores = []
-    for c in combinations(group, 2):
+    for c in combinations(values, 2):
         score = fuzz.partial_ratio(c[0], c[1])
         value = c[0] if len(c[0]) >= len(c[1]) else c[1]
         scores.append(FuzzyRatioScore(score, value))
@@ -31,9 +31,9 @@ def top_partial_ratio(group):
     return scores[0]
 
 
-def top_token_set_ratio(group):
+def top_token_set_ratio(values):
     scores = []
-    for c in combinations(group, 2):
+    for c in combinations(values, 2):
         score = fuzz.token_set_ratio(c[0], c[1])
         tokens_0 = len(c[0].split())
         tokens_1 = len(c[1].split())
@@ -146,12 +146,12 @@ def best_text_value(group):
         return explain_one_transcript(filled[0].value, values, filled)
 
     # Check for simple inplace fuzzy matches
-    top = top_partial_ratio(group)
+    top = top_partial_ratio(values)
     if top.score >= ARGS.fuzzy_ratio_threshold:
         return explain_fuzzy_match(top.value, values, filled, top.score, 'Partial ratio')
 
     # Now look for the best token match
-    top = top_token_set_ratio(group)
+    top = top_token_set_ratio(values)
     if top.score >= ARGS.fuzzy_set_threshold:
         return explain_fuzzy_match(top.value, values, filled, top.score, 'Token set ratio')
 

@@ -1,5 +1,6 @@
 .ipynb_checkpoints/
 junk.*
+temp.*
 .~lock*
 temp/
 __pycache__/
