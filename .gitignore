@@ -4,3 +4,5 @@ temp.*
 .~lock*
 temp/
 __pycache__/
+venv/*
+*.pyc

@@ -24,7 +24,8 @@ def parse_command_line():
                         help='Write the reconciled classifications to this CSV file '
                              '(default=reconciled_<workflow-id>.csv).')
     parser.add_argument('-R', '--no-reconciled', action='store_true',
-                        help='Do not write either a reconciled classifications file or an explanations file and '
+                        help='Do not write either a reconciled classifications file or '
+                        'an explanations file and '
                         'stop further processing. This requires the "-u" option.')
     parser.add_argument('-u', '--unreconciled',
                         help='Write the unreconciled workflow classifications to this CSV file.')
@@ -44,42 +45,44 @@ def parse_command_line():
                              '(default=reconciled_<workflow-id>_summary.html).')
     parser.add_argument('-M', '--no-summary', action='store_true',
                         help='Do not write a summary file.')
-    args = parser.parse_args()
-    if not args.reconciled:
-        args.reconciled = 'reconciled_{}.csv'.format(args.workflow_id)
-    if not args.explanations:
-        args.explanations = 'reconciled_{}_explanations.csv'.format(args.workflow_id)
-    if not args.summary:
-        args.summary = 'reconciled_{}_summary.html'.format(args.workflow_id)
-    if args.no_reconciled and not args.unreconciled:
+    args_out = parser.parse_args()
+    if not args_out.reconciled:
+        args_out.reconciled = 'reconciled_{}.csv'.format(args_out.workflow_id)
+    if not args_out.explanations:
+        args_out.explanations = 'reconciled_{}_explanations.csv'.format(args_out.workflow_id)
+    if not args_out.summary:
+        args_out.summary = 'reconciled_{}_summary.html'.format(args_out.workflow_id)
+    if args_out.no_reconciled and not args_out.unreconciled:
         print('The --no-reconciled option (-R) requires the --unreconciled (-u) option.')
         sys.exit()
-    args.explanations = '' if args.no_explanations else args.explanations
-    args.reconciled = '' if args.no_reconciled else args.reconciled
-    args.summary = '' if args.no_summary else args.summary
-    return args
+    args_out.explanations = '' if args_out.no_explanations else args_out.explanations
+    args_out.reconciled = '' if args_out.no_reconciled else args_out.reconciled
+    args_out.summary = '' if args_out.no_summary else args_out.summary
+    return args_out
 
 
 if __name__ == "__main__":
-    args = parse_command_line()
+    ARGS = parse_command_line()
 
-    unreconciled_df = create_unreconciled_dataframe(args.workflow_id, args.input_classifications, args.input_subjects)
-    if unreconciled_df.shape[0] == 0:
-        print('Workflow {} has no data.'.format(args.workflow_id))
+    UNRECONCILED_DF = create_unreconciled_dataframe(ARGS.workflow_id,
+                                                    ARGS.input_classifications,
+                                                    ARGS.input_subjects)
+    if UNRECONCILED_DF.shape[0] == 0:
+        print('Workflow {} has no data.'.format(ARGS.workflow_id))
         sys.exit()
 
-    if args.unreconciled:
-        utils.output_dataframe(unreconciled_df, args.unreconciled)
+    if ARGS.unreconciled:
+        utils.output_dataframe(UNRECONCILED_DF, ARGS.unreconciled)
 
-    if args.no_reconciled:
+    if ARGS.no_reconciled:
         sys.exit()
 
-    reconciled_df, explanations_df = create_reconciled_dataframes(unreconciled_df, args)
+    RECONCILED_DF, EXPLANATIONS_DF = create_reconciled_dataframes(UNRECONCILED_DF, ARGS)
 
-    utils.output_dataframe(reconciled_df, args.reconciled)
+    utils.output_dataframe(RECONCILED_DF, ARGS.reconciled)
 
-    if args.explanations:
-        utils.output_dataframe(explanations_df, args.explanations)
+    if ARGS.explanations:
+        utils.output_dataframe(EXPLANATIONS_DF, ARGS.explanations)
 
-    if args.summary:
-        create_summary_report(unreconciled_df, reconciled_df, explanations_df, args)
+    if ARGS.summary:
+        create_summary_report(UNRECONCILED_DF, RECONCILED_DF, EXPLANATIONS_DF, ARGS)

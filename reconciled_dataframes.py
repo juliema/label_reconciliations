@@ -3,7 +3,6 @@ from functools import reduce
 from collections import Counter, namedtuple
 from itertools import combinations
 from fuzzywuzzy import fuzz
-import pandas as pd
 import utils
 
 ARGS = None
@@ -23,32 +22,35 @@ def normalize_text(group):
 
 def top_partial_ratio(values):
     scores = []
-    for c in combinations(values, 2):
-        score = fuzz.partial_ratio(c[0], c[1])
-        value = c[0] if len(c[0]) >= len(c[1]) else c[1]
+    for combo in combinations(values, 2):
+        score = fuzz.partial_ratio(combo[0], combo[1])
+        value = combo[0] if len(combo[0]) >= len(combo[1]) else combo[1]
         scores.append(FuzzyRatioScore(score, value))
-    scores = sorted(scores, reverse=True, key=lambda s: '{:0>6} {:0>6}'.format(s.score, len(s.value)))
+    scores = sorted(scores,
+                    reverse=True,
+                    key=lambda s: '{:0>6} {:0>6}'.format(s.score, len(s.value)))
     return scores[0]
 
 
 def top_token_set_ratio(values):
     scores = []
-    for c in combinations(values, 2):
-        score = fuzz.token_set_ratio(c[0], c[1])
-        tokens_0 = len(c[0].split())
-        tokens_1 = len(c[1].split())
+    for combo in combinations(values, 2):
+        score = fuzz.token_set_ratio(combo[0], combo[1])
+        tokens_0 = len(combo[0].split())
+        tokens_1 = len(combo[1].split())
         if tokens_0 > tokens_1:
-            value = c[0]
+            value = combo[0]
             tokens = tokens_0
         elif tokens_0 < tokens_1:
-            value = c[1]
+            value = combo[1]
             tokens = tokens_1
         else:
             tokens = tokens_0
-            value = c[0] if len(c[0]) <= len(c[1]) else c[1]
+            value = combo[0] if len(combo[0]) <= len(combo[1]) else combo[1]
         scores.append(FuzzySetScore(score, value, tokens))
     ordered = sorted(scores, reverse=True,
-                     key=lambda s: '{:0>6} {:0>6} {:0>6}'.format(s.score, s.tokens, 1000000 - len(s.value)))
+                     key=lambda s: '{:0>6} {:0>6} {:0>6}'.format(
+                         s.score, s.tokens, 1000000 - len(s.value)))
     return ordered[0]
 
 
@@ -81,11 +83,12 @@ def format_explanation(form, record_count=None, blank_count=None,
 
 def explain_all_blank(values):
     record_count = len(values)
-    return (format_explanation('{All} {record_count} {records} {are} blank', record_count=record_count), '')
+    return (format_explanation('{All} {record_count} {records} {are} blank',
+                               record_count=record_count), '')
 
 
 def explain_one_transcript(value, values, filled):
-    record_count, blank_count = explain_values(values, filled)
+    record_count, _ = explain_values(values, filled)
     form = 'Only 1 transcript in {record_count} {records}'
     return (format_explanation(form, record_count=record_count), value)
 
@@ -93,25 +96,28 @@ def explain_one_transcript(value, values, filled):
 def explain_no_match(values, filled, match_type):
     record_count, blank_count = explain_values(values, filled)
     form = 'No {match_type} match on {record_count} {records} with {blank_count} {blanks}'
-    return (format_explanation(form, record_count=record_count, blank_count=blank_count, match_type=match_type), '')
+    return (format_explanation(form, record_count=record_count,
+                               blank_count=blank_count, match_type=match_type), '')
 
 
 def explain_exact_match(value, values, filled, match_type):
     record_count, blank_count = explain_values(values, filled)
-    form = '{match_type} match, {match_count} of {record_count} {records} with {blank_count} {blanks}'
+    form = ('{match_type} match, {match_count} of {record_count} '
+            '{records} with {blank_count} {blanks}')
     return (format_explanation(form, record_count=record_count, match_count=filled[0].count,
                                blank_count=blank_count, match_type=match_type), value)
 
 
 def explain_fuzzy_match(value, values, filled, score, match_type):
     record_count, blank_count = explain_values(values, filled)
-    form = '{match_type} match on {record_count} {records} with {blank_count} {blanks}, score={score}'
+    form = ('{match_type} match on {record_count} {records} '
+            'with {blank_count} {blanks}, score={score}')
     return (format_explanation(form, record_count=record_count, blank_count=blank_count,
                                match_type=match_type, score=score), value)
 
 
 def only_filled_values(values):
-    return [ExactScore(c[0], c[1]) for c in Counter([v for v in values if v]).most_common()]
+    return [ExactScore(cnt[0], cnt[1]) for cnt in Counter([v for v in values if v]).most_common()]
 
 
 def best_select_value(group):
@@ -131,8 +137,6 @@ def best_select_value(group):
 
 
 def best_text_value(group):
-    global ARGS
-
     values = normalize_text(group)
     filled = only_filled_values(values)
 
@@ -162,35 +166,38 @@ def create_reconciled_dataframes(unreconciled_df, args):
     global ARGS
     ARGS = args
 
-    # How to aggregate the columns based on each column's type which is determined by the column name
-    method_for_select_columns = {c: best_select_value for c in unreconciled_df.columns
-                                 if re.match(utils.SELECT_COLUMN_PATTERN, c)}
-    method_for_text_columns = {c: best_text_value for c in unreconciled_df.columns
-                               if re.match(utils.TEXT_COLUMN_PATTERN, c)}
-    method_for_subject_columns = {c: all_are_identical for c in unreconciled_df.columns
-                                  if c.startswith('subject_') and c != GROUP_BY}
+    # How to aggregate columns based on each column's type which is determined by the column name
+    method_for_select_columns = {col: best_select_value for col in unreconciled_df.columns
+                                 if re.match(utils.SELECT_COLUMN_PATTERN, col)}
+    method_for_text_columns = {col: best_text_value for col in unreconciled_df.columns
+                               if re.match(utils.TEXT_COLUMN_PATTERN, col)}
+    method_for_subject_columns = {col: all_are_identical for col in unreconciled_df.columns
+                                  if col.startswith('subject_') and col != GROUP_BY}
 
     best_value_methods = method_for_select_columns.copy()
     best_value_methods.update(method_for_text_columns)
     best_value_methods.update(method_for_subject_columns)
 
     best_value_methods['locations'] = all_are_identical  # We want this column
-    best_value_methods = {k: v for k, v in best_value_methods.items() if k not in UNWANTED_COLUMNS}  # Remove junk
+    best_value_methods = {k: v for k, v in best_value_methods.items()
+                          if k not in UNWANTED_COLUMNS}  # Remove junk
 
     # Aggregate using the per column functions setup above
     reconciled_df = unreconciled_df.fillna('').groupby(GROUP_BY).aggregate(best_value_methods)
 
     # Split the combined reconciled value and explanation tuple into separate columns
-    for c in list(method_for_text_columns.keys()) + list(method_for_select_columns.keys()):
-        reconciled_df[c + '_explanation'] = reconciled_df[c].apply(lambda t: t[0])
-        reconciled_df[c] = reconciled_df[c].apply(lambda t: t[1])
+    for col in list(method_for_text_columns.keys()) + list(method_for_select_columns.keys()):
+        reconciled_df[col + '_explanation'] = reconciled_df[col].apply(lambda t: t[0])
+        reconciled_df[col] = reconciled_df[col].apply(lambda t: t[1])
 
     reconciled_df = reconciled_df.reindex_axis(sorted(reconciled_df.columns), axis=1)
 
-    explanations_df = reconciled_df.loc[:, [c for c in reconciled_df.columns if c.endswith('_explanation')]]
-    explanations_cols = {c: c.replace('_explanation', '') for c in explanations_df.columns}
+    explanations_df = reconciled_df.loc[:, [col for col in reconciled_df.columns
+                                            if col.endswith('_explanation')]]
+    explanations_cols = {col: col.replace('_explanation', '') for col in explanations_df.columns}
     explanations_df.rename(columns=explanations_cols, inplace=True)
 
-    reconciled_df.drop([c for c in reconciled_df.columns if c.endswith('_explanation')], axis=1, inplace=True)
+    reconciled_df.drop([col for col in reconciled_df.columns if col.endswith('_explanation')],
+                       axis=1, inplace=True)
 
     return reconciled_df, explanations_df

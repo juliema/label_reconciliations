@@ -1,8 +1,6 @@
-import sys
 import json
 import dateutil
 import pandas as pd
-import utils
 
 
 SELECT_COLUMN_FLAG = 's'  # Flag a select column
@@ -40,7 +38,7 @@ def extract_an_annotaion(unreconciled_df, task, task_id, index):
 
 
 def extract_annotations_json(unreconciled_df):
-    unreconciled_df['annotation_json'] = unreconciled_df['annotations'].map(lambda x: json.loads(x))
+    unreconciled_df['annotation_json'] = unreconciled_df['annotations'].map(json.loads)
     for index, row in unreconciled_df.iterrows():
         for task in row['annotation_json']:
             task_id = task['task']
@@ -53,19 +51,20 @@ def extract_annotations_json(unreconciled_df):
 
 
 def extract_subject_json(unreconciled_df):
-    unreconciled_df['subject_json'] = unreconciled_df['subject_data'].map(lambda x: json.loads(x))
+    unreconciled_df['subject_json'] = unreconciled_df['subject_data'].map(json.loads)
     subject_keys = {}
     for subj in unreconciled_df['subject_json']:
         for val in iter(subj.values()):
             for k in val.keys():
                 subject_keys[k] = 1
-    for k in subject_keys.keys():
-        unreconciled_df['subject_' + k] = unreconciled_df['subject_json'].apply(extract_json_value, column=k)
+    for k in subject_keys:
+        unreconciled_df['subject_' + k] = unreconciled_df['subject_json'].apply(
+            extract_json_value, column=k)
     unreconciled_df.drop('subject_json', axis=1, inplace=True)
 
 
 def extract_metata_json(unreconciled_df):
-    unreconciled_df['metadata_json'] = unreconciled_df['metadata'].map(lambda x: json.loads(x))
+    unreconciled_df['metadata_json'] = unreconciled_df['metadata'].map(json.loads)
     unreconciled_df['classification_started_at'] = unreconciled_df['metadata_json'].apply(
         extract_json_date, column='started_at')
     unreconciled_df['classification_finished_at'] = unreconciled_df['metadata_json'].apply(
@@ -86,11 +85,12 @@ def create_unreconciled_dataframe(workflow_id, input_classifications, input_subj
     unreconciled_df = unreconciled_df[cols]
 
     # Make key data types match in the two data frames
-    unreconciled_df['subject_ids'] = unreconciled_df.subject_ids.map(lambda x: int(str(x).split(';')[0]))
+    unreconciled_df['subject_ids'] = unreconciled_df.subject_ids.map(
+        lambda x: int(str(x).split(';')[0]))
 
     # Get subject info we need from the subjects_df
-    unreconciled_df = pd.merge(unreconciled_df, subjects_df[['subject_id', 'locations']], how='left',
-                               left_on='subject_ids', right_on='subject_id')
+    unreconciled_df = pd.merge(unreconciled_df, subjects_df[['subject_id', 'locations']],
+                               how='left', left_on='subject_ids', right_on='subject_id')
 
     extract_metata_json(unreconciled_df)
     extract_annotations_json(unreconciled_df)
