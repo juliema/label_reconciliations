@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>{{header.title}}</title>
+<style>
+  html {
+    font-family: "Bitstream Vera Serif Bold";
+  }
+
+  header h1 {
+    text-align: center;
+  }
+
+  header div {
+    font-size: 16px;
+    width: 360px;
+    margin-bottom: 4px;
+  }
+
+  header div label {
+    text-align: right;
+    display: inline-block;
+    width: 200px;
+  }
+
+  header div span {
+    float: right;
+  }
+
+  section {
+    margin-top: 2em;
+    margin-bottom: 1em;
+  }
+
+  tbody td {
+    border-bottom: 1px solid #e0e0e0;
+  }
+
+  th {
+    padding: 2px 4px;
+  }
+
+  #stats thead tr:nth-child(1) th:nth-child(2) {
+    background: lightgray;
+  }
+
+  #stats thead tr:nth-child(2) th {
+    text-decoration: underline;
+  }
+
+  #stats thead tr:nth-child(2) th:nth-child(1),
+  #stats thead tr:nth-child(2) th:nth-child(2) {
+    text-align: left;
+  }
+
+  #stats tr td:nth-child(3),
+  #stats tr th:nth-child(3),
+  #stats tr td:nth-child(4),
+  #stats tr th:nth-child(4),
+  #stats tr td:nth-child(5),
+  #stats tr th:nth-child(5),
+  #stats tr td:nth-child(6),
+  #stats tr th:nth-child(6),
+  #stats tr td:nth-child(7),
+  #stats tr th:nth-child(7),
+  #stats tr td:nth-child(8),
+  #stats tr th:nth-child(8) {
+    text-align: right;
+  }
+
+  #stats tr td:nth-child(1),
+  #stats tr td:nth-child(2),
+  #problems td {
+    padding-left: 4px;
+  }
+
+  #stats tr td:nth-child(3),
+  #stats tr td:nth-child(4),
+  #stats tr td:nth-child(5),
+  #stats tr td:nth-child(6),
+  #stats tr td:nth-child(7),
+  #stats tr td:nth-child(8) {
+    padding-right: 12px;
+  }
+
+  #problems th {
+    text-align: left;
+    text-decoration: underline;
+  }
+</style>
+</head>
+  <body>
+    <header>
+      <h1>{{header.heading}}</h1>
+      <div><label>Date:</label><span>{{header.date}}</span></div>
+      <div><label>Number of Subjects:</label><span>{{header.subjects}}</span></div>
+      <div><label>Number of Transcripts:</label><span>{{header.transcripts}}</span></div>
+      <div><label>Transcripts per Subject:</label><span>{{header.ratio}}</span></div>
+    </header>
+    <section id="stats">
+      <h2>Reconciled Data</h2>
+      <table>
+        <thead>
+          <tr>
+            <th colspan="2"></th>
+            <th colspan="5">Reconciled</th>
+            <th colspan="1"></th>
+          </tr>
+          <tr>
+            <th>Field</th>
+            <th>Type</th>
+            <th>Exact Matches</th>
+            <th>Fuzzy Matches</th>
+            <th>All Blank</th>
+            <th>One Transcript</th>
+            <th>Total</th>
+            <th>No Matches</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in reconciled %}
+            <tr>
+              <td>{{row.name}}</td>
+              <td>{{row.col_type}}</td>
+              <td>{{row.num_exact_match}}</td>
+              <td>{{row.num_fuzzy_match}}</td>
+              <td>{{row.num_all_blank}}</td>
+              <td>{{row.num_onesies}}</td>
+              <td>{{row.num_reconciled}}</td>
+              <td>{{row.num_no_match}}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+    <section id="problems">
+      <h2>Problem Records</h2>
+      <table>
+        <thead>
+          <tr>
+            {% for th in problem_thead %}
+            <th>{{th}}</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for tr in problem_tbody %}
+          <tr>
+            {% for td in tr %}
+            <td>{{td}}</td>
+            {% endfor %}
+          </tr>
+          {% endfor %}
+      </tbody>
+      </table>
+    </section>
+  </body>
+</html>
