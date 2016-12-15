@@ -16,7 +16,6 @@ ONESIES_PATTERN = r'^Only 1 transcript in'
 
 def get_workflow_name(args, unreconciled_df):
     """Extract and format the workflow name from the dataframe."""
-
     try:
         workflow_name = unreconciled_df.loc[0, 'workflow_name']
         workflow_name = re.sub(r'^[^_]*_', '', workflow_name)
@@ -28,7 +27,6 @@ def get_workflow_name(args, unreconciled_df):
 
 def header_data(args, reconciled_df, unreconciled_df):
     """Data that goes into the report header."""
-
     workflow_name = get_workflow_name(args, unreconciled_df)
     return {
         'date': datetime.strftime(datetime.now(), '%Y-%m-%d %H:%M'),
@@ -76,7 +74,6 @@ def problem_thead_data(explanations_df):
 def problem_tbody_data(explanations_df):
     """Get the data fields for the problem summary of each subject."""
     problem_tbody = []
-
     pattern = '|'.join([NO_MATCH_PATTERN, ONESIES_PATTERN])
     for subject_id, cols in explanations_df.iterrows():
         trow = []
