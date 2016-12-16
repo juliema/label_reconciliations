@@ -1,3 +1,5 @@
+"""Take the unreconciled dataframe and build the reconciled and explanations dataframes."""
+
 import re
 from functools import reduce
 from collections import Counter, namedtuple

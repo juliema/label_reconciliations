@@ -59,7 +59,7 @@ def reconciled_summary(explanations_df):
                 explanations_df[explanations_df[col].str.contains(ONESIES_PATTERN)].shape[0]),
             'num_reconciled': '{:,}'.format(explanations_df.shape[0] - num_no_match),
         })
-        return reconciled
+    return reconciled
 
 
 def problem_thead_data(explanations_df):

@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+"""The main program."""
 
 import sys
 import argparse
@@ -9,6 +9,7 @@ import utils
 
 
 def parse_command_line():
+    """Get user input."""
     parser = argparse.ArgumentParser(description='''
         This takes raw Notes from Nature classifications and subjects files and creates a reconciliation
         of the classifications for a particular workflow. That is, it reduces n classifications per
