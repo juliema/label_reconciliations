@@ -99,7 +99,7 @@
       <div><label>Transcripts per Subject:</label><span>{{header.ratio}}</span></div>
     </header>
     <section id="stats">
-      <h2>Reconciled Data</h2>
+      <h2>Reconciliation Summary</h2>
       <table>
         <thead>
           <tr>
@@ -135,17 +135,17 @@
       </table>
     </section>
     <section id="problems">
-      <h2>Problem Records</h2>
+      <h2>Reconciliation Detail</h2>
       <table>
         <thead>
           <tr>
-            {% for th in problem_thead %}
+            {% for th in detail_thead %}
             <th>{{th}}</th>
             {% endfor %}
           </tr>
         </thead>
         <tbody>
-          {% for tr in problem_tbody %}
+          {% for tr in detail_tbody %}
           <tr>
             {% for td in tr %}
             <td>{{td}}</td>

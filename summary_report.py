@@ -3,6 +3,7 @@
 import re
 import sys
 from datetime import datetime
+import pandas as pd
 from jinja2 import Environment, PackageLoader
 import utils
 
@@ -62,18 +63,18 @@ def reconciled_summary(explanations_df):
     return reconciled
 
 
-def problem_thead_data(explanations_df):
+def detail_thead_data(explanations_df):
     """Get the header fields for the problem summary of each subject."""
-    problem_thead = []
-    problem_thead.append(explanations_df.index.name)
+    detail_thead = []
+    detail_thead.append(explanations_df.index.name)
     for col in explanations_df.columns:
-        problem_thead.append(utils.format_name(col))
-    return problem_thead
+        detail_thead.append(utils.format_name(col))
+    return detail_thead
 
 
-def problem_tbody_data(explanations_df):
+def detail_tbody_data(explanations_df):
     """Get the data fields for the problem summary of each subject."""
-    problem_tbody = []
+    detail_tbody = []
     pattern = '|'.join([NO_MATCH_PATTERN, ONESIES_PATTERN])
     for subject_id, cols in explanations_df.iterrows():
         trow = []
@@ -86,19 +87,31 @@ def problem_tbody_data(explanations_df):
                 tdata = col
             trow.append(tdata)
         if keep:
-            problem_tbody.append(trow)
-    return problem_tbody
+            detail_tbody.append(trow)
+    return detail_tbody
+
+
+def merge_dataframes(unreconciled_df, reconciled_df, explanations_df):
+    """Combine the dataframes so that we can print them out in order for the detail report."""
+    reconciled_df['collate'] = 'A: reconciled'
+    explanations_df['collate'] = 'B: explanations'
+    unreconciled_df['collate'] = 'C: unreconciled'
+    detail_df = pd.concat([explanations_df, reconciled_df, unreconciled_df]).fillna('')
+    detail_df.sort_values(['subject_id', 'collate', 'classification_id'], inplace=True)
+    detail_df = detail_df.astype(object)
+    return detail_df
 
 
 def create_summary_report(unreconciled_df, reconciled_df, explanations_df, args):
     """Build the report from the template."""
     env = Environment(loader=PackageLoader('reconcile', '.'))
     template = env.get_template('summary_report_template.html')
+
     # pylint: disable=E1101
-    summary = template.render(header=header_data(args, reconciled_df, unreconciled_df),
-                              reconciled=reconciled_summary(explanations_df),
-                              problem_thead=problem_thead_data(explanations_df),
-                              problem_tbody=problem_tbody_data(explanations_df))
+    summary = template.render(
+        header=header_data(args, reconciled_df, unreconciled_df),
+        reconciled=reconciled_summary(explanations_df),
+        detail_df=merge_dataframes(unreconciled_df, reconciled_df, explanations_df))
     # pylint: enable=E1101
 
     with open(args.summary, 'w') as out_file:

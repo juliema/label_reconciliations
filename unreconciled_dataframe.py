@@ -77,7 +77,9 @@ def create_unreconciled_dataframe(workflow_id, input_classifications, input_subj
     unreconciled_df = pd.read_csv(input_classifications)
 
     # We need to do this by workflow because each one's annotations have a different structure
+    # pylint: disable=E1101
     unreconciled_df = unreconciled_df.loc[unreconciled_df.workflow_id == workflow_id, :]
+    # pylint: enable=E1101
 
     # bring the last column to be the first
     cols = unreconciled_df.columns.tolist()
