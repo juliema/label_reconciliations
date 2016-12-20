@@ -7,7 +7,7 @@ import pandas as pd
 from jinja2 import Environment, PackageLoader
 import utils
 
-# These depend on the patterns put into explanations_df FIXME
+# These depend on the patterns put into explanations_df
 NO_MATCH_PATTERN = r'^No (?:select|text) match on'
 EXACT_MATCH_PATTERN = r'^(?:Exact|Normalized exact) match'
 FUZZ_MATCH_PATTERN = r'^(?:Partial|Token set) ratio match'
@@ -63,43 +63,33 @@ def reconciled_summary(explanations_df):
     return reconciled
 
 
-def detail_thead_data(explanations_df):
-    """Get the header fields for the problem summary of each subject."""
-    detail_thead = []
-    detail_thead.append(explanations_df.index.name)
-    for col in explanations_df.columns:
-        detail_thead.append(utils.format_name(col))
-    return detail_thead
-
-
-def detail_tbody_data(explanations_df):
-    """Get the data fields for the problem summary of each subject."""
-    detail_tbody = []
-    pattern = '|'.join([NO_MATCH_PATTERN, ONESIES_PATTERN])
-    for subject_id, cols in explanations_df.iterrows():
-        trow = []
-        trow.append(str(subject_id))
-        keep = False
-        for col in cols:
-            tdata = ''
-            if re.search(pattern, col):
-                keep = True
-                tdata = col
-            trow.append(tdata)
-        if keep:
-            detail_tbody.append(trow)
-    return detail_tbody
-
-
 def merge_dataframes(unreconciled_df, reconciled_df, explanations_df):
     """Combine the dataframes so that we can print them out in order for the detail report."""
-    reconciled_df['collate'] = 'A: reconciled'
-    explanations_df['collate'] = 'B: explanations'
-    unreconciled_df['collate'] = 'C: unreconciled'
-    detail_df = pd.concat([explanations_df, reconciled_df, unreconciled_df]).fillna('')
-    detail_df.sort_values(['subject_id', 'collate', 'classification_id'], inplace=True)
-    detail_df = detail_df.astype(object)
-    return detail_df
+
+    # Make subject_id a column
+    rec_df = reconciled_df.reset_index()
+    exp_df = explanations_df.reset_index()
+    unr_df = unreconciled_df.copy()
+
+    # We want the detail rows to come out in this order
+    rec_df['collate'] = 'A: reconciled'
+    exp_df['collate'] = 'B: explanations'
+    unr_df['collate'] = 'C: unreconciled'
+
+    # Merge and format the dataframes
+    merged_df = pd.concat([exp_df, rec_df, unr_df]).fillna('')
+    merged_df.sort_values(['subject_id', 'collate', 'classification_id'], inplace=True)
+    merged_df = merged_df.astype(object)
+
+    # Put the columns into this order and remove excess
+    merged_cols = [rec_df.columns[0], 'classification_id']
+    merged_cols.extend(rec_df.columns[1:])
+    merged_df = merged_df.loc[:, merged_cols]
+    merged_df.rename(columns={c: utils.format_name(c) for c in merged_cols}, inplace=True)
+
+    merged_df = merged_df.fillna('')
+
+    return merged_df
 
 
 def create_summary_report(unreconciled_df, reconciled_df, explanations_df, args):
@@ -107,12 +97,16 @@ def create_summary_report(unreconciled_df, reconciled_df, explanations_df, args)
     env = Environment(loader=PackageLoader('reconcile', '.'))
     template = env.get_template('summary_report_template.html')
 
+    merged_df = merge_dataframes(unreconciled_df, reconciled_df, explanations_df)
+
     # pylint: disable=E1101
     summary = template.render(
         header=header_data(args, reconciled_df, unreconciled_df),
         reconciled=reconciled_summary(explanations_df),
-        detail_df=merge_dataframes(unreconciled_df, reconciled_df, explanations_df))
+        merged_df=merged_df)
     # pylint: enable=E1101
 
     with open(args.summary, 'w') as out_file:
         out_file.write(summary)
+        # out_file.write(merged_df.to_html())
+        # out_file.write('</section></body></html>')

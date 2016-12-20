@@ -139,15 +139,17 @@
       <table>
         <thead>
           <tr>
-            {% for th in detail_thead %}
+            <th>+</th>
+            {% for th in merged_df.columns[:-1] %}
             <th>{{th}}</th>
             {% endfor %}
           </tr>
         </thead>
         <tbody>
-          {% for tr in detail_tbody %}
+          {% for _, tr in merged_df.iterrows() %}
           <tr>
-            {% for td in tr %}
+            <td>+</td>
+            {% for td in tr[:-1] %}
             <td>{{td}}</td>
             {% endfor %}
           </tr>
