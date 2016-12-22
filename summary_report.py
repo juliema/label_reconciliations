@@ -2,10 +2,11 @@
 
 import re
 import sys
+import json
 from datetime import datetime
 import pandas as pd
 from jinja2 import Environment, PackageLoader
-import utils
+import util
 
 # These depend on the patterns put into explanations_df
 NO_MATCH_PATTERN = r'^No (?:select|text) match on'
@@ -44,10 +45,10 @@ def reconciled_summary(explanations_df):
     """Build a summary of how each field was reconciled."""
     reconciled = []
     for col in [c for c in explanations_df.columns]:
-        col_type = 'select' if re.match(utils.SELECT_COLUMN_PATTERN, col) else 'text'
+        col_type = 'select' if re.match(util.SELECT_COLUMN_PATTERN, col) else 'text'
         num_no_match = explanations_df[explanations_df[col].str.contains(NO_MATCH_PATTERN)].shape[0]
         reconciled.append({
-            'name': utils.format_name(col),
+            'name': util.format_name(col),
             'col_type': col_type,
             'num_no_match': num_no_match,
             'num_exact_match': '{:,}'.format(
@@ -72,24 +73,34 @@ def merge_dataframes(unreconciled_df, reconciled_df, explanations_df):
     unr_df = unreconciled_df.copy()
 
     # We want the detail rows to come out in this order
-    rec_df['collate'] = 'A: reconciled'
-    exp_df['collate'] = 'B: explanations'
-    unr_df['collate'] = 'C: unreconciled'
+    rec_df['row_type'] = util.ROW_TYPES['reconciled']
+    exp_df['row_type'] = util.ROW_TYPES['explanations']
+    unr_df['row_type'] = util.ROW_TYPES['unreconciled']
 
     # Merge and format the dataframes
     merged_df = pd.concat([exp_df, rec_df, unr_df]).fillna('')
-    merged_df.sort_values(['subject_id', 'collate', 'classification_id'], inplace=True)
+    merged_df.sort_values(['subject_id', 'row_type', 'classification_id'], inplace=True)
     merged_df = merged_df.astype(object)
 
     # Put the columns into this order and remove excess
     merged_cols = [rec_df.columns[0], 'classification_id']
     merged_cols.extend(rec_df.columns[1:])
     merged_df = merged_df.loc[:, merged_cols]
-    merged_df.rename(columns={c: utils.format_name(c) for c in merged_cols}, inplace=True)
+    merged_df.rename(columns={c: util.format_name(c) for c in merged_cols}, inplace=True)
 
-    merged_df = merged_df.fillna('')
+    return merged_df.columns, merged_df.groupby(util.GROUP_BY)
 
-    return merged_df
+
+def problems(explanations_df):
+    """Make a list of problems for each subject."""
+    probs = {}
+    pattern = '|'.join([NO_MATCH_PATTERN, ONESIES_PATTERN])
+    for subject_id, cols in explanations_df.iterrows():
+        probs[subject_id] = {}
+        for col, value in cols.iteritems():
+            if re.search(pattern, value):
+                probs[subject_id][util.format_name(col)] = 1
+    return probs
 
 
 def create_summary_report(unreconciled_df, reconciled_df, explanations_df, args):
@@ -97,16 +108,20 @@ def create_summary_report(unreconciled_df, reconciled_df, explanations_df, args)
     env = Environment(loader=PackageLoader('reconcile', '.'))
     template = env.get_template('summary_report_template.html')
 
-    merged_df = merge_dataframes(unreconciled_df, reconciled_df, explanations_df)
+    merged_cols, merged_df = merge_dataframes(unreconciled_df, reconciled_df, explanations_df)
 
     # pylint: disable=E1101
     summary = template.render(
         header=header_data(args, reconciled_df, unreconciled_df),
+        row_types=util.ROW_TYPES,
         reconciled=reconciled_summary(explanations_df),
+        problems=problems(explanations_df),
+        options=[util.format_name(col) for col in explanations_df.columns],
+        merged_cols=merged_cols,
         merged_df=merged_df)
     # pylint: enable=E1101
 
     with open(args.summary, 'w') as out_file:
         out_file.write(summary)
-        # out_file.write(merged_df.to_html())
+        # out_file.write(merged_df.to_html())  # Not flexible enuf
         # out_file.write('</section></body></html>')

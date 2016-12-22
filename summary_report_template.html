@@ -1,161 +1,310 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="utf-8" />
   <title>{{header.title}}</title>
-<style>
-  html {
-    font-family: "Bitstream Vera Serif Bold";
-  }
+  <style>
+    :root {
+      --bg-gray: #e0e0e0
+    }
 
-  header h1 {
-    text-align: center;
-  }
+    html {
+        font-family: "Bitstream Vera Serif Bold";
+    }
 
-  header div {
-    font-size: 16px;
-    width: 360px;
-    margin-bottom: 4px;
-  }
+    header h1 {
+        text-align: center;
+    }
 
-  header div label {
-    text-align: right;
-    display: inline-block;
-    width: 200px;
-  }
+    header div {
+        font-size: 16px;
+        width: 360px;
+        margin-bottom: 4px;
+    }
 
-  header div span {
-    float: right;
-  }
+    header div label {
+        text-align: right;
+        display: inline-block;
+        width: 200px;
+    }
 
-  section {
-    margin-top: 2em;
-    margin-bottom: 1em;
-  }
+    header div span {
+        float: right;
+    }
 
-  tbody td {
-    border-bottom: 1px solid #e0e0e0;
-  }
+    section {
+        margin-top: 2em;
+        margin-bottom: 1em;
+    }
 
-  th {
-    padding: 2px 4px;
-  }
+    tbody td {
+        border-bottom: 1px solid var(--bg-gray);
+    }
 
-  #stats thead tr:nth-child(1) th:nth-child(2) {
-    background: lightgray;
-  }
+    th {
+        padding: 2px 4px;
+        vertical-align: bottom;
+    }
 
-  #stats thead tr:nth-child(2) th {
-    text-decoration: underline;
-  }
+    #stats thead tr:nth-child(1) th:nth-child(2) {
+        background: lightgray;
+    }
 
-  #stats thead tr:nth-child(2) th:nth-child(1),
-  #stats thead tr:nth-child(2) th:nth-child(2) {
-    text-align: left;
-  }
+    #stats thead tr:nth-child(2) th {
+        text-decoration: underline;
+    }
 
-  #stats tr td:nth-child(3),
-  #stats tr th:nth-child(3),
-  #stats tr td:nth-child(4),
-  #stats tr th:nth-child(4),
-  #stats tr td:nth-child(5),
-  #stats tr th:nth-child(5),
-  #stats tr td:nth-child(6),
-  #stats tr th:nth-child(6),
-  #stats tr td:nth-child(7),
-  #stats tr th:nth-child(7),
-  #stats tr td:nth-child(8),
-  #stats tr th:nth-child(8) {
-    text-align: right;
-  }
+    #stats thead tr:nth-child(2) th:nth-child(1),
+    #stats thead tr:nth-child(2) th:nth-child(2) {
+        text-align: left;
+    }
 
-  #stats tr td:nth-child(1),
-  #stats tr td:nth-child(2),
-  #problems td {
-    padding-left: 4px;
-  }
+    #stats tr td:nth-child(3),
+    #stats tr th:nth-child(3),
+    #stats tr td:nth-child(4),
+    #stats tr th:nth-child(4),
+    #stats tr td:nth-child(5),
+    #stats tr th:nth-child(5),
+    #stats tr td:nth-child(6),
+    #stats tr th:nth-child(6),
+    #stats tr td:nth-child(7),
+    #stats tr th:nth-child(7),
+    #stats tr td:nth-child(8),
+    #stats tr th:nth-child(8) {
+        text-align: right;
+    }
 
-  #stats tr td:nth-child(3),
-  #stats tr td:nth-child(4),
-  #stats tr td:nth-child(5),
-  #stats tr td:nth-child(6),
-  #stats tr td:nth-child(7),
-  #stats tr td:nth-child(8) {
-    padding-right: 12px;
-  }
+    #stats tr td:nth-child(1),
+    #stats tr td:nth-child(2),
+    #details td {
+        padding-left: 4px;
+    }
 
-  #problems th {
-    text-align: left;
-    text-decoration: underline;
-  }
-</style>
+    #stats tr td:nth-child(3),
+    #stats tr td:nth-child(4),
+    #stats tr td:nth-child(5),
+    #stats tr td:nth-child(6),
+    #stats tr td:nth-child(7),
+    #stats tr td:nth-child(8) {
+        padding-right: 12px;
+    }
+
+    #details table {
+      margin-top: 24px;
+    }
+
+    #details th {
+        text-align: left;
+        text-decoration: underline;
+    }
+
+    #details th.no-ul {
+        text-decoration: none;
+    }
+
+    #details tr button:before {
+        content: '-';
+    }
+
+    #details tr.closed button:before {
+        content: '+';
+    }
+
+    #details tr.closed[data-row-type="{{row_types.explanations}}"],
+    #details tr.closed[data-row-type="{{row_types.unreconciled}}"] {
+      display: none;
+    }
+
+    #details tr[data-row-type="{{row_types.explanations}}"] td.filled {
+      background-color: var(--bg-gray);
+    }
+
+    #details td.problem {
+      background-color: #ffecec;
+    }
+
+    #details tbody tr.hide {
+      display: none;
+    }
+
+    #details label {
+      font-size: larger;
+    }
+
+    #details select,
+    #details option {
+      font-size: medium;
+      padding: 2px;
+    }
+
+  </style>
 </head>
-  <body>
-    <header>
+
+<body>
+  <header>
       <h1>{{header.heading}}</h1>
       <div><label>Date:</label><span>{{header.date}}</span></div>
       <div><label>Number of Subjects:</label><span>{{header.subjects}}</span></div>
       <div><label>Number of Transcripts:</label><span>{{header.transcripts}}</span></div>
       <div><label>Transcripts per Subject:</label><span>{{header.ratio}}</span></div>
-    </header>
-    <section id="stats">
+  </header>
+  <section id="stats">
       <h2>Reconciliation Summary</h2>
       <table>
-        <thead>
-          <tr>
-            <th colspan="2"></th>
-            <th colspan="5">Reconciled</th>
-            <th colspan="1"></th>
-          </tr>
-          <tr>
-            <th>Field</th>
-            <th>Type</th>
-            <th>Exact Matches</th>
-            <th>Fuzzy Matches</th>
-            <th>All Blank</th>
-            <th>One Transcript</th>
-            <th>Total</th>
-            <th>No Matches</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for row in reconciled %}
-            <tr>
-              <td>{{row.name}}</td>
-              <td>{{row.col_type}}</td>
-              <td>{{row.num_exact_match}}</td>
-              <td>{{row.num_fuzzy_match}}</td>
-              <td>{{row.num_all_blank}}</td>
-              <td>{{row.num_onesies}}</td>
-              <td>{{row.num_reconciled}}</td>
-              <td>{{row.num_no_match}}</td>
-            </tr>
-          {% endfor %}
-        </tbody>
+          <thead>
+              <tr>
+                  <th colspan="2"></th>
+                  <th colspan="5">Reconciled</th>
+                  <th colspan="1"></th>
+              </tr>
+              <tr>
+                  <th>Field</th>
+                  <th>Type</th>
+                  <th>Exact Matches</th>
+                  <th>Fuzzy Matches</th>
+                  <th>All Blank</th>
+                  <th>One Transcript</th>
+                  <th>Total</th>
+                  <th>No Matches</th>
+              </tr>
+          </thead>
+          <tbody>
+              {% for row in reconciled %}
+              <tr>
+                  <td>{{row.name}}</td>
+                  <td>{{row.col_type}}</td>
+                  <td>{{row.num_exact_match}}</td>
+                  <td>{{row.num_fuzzy_match}}</td>
+                  <td>{{row.num_all_blank}}</td>
+                  <td>{{row.num_onesies}}</td>
+                  <td>{{row.num_reconciled}}</td>
+                  <td>{{row.num_no_match}}</td>
+              </tr>
+              {% endfor %}
+          </tbody>
       </table>
-    </section>
-    <section id="problems">
-      <h2>Reconciliation Detail</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>+</th>
-            {% for th in merged_df.columns[:-1] %}
-            <th>{{th}}</th>
-            {% endfor %}
-          </tr>
-        </thead>
-        <tbody>
-          {% for _, tr in merged_df.iterrows() %}
-          <tr>
-            <td>+</td>
-            {% for td in tr[:-1] %}
-            <td>{{td}}</td>
-            {% endfor %}
-          </tr>
+  </section>
+  <section id="details">
+    <h2>Reconciliation Detail</h2>
+    <label>Filter Rows:</label>
+    <select>
+      <option value="__off__" selected="true">Show All</option>
+      <option value="__all__">Show All Problems</option>
+      {% for opt in options %}
+        <option value="{{opt}}">Show Problems with: {{opt}}</option>
+      {% endfor %}
+    </select>
+    <table>
+      <thead>
+        <tr class="closed">
+          <th class="no-ul"><button title="Open or close all subjects"></button></th>
+          {% for col in merged_cols[:-1] %}
+            <th>{{col}}</th>
           {% endfor %}
+      </tr>
+      </thead>
+      <tbody>
+        {% for _, group in merged_df %}
+          {% for row in group.itertuples() %}
+            {% if row.row_type == row_types.explanations %}
+              {% set explanations = row %}
+              {% set row_problems = ','.join(problems[row.subject_id]) %}
+            {% elif row.row_type == row_types.reconciled %}
+              <tr class="closed" data-subject-id="{{row.subject_id}}"
+                  data-row-type="{{row.row_type}}" data-problems="{{row_problems}}">
+                <td><button title="Open or close this subject"></button></td>
+                <td>{{row.subject_id}}</td>
+                <td></td>
+                {% for col in merged_cols[2:-1] %}
+                  <td class="{{'problem' if problems[row.subject_id].get(col, None) else ''}}"
+                      title="{{explanations[col]}}">
+                    {{row[col]}}
+                  </td>
+                {% endfor %}
+              </tr>
+              <tr class="closed" data-subject-id="{{explanations.subject_id}}"
+                  data-row-type="{{explanations.row_type}}" data-problems="{{row_problems}}">
+                <td></td>
+                <td></td>
+                <td></td>
+                {% for col in merged_cols[2:-1] %}
+                  <td class="{{'filled' if explanations[col] else ''}}">{{explanations[col]}}</td>
+                {% endfor %}
+              </tr>
+            {% elif row.row_type == row_types.unreconciled %}
+              <tr class="closed" data-subject-id="{{row.subject_id}}"
+                  data-row-type="{{row.row_type}}" data-problems="{{row_problems}}">
+                <td></td>
+                <td></td>
+                <td>{{row.classification_id | int('')}}</td>
+                {% for col in merged_cols[2:-1] %}
+                  <td>{{row[col]}}</td>
+                {% endfor %}
+              </tr>
+            {% endif %}
+          {% endfor %}
+        {% endfor %}
       </tbody>
-      </table>
-    </section>
-  </body>
+    </table>
+  </section>
+
+  <script>
+    const tbody = document.querySelector('#details tbody');
+    const thead = document.querySelector('#details thead');
+    const filter = document.querySelector('#details select');
+    const detailRows = document.querySelectorAll('#details tbody tr');
+
+    function toggleClosed(event) {
+      if (! event.target.matches('button')) { return; }
+      const tr = event.target.parentElement.parentElement;
+      const subjectId = tr.dataset.subjectId;
+      const selector = '#details tbody tr[data-subject-id="' + subjectId + '"]';
+      const trs = document.querySelectorAll(selector);
+      trs.forEach(function(r) { r.classList.toggle('closed'); });
+    }
+
+    function toggleAllClosed(event) {
+      if (! event.target.matches('button')) { return; }
+      const tr = event.target.parentElement.parentElement;
+      const selector = '#details tbody tr';
+      const trs = document.querySelectorAll(selector);
+      tr.classList.toggle('closed');
+      if (tr.classList.contains('closed')) {
+        trs.forEach(function(r) { r.classList.add('closed'); });
+      } else {
+        trs.forEach(function(r) { r.classList.remove('closed'); });
+      }
+    }
+
+    function filterChange() {
+      const filterValue = this.value;
+      if (filterValue == '__off__') {
+        detailRows.forEach(function(row) { row.classList.remove('hide'); });
+      } else if (filterValue == '__all__') {
+        detailRows.forEach(function(row) {
+          if (row.dataset.problems) {
+            row.classList.remove('hide');
+          } else {
+            row.classList.add('hide');
+          }
+        });
+      } else {
+        detailRows.forEach(function(row) {
+          if (row.dataset.problems.indexOf(filterValue) > -1) {
+            row.classList.remove('hide');
+          } else {
+            row.classList.add('hide');
+          }
+        });
+      }
+    }
+
+    tbody.addEventListener('click', toggleClosed);
+    thead.addEventListener('click', toggleAllClosed);
+    filter.addEventListener('change', filterChange);
+  </script>
+
+</body>
+
 </html>

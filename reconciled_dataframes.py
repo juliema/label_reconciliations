@@ -5,11 +5,10 @@ from functools import reduce
 from collections import Counter, namedtuple
 from itertools import combinations
 from fuzzywuzzy import fuzz
-import utils
+import util
 
 ARGS = None
 PLACE_HOLDERS = ['placeholder']  # Replace these placeholders with an empty string
-GROUP_BY = 'subject_id'          # We group on this column
 
 ExactScore = namedtuple('ExactScore', 'value count')
 FuzzyRatioScore = namedtuple('FuzzyRatioScore', 'score value')
@@ -170,11 +169,11 @@ def create_reconciled_dataframes(unreconciled_df, args):
 
     # How to aggregate columns based on each column's type which is determined by the column name
     method_for_select_columns = {col: best_select_value for col in unreconciled_df.columns
-                                 if re.match(utils.SELECT_COLUMN_PATTERN, col)}
+                                 if re.match(util.SELECT_COLUMN_PATTERN, col)}
     method_for_text_columns = {col: best_text_value for col in unreconciled_df.columns
-                               if re.match(utils.TEXT_COLUMN_PATTERN, col)}
+                               if re.match(util.TEXT_COLUMN_PATTERN, col)}
     method_for_subject_columns = {col: all_are_identical for col in unreconciled_df.columns
-                                  if col.startswith('subject_') and col != GROUP_BY}
+                                  if col.startswith('subject_') and col != util.GROUP_BY}
 
     best_value_methods = method_for_select_columns.copy()
     best_value_methods.update(method_for_text_columns)
@@ -185,7 +184,7 @@ def create_reconciled_dataframes(unreconciled_df, args):
                           if k not in UNWANTED_COLUMNS}  # Remove junk
 
     # Aggregate using the per column functions setup above
-    reconciled_df = unreconciled_df.fillna('').groupby(GROUP_BY).aggregate(best_value_methods)
+    reconciled_df = unreconciled_df.fillna('').groupby(util.GROUP_BY).aggregate(best_value_methods)
 
     # Split the combined reconciled value and explanation tuple into separate columns
     for col in list(method_for_text_columns.keys()) + list(method_for_select_columns.keys()):
