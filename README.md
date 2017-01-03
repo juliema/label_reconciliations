@@ -44,4 +44,4 @@ subject_id | Country | Species Name | Location | Collector
 
 - Many researchers will want to know how the program determined the "best" match. Use the summary file ("-s" option) to see how the matches were chosen. It also provides an indication of all of the no matches and potentially problematic matches.
 
-- Using the "-u" option, You may also output a CSV file of the raw unreconciled data.
+- Using the "-u" option, You may also output a CSV file of the raw unreconciled data with the data in the JSON objects extracted into columns.
