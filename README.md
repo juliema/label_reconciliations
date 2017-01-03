@@ -2,10 +2,13 @@
 
 ## Installation
 
-Requirements:
-- It is recommended that you use a virtual environment for this project.
-- python 3.4 or later
-- pip install -r requirements.txt
+- We require python 3.4 or later
+- `git clone https://github.com/juliema/label_reconciliations`
+- `cd label_reconciliations`
+- It is recommended that you use a Python virtual environment for this project.
+- Optional: `virtualenv venv -p python3`
+- Optional: `source venv/bin/activate`
+- `pip install -r requirements.txt`
 
 ## Examples
 
@@ -39,4 +42,6 @@ subject_id | Country | Species Name | Location | Collector
 
 ### Other Program Features
 
-- Many researchers will want to know how the program determined the "best" match. Use the summary file to see how the matches were chosen. It also provides an indication of all of the no matches and potentially problematic matches.
+- Many researchers will want to know how the program determined the "best" match. Use the summary file ("-s" option) to see how the matches were chosen. It also provides an indication of all of the no matches and potentially problematic matches.
+
+- Using the "-u" option, You may also output a CSV file of the raw unreconciled data.
