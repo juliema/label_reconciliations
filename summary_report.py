@@ -2,7 +2,6 @@
 
 import re
 import sys
-import json
 from datetime import datetime
 import pandas as pd
 from jinja2 import Environment, PackageLoader
