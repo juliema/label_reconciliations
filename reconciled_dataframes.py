@@ -18,10 +18,12 @@ UNWANTED_COLUMNS = ['subject_data', 'subject_retired', 'subject_subjectId']
 
 
 def normalize_text(group):
+    """Collapse space into one space and EOLs into one EOL."""
     return ['\n'.join([' '.join(ln.split()) for ln in str(g).splitlines()]) for g in group]
 
 
 def top_partial_ratio(values):
+    """Return the best partial ratio match from fuzzywuzzy module."""
     scores = []
     for combo in combinations(values, 2):
         score = fuzz.partial_ratio(combo[0], combo[1])
@@ -34,6 +36,7 @@ def top_partial_ratio(values):
 
 
 def top_token_set_ratio(values):
+    """Return the best token set ratio match from fuzzywuzzy module."""
     scores = []
     for combo in combinations(values, 2):
         score = fuzz.token_set_ratio(combo[0], combo[1])
@@ -56,11 +59,13 @@ def top_token_set_ratio(values):
 
 
 def all_are_identical(group):
+    """Handle a group where all of the items are identical."""
     values = [g for g in group]
     return values[0]
 
 
 def explain_values(values, filled):
+    """Get group values used in the best choice explanations."""
     record_count = len(values)
     blank_count = record_count - reduce((lambda x, y: x + y.count), filled, 0)
     return record_count, blank_count
@@ -72,29 +77,35 @@ BLANK_PLURALS = {'blanks': 'blanks'}
 BLANK_SINGULARS = {'blanks': 'blank'}
 
 
+# pylint: disable=R0913
 def format_explanation(form, record_count=None, blank_count=None,
                        match_count=None, match_type=None, score=None):
+    """Build an explaination for the group's best choice."""
     std_words = dict(record_count=record_count, blank_count=blank_count,
                      match_count=match_count, match_type=match_type, score=score)
     total_words = TOTAL_SINGULARS.copy() if record_count == 1 else TOTAL_PLURALS.copy()
     blank_words = BLANK_SINGULARS.copy() if blank_count == 1 else BLANK_PLURALS.copy()
     words = dict(list(total_words.items()) + list(blank_words.items()) + list(std_words.items()))
     return form.format(**words)
+# pylint: enable=R0913
 
 
 def explain_all_blank(values):
+    """Explain case where all values in the group are blank."""
     record_count = len(values)
     return (format_explanation('{All} {record_count} {records} {are} blank',
                                record_count=record_count), '')
 
 
 def explain_one_transcript(value, values, filled):
+    """Explain the case where one value in the group is filled and all others are blank."""
     record_count, _ = explain_values(values, filled)
     form = 'Only 1 transcript in {record_count} {records}'
     return (format_explanation(form, record_count=record_count), value)
 
 
 def explain_no_match(values, filled, match_type):
+    """Explain when we are unable to match any value in the group."""
     record_count, blank_count = explain_values(values, filled)
     form = 'No {match_type} match on {record_count} {records} with {blank_count} {blanks}'
     return (format_explanation(form, record_count=record_count,
@@ -102,6 +113,7 @@ def explain_no_match(values, filled, match_type):
 
 
 def explain_exact_match(value, values, filled, match_type):
+    """Explain when we have an exact match between items in the group."""
     record_count, blank_count = explain_values(values, filled)
     form = ('{match_type} match, {match_count} of {record_count} '
             '{records} with {blank_count} {blanks}')
@@ -110,6 +122,7 @@ def explain_exact_match(value, values, filled, match_type):
 
 
 def explain_fuzzy_match(value, values, filled, score, match_type):
+    """Explain the case where we do a fuzzy match on the group."""
     record_count, blank_count = explain_values(values, filled)
     form = ('{match_type} match on {record_count} {records} '
             'with {blank_count} {blanks}, score={score}')
@@ -118,10 +131,12 @@ def explain_fuzzy_match(value, values, filled, score, match_type):
 
 
 def only_filled_values(values):
+    """Get the items in the group where they are filled and sort by frequency."""
     return [ExactScore(cnt[0], cnt[1]) for cnt in Counter([v for v in values if v]).most_common()]
 
 
 def best_select_value(group):
+    """Handle the case where the group is for a drop-down select list."""
     values = [str(g) if str(g).lower() not in PLACE_HOLDERS else '' for g in group]
     filled = only_filled_values(values)
 
@@ -138,6 +153,7 @@ def best_select_value(group):
 
 
 def best_text_value(group):
+    """Handle the case where the group is a free-form text field."""
     values = normalize_text(group)
     filled = only_filled_values(values)
 
@@ -164,7 +180,10 @@ def best_text_value(group):
 
 
 def create_reconciled_dataframes(unreconciled_df, args):
-    global ARGS
+    """This is the function called by external modules."""
+    # pylint: disable=W0603
+    global ARGS  # We need these values in a function where we don't controll the signature.
+    # pylint: enable=W0603
     ARGS = args
 
     # How to aggregate columns based on each column's type which is determined by the column name
@@ -179,7 +198,6 @@ def create_reconciled_dataframes(unreconciled_df, args):
     best_value_methods.update(method_for_text_columns)
     best_value_methods.update(method_for_subject_columns)
 
-    best_value_methods['locations'] = all_are_identical  # We want this column
     best_value_methods = {k: v for k, v in best_value_methods.items()
                           if k not in UNWANTED_COLUMNS}  # Remove junk
 

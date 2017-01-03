@@ -1,8 +1,8 @@
 fuzzywuzzy==0.14.0
-Jinja2==2.8
+Jinja2==2.8.1
 MarkupSafe==0.23
-numpy==1.11.2
-pandas==0.19.1
+numpy==1.11.3
+pandas==0.19.2
 python-dateutil==2.6.0
 python-Levenshtein==0.12.0
 pytz==2016.10

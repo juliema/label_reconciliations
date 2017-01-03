@@ -7,7 +7,6 @@
   <style>
     :root {
       --bg-gray: #e0e0e0;
-      --bg-dark: #909090;
       --bg-problem: #ffecec;
       --bg-unreconciled: #eaffea;
     }
@@ -119,25 +118,18 @@
       display: none;
     }
 
-    #details tr[data-row-type="{{row_types.reconciled}}"] td {
-      -border-top: 1px solid var(--bg-dark);
-    }
-
     #details tr[data-row-type="{{row_types.explanations}}"] td.filled {
       background-color: var(--bg-gray);
     }
 
     #details tr[data-row-type="{{row_types.unreconciled}}"] td {
-      -background-color: var(--bg-unreconciled);
-      border-bottom: 1px solid var(--bg-gray);
-      border-right: 1px solid var(--bg-gray);
+      background-color: var(--bg-unreconciled);
     }
 
     #details tr[data-row-type="{{row_types.unreconciled}}"] td:first-child,
     #details tr[data-row-type="{{row_types.unreconciled}}"] td:nth-child(2) {
-      -background-color: white;
-      border: none;
-  }
+      background-color: white;
+    }
 
     #details td.problem {
       background-color: var(--bg-problem);

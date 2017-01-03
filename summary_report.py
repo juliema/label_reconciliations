@@ -15,20 +15,20 @@ ALL_BLANK_PATTERN = r'^(?:All|The) \d+ record'
 ONESIES_PATTERN = r'^Only 1 transcript in'
 
 
-def get_workflow_name(args, unreconciled_df):
+def get_workflow_name(unreconciled_df):
     """Extract and format the workflow name from the dataframe."""
     try:
-        workflow_name = unreconciled_df.loc[0, 'workflow_name']
+        workflow_name = unreconciled_df.workflow_name.iloc[0]
         workflow_name = re.sub(r'^[^_]*_', '', workflow_name)
     except KeyError:
-        print('Workflow ID {} not found in classifications file.'.format(args.workflow_id))
+        print('Workflow name not found in classifications file.')
         sys.exit(1)
     return workflow_name
 
 
 def header_data(args, reconciled_df, unreconciled_df):
     """Data that goes into the report header."""
-    workflow_name = get_workflow_name(args, unreconciled_df)
+    workflow_name = get_workflow_name(unreconciled_df)
     return {
         'date': datetime.strftime(datetime.now(), '%Y-%m-%d %H:%M'),
         'title': 'Summary of {}'.format(args.workflow_id),
