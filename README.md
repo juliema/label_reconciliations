@@ -47,7 +47,7 @@ subject_id | Country | Species Name | Location | Collector
 - Using the "-u" option, You may also output a CSV file of the raw unreconciled data with the data in the JSON objects extracted into columns.
 
 
-## Reconciliation Logic
+# Reconciliation Logic
 
 - Below we describe our logic and process of reconciling multiple transcriptions into a single reconciled transcript for providers. This process is the first order reconciliation logic, the main idea is to capture the label information verbatim and not add any interpretations of the data (e.g. change  rd. to road). This logic is ideal for two reasons, first the instructions for the users is to transcribe the labels as-is and therefore the reconciled transcription should capture that idea. Second, interpretations of these labels could be different from each transcriber  (st. could be street or state) and may require input from the providers about each collection, and may fall under goals for future work. This transcription reconciliation process should be useful across all expeditions regardless of museum origin or taxonomic group covered. 
  
@@ -63,11 +63,11 @@ subject_id | Country | Species Name | Location | Collector
 - One issue with these categories is that in some cases it is unclear which category the label data should be added to. For example, often it is unclear if data should go in the locality or the habitat field, if a label says ‘middle of a field’, is that locality or habitat information?  Since we don’t legislate how expeditions are setup to capture information, we cannot solve this issue for our providers  Our approach does not move information between categories. Ultimately it will be up to the next level of reconciliation interpretations done by providers to determine if the data are misplaced. 
 
 ### Summary of Free - Text Reconciliation process:
-    `exact match = perfect match between the transcripts
-    `normalized = removed white spaces and punctuation and then the transcripts matched 
-    `partial ratio match = 
-    `token set ratio match = one transcript is a subset of another
-    `no match = nothing matched between the transcripts. This could be because they were completely different or because two were blank whereas only one had a response.    
+    exact match = perfect match between the transcripts
+    normalized exact match = removed white spaces and punctuation and then the transcripts matched 
+    partial ratio match = parts of words in one transcript are found in anohter (e.g., 'rd' and 'road)
+    token set ratio match = the words of one transcript are a subset of another
+    no match = nothing matched between the transcripts. This could be because they were completely different or because two were blank whereas only one had a response.    
 
 
 
