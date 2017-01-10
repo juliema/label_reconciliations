@@ -45,3 +45,10 @@ subject_id | Country | Species Name | Location | Collector
 - Many researchers will want to know how the program determined the "best" match. Use the summary file ("-s" option) to see how the matches were chosen. It also provides an indication of all of the no matches and potentially problematic matches.
 
 - Using the "-u" option, You may also output a CSV file of the raw unreconciled data with the data in the JSON objects extracted into columns.
+
+
+## Reconciliation Logic
+
+Below we describe our logic and process of reconciling multiple transcriptions into a single reconciled transcript for providers. This process is the first order reconciliation logic, the main idea is to capture the label information verbatim and not add any interpretations of the data (e.g. change  rd. to road). This logic is ideal for two reasons, first the instructions for the users is to transcribe the labels as-is and therefore the reconciled transcription should capture that idea. Second, interpretations of these labels could be different from each transcriber  (st. could be street or state) and may require input from the providers about each collection, and may fall under goals for future work. This transcription reconciliation process should be useful across all expeditions regardless of museum origin or taxonomic group covered. 
+    There are two types of transcription fields, those that include a drop down menu (e.g. Country, State) and those that are free text (e.g. Location and Habitat). We have a different process for reconciling each of these types explained below. The output of the reconciled transcription will include not only the reconciled transcript but also in the ‘summary’ file information about the transcriptions for each category, including the number of completed responses and how well they match for each category (see Figure 1). This will allow providers to determine their level of confidence in each reconciled transcription and check labels that may have been more difficult. For example, if only one transcriber out of three was able to fill in a category, this label is more difficult and providers may choose to check these ones. 
+
