@@ -109,7 +109,7 @@ def create_summary_report(unreconciled_df, reconciled_df, explanations_df, args)
 
     merged_cols, merged_df = merge_dataframes(unreconciled_df, reconciled_df, explanations_df)
 
-    # pylint: disable=E1101
+    # pylint: disable=no-member
     summary = template.render(
         header=header_data(args, reconciled_df, unreconciled_df),
         row_types=util.ROW_TYPES,
@@ -118,7 +118,7 @@ def create_summary_report(unreconciled_df, reconciled_df, explanations_df, args)
         options=[util.format_name(col) for col in explanations_df.columns],
         merged_cols=merged_cols,
         merged_df=merged_df)
-    # pylint: enable=E1101
+    # pylint: enable=no-member
 
     with open(args.summary, 'w') as out_file:
         out_file.write(summary)

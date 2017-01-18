@@ -77,7 +77,7 @@ BLANK_PLURALS = {'blanks': 'blanks'}
 BLANK_SINGULARS = {'blanks': 'blank'}
 
 
-# pylint: disable=R0913
+# pylint: disable=too-many-arguments
 def format_explanation(form, record_count=None, blank_count=None,
                        match_count=None, match_type=None, score=None):
     """Build an explaination for the group's best choice."""
@@ -87,7 +87,7 @@ def format_explanation(form, record_count=None, blank_count=None,
     blank_words = BLANK_SINGULARS.copy() if blank_count == 1 else BLANK_PLURALS.copy()
     words = dict(list(total_words.items()) + list(blank_words.items()) + list(std_words.items()))
     return form.format(**words)
-# pylint: enable=R0913
+# pylint: enable=too-many-arguments
 
 
 def explain_all_blank(values):
@@ -181,9 +181,9 @@ def best_text_value(group):
 
 def create_reconciled_dataframes(unreconciled_df, args):
     """This is the function called by external modules."""
-    # pylint: disable=W0603
+    # pylint: disable=global-statement
     global ARGS  # We need these values in a function where we don't controll the signature.
-    # pylint: enable=W0603
+    # pylint: enable=global-statement
     ARGS = args
 
     # How to aggregate columns based on each column's type which is determined by the column name

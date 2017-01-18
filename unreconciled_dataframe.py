@@ -105,9 +105,9 @@ def create_unreconciled_dataframe(workflow_id, classifications):
     workflow_id = get_workflow_id(workflow_id, unreconciled_df)
 
     # We need to do this by workflow because each one's annotations have a different structure
-    # pylint: disable=E1101
+    # pylint: disable=no-member
     unreconciled_df = unreconciled_df.loc[unreconciled_df.workflow_id == workflow_id, :]
-    # pylint: enable=E1101
+    # pylint: enable=no-member
 
     # bring the last column to be the first
     cols = unreconciled_df.columns.tolist()
