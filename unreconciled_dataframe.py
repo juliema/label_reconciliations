@@ -122,6 +122,8 @@ def create_unreconciled_dataframe(workflow_id, classifications):
     extract_annotations_json(unreconciled_df)
     extract_subject_json(unreconciled_df)
 
+    if 'subject_id' in unreconciled_df.columns:
+        unreconciled_df.rename(columns={'subject_id': 'subject_id_external'}, inplace=True)
     unreconciled_df.drop(['user_id', 'user_ip'], axis=1, inplace=True)
     unreconciled_df.rename(columns={'subject_ids': 'subject_id'}, inplace=True)
     unreconciled_df.sort_values(['subject_id', 'classification_id'], inplace=True)
