@@ -29,9 +29,7 @@ def top_partial_ratio(values):
         score = fuzz.partial_ratio(combo[0], combo[1])
         value = combo[0] if len(combo[0]) >= len(combo[1]) else combo[1]
         scores.append(FuzzyRatioScore(score, value))
-    scores = sorted(scores,
-                    reverse=True,
-                    key=lambda s: '{:0>6} {:0>6}'.format(s.score, len(s.value)))
+    scores = sorted(scores, reverse=True, key=lambda s: (s.score, len(s.value)))
     return scores[0]
 
 
@@ -53,8 +51,7 @@ def top_token_set_ratio(values):
             value = combo[0] if len(combo[0]) <= len(combo[1]) else combo[1]
         scores.append(FuzzySetScore(score, value, tokens))
     ordered = sorted(scores, reverse=True,
-                     key=lambda s: '{:0>6} {:0>6} {:0>6}'.format(
-                         s.score, s.tokens, 1000000 - len(s.value)))
+                     key=lambda s: (s.score, s.tokens, 1000000 - len(s.value)))
     return ordered[0]
 
 
