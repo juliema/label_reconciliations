@@ -29,7 +29,7 @@ def header_label(task_id, label, task_type):
 
 
 def extract_an_annotaion(unreconciled_df, task, task_id, index):
-    """Hoists an annotion field into the data frame."""
+    """Hoists an annotation field into the data frame."""
     if isinstance(task.get('value'), list):
         for subtask in task['value']:
             subtask_id = subtask.get('task', task_id)

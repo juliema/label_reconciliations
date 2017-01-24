@@ -80,7 +80,7 @@ BLANK_SINGULARS = {'blanks': 'blank'}
 # pylint: disable=too-many-arguments
 def format_explanation(form, record_count=None, blank_count=None,
                        match_count=None, match_type=None, score=None):
-    """Build an explaination for the group's best choice."""
+    """Build an explanation for the group's best choice."""
     std_words = dict(record_count=record_count, blank_count=blank_count,
                      match_count=match_count, match_type=match_type, score=score)
     total_words = TOTAL_SINGULARS.copy() if record_count == 1 else TOTAL_PLURALS.copy()
@@ -166,7 +166,7 @@ def best_text_value(group):
     if len(filled) == 1:
         return explain_one_transcript(filled[0].value, values, filled)
 
-    # Check for simple inplace fuzzy matches
+    # Check for simple in-place fuzzy matches
     top = top_partial_ratio(values)
     if top.score >= ARGS.fuzzy_ratio_threshold:
         return explain_fuzzy_match(top.value, values, filled, top.score, 'Partial ratio')
@@ -182,7 +182,7 @@ def best_text_value(group):
 def create_reconciled_dataframes(unreconciled_df, args):
     """This is the function called by external modules."""
     # pylint: disable=global-statement
-    global ARGS  # We need these values in a function where we don't controll the signature.
+    global ARGS  # We need these values in a function where we don't control the signature.
     # pylint: enable=global-statement
     ARGS = args
 
