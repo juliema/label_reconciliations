@@ -17,6 +17,7 @@ ONESIES_PATTERN = r'^Only 1 transcript in'
 
 def get_workflow_name(unreconciled_df):
     """Extract and format the workflow name from the dataframe."""
+
     try:
         workflow_name = unreconciled_df.workflow_name.iloc[0]
         workflow_name = re.sub(r'^[^_]*_', '', workflow_name)
@@ -28,12 +29,15 @@ def get_workflow_name(unreconciled_df):
 
 def header_data(args, reconciled_df, unreconciled_df):
     """Data that goes into the report header."""
+
     workflow_name = get_workflow_name(unreconciled_df)
     return {
         'date': datetime.strftime(datetime.now(), '%Y-%m-%d %H:%M'),
         'title': 'Summary of {}'.format(args.workflow_id),
-        'ratio': '{:.2f}'.format(unreconciled_df.shape[0] / reconciled_df.shape[0]),
-        'heading': 'Summary of "{}" ({})'.format(workflow_name, args.workflow_id),
+        'ratio': '{:.2f}'.format(
+            unreconciled_df.shape[0] / reconciled_df.shape[0]),
+        'heading': 'Summary of "{}" ({})'.format(
+            workflow_name, args.workflow_id),
         'subjects': '{:,}'.format(reconciled_df.shape[0]),
         'transcripts': '{:,}'.format(unreconciled_df.shape[0]),
         'workflow_name': workflow_name,
@@ -42,29 +46,47 @@ def header_data(args, reconciled_df, unreconciled_df):
 
 def reconciled_summary(explanations_df):
     """Build a summary of how each field was reconciled."""
+
     reconciled = []
     for col in [c for c in explanations_df.columns]:
-        col_type = 'select' if re.match(util.SELECT_COLUMN_PATTERN, col) else 'text'
-        num_no_match = explanations_df[explanations_df[col].str.contains(NO_MATCH_PATTERN)].shape[0]
+
+        col_type = 'text'
+        if re.match(util.SELECT_COLUMN_PATTERN, col):
+            col_type = 'select'
+
+        num_fuzzy_match = ''
+        if col_type == 'text':
+            num_fuzzy_match = '{:,}'.format(
+                explanations_df[explanations_df[col].str.contains(
+                    FUZZ_MATCH_PATTERN)].shape[0])
+
+        num_no_match = explanations_df[explanations_df[col].str.contains(
+            NO_MATCH_PATTERN)].shape[0]
+
         reconciled.append({
             'name': util.format_name(col),
             'col_type': col_type,
             'num_no_match': num_no_match,
             'num_exact_match': '{:,}'.format(
-                explanations_df[explanations_df[col].str.contains(EXACT_MATCH_PATTERN)].shape[0]),
-            'num_fuzzy_match': '{:,}'.format(explanations_df[explanations_df[col].str.contains(
-                FUZZ_MATCH_PATTERN)].shape[0]) if col_type == 'text' else '',
+                explanations_df[explanations_df[col].str.contains(
+                    EXACT_MATCH_PATTERN)].shape[0]),
+            'num_fuzzy_match': num_fuzzy_match,
             'num_all_blank': '{:,}'.format(
-                explanations_df[explanations_df[col].str.contains(ALL_BLANK_PATTERN)].shape[0]),
+                explanations_df[explanations_df[col].str.contains(
+                    ALL_BLANK_PATTERN)].shape[0]),
             'num_onesies': '{:,}'.format(
-                explanations_df[explanations_df[col].str.contains(ONESIES_PATTERN)].shape[0]),
-            'num_reconciled': '{:,}'.format(explanations_df.shape[0] - num_no_match),
+                explanations_df[explanations_df[col].str.contains(
+                    ONESIES_PATTERN)].shape[0]),
+            'num_reconciled': '{:,}'.format(
+                explanations_df.shape[0] - num_no_match),
         })
     return reconciled
 
 
 def merge_dataframes(unreconciled_df, reconciled_df, explanations_df):
-    """Combine the dataframes so that we can print them out in order for the detail report."""
+    """Combine the dataframes so that we can print them out in order for the
+    detail report.
+    """
 
     # Make subject_id a column
     rec_df = reconciled_df.reset_index()
@@ -78,20 +100,23 @@ def merge_dataframes(unreconciled_df, reconciled_df, explanations_df):
 
     # Merge and format the dataframes
     merged_df = pd.concat([exp_df, rec_df, unr_df]).fillna('')
-    merged_df.sort_values(['subject_id', 'row_type', 'classification_id'], inplace=True)
+    merged_df.sort_values(['subject_id', 'row_type', 'classification_id'],
+                          inplace=True)
     merged_df = merged_df.astype(object)
 
     # Put the columns into this order and remove excess
     merged_cols = [rec_df.columns[0], 'classification_id']
     merged_cols.extend(rec_df.columns[1:])
     merged_df = merged_df.loc[:, merged_cols]
-    merged_df.rename(columns={c: util.format_name(c) for c in merged_cols}, inplace=True)
+    merged_df.rename(columns={c: util.format_name(c) for c in merged_cols},
+                     inplace=True)
 
     return merged_df.columns, merged_df.groupby(util.GROUP_BY)
 
 
 def problems(explanations_df):
     """Make a list of problems for each subject."""
+
     probs = {}
     pattern = '|'.join([NO_MATCH_PATTERN, ONESIES_PATTERN])
     for subject_id, cols in explanations_df.iterrows():
@@ -102,12 +127,18 @@ def problems(explanations_df):
     return probs
 
 
-def create_summary_report(unreconciled_df, reconciled_df, explanations_df, args):
+def create_summary_report(unreconciled_df,
+                          reconciled_df,
+                          explanations_df,
+                          args):
     """Build the report from the template."""
+
     env = Environment(loader=PackageLoader('reconcile', '.'))
     template = env.get_template('summary_report_template.html')
 
-    merged_cols, merged_df = merge_dataframes(unreconciled_df, reconciled_df, explanations_df)
+    merged_cols, merged_df = merge_dataframes(unreconciled_df,
+                                              reconciled_df,
+                                              explanations_df)
 
     # pylint: disable=no-member
     summary = template.render(

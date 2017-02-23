@@ -1,3 +1,5 @@
+"""Common utilites."""
+
 import re
 
 GROUP_BY = 'subject_id'             # We group on this column
@@ -12,11 +14,15 @@ ROW_TYPES = {  # Row types and their sort order
 
 
 def format_name(name):
+    """Remove tag ID and type flag from the column name."""
+
     name = re.sub(COLUMN_PATTERN, '', name)
     return re.sub(r'\W', '', name)
 
 
-def output_dataframe(df, file_name):
+def output_dataframe(df, file_name):  # pylint: disable=invalid-name
+    """Write a dataframe to a file."""
+
     columns = {c: format_name(c) for c in df.columns}
     new_df = df.rename(columns=columns)
     new_df.to_csv(file_name, sep=',', encoding='utf-8')
