@@ -58,42 +58,20 @@
       text-decoration: underline;
     }
 
-    #stats thead tr:nth-child(2) th:nth-child(1),
-    #stats thead tr:nth-child(2) th:nth-child(2),
-    #users tr th:nth-child(1) {
-      text-align: left;
-    }
-
-    #stats tr td:nth-child(3),
-    #stats tr th:nth-child(3),
-    #stats tr td:nth-child(4),
-    #stats tr th:nth-child(4),
-    #stats tr td:nth-child(5),
-    #stats tr th:nth-child(5),
-    #stats tr td:nth-child(6),
-    #stats tr th:nth-child(6),
-    #stats tr td:nth-child(7),
-    #stats tr th:nth-child(7),
-    #stats tr td:nth-child(8),
-    #stats tr th:nth-child(8),
-    #users tr th:nth-child(2),
-    #users tr td:nth-child(2) {
+    th.right,
+    td.right {
       text-align: right;
     }
 
-    #stats tr td:nth-child(1),
-    #stats tr td:nth-child(2),
-    #details td {
+    th.left {
+      text-align: left;
+    }
+
+    td.left {
       padding-left: 4px;
     }
 
-    #stats tr td:nth-child(3),
-    #stats tr td:nth-child(4),
-    #stats tr td:nth-child(5),
-    #stats tr td:nth-child(6),
-    #stats tr td:nth-child(7),
-    #stats tr td:nth-child(8),
-    #users tr td:nth-child(2) {
+    td.right{
       padding-right: 12px;
     }
 
@@ -171,15 +149,15 @@
     <table>
       <thead>
         <tr>
-          <th>Transcriber</th>
-          <th>Count</th>
+          <th class="left">Transcriber</th>
+          <th class="right">Count</th>
         </tr>
       </thead>
       <tbody>
         {% for name, count in top_users.iteritems() %}
         <tr>
-          <td>{{name}}</td>
-          <td>{{ '{:,}'.format(count) }}</td>
+          <td class="left">{{name}}</td>
+          <td class="right">{{ '{:,}'.format(count) }}</td>
         </tr>
         {% endfor %}
       </tbody>
@@ -195,27 +173,27 @@
           <th colspan="1"></th>
         </tr>
         <tr>
-          <th>Field</th>
-          <th>Type</th>
-          <th>Exact Matches</th>
-          <th>Fuzzy Matches</th>
-          <th>All Blank</th>
-          <th>One Transcript</th>
-          <th>Total</th>
-          <th>No Matches</th>
+          <th class="left">Field</th>
+          <th class="left">Type</th>
+          <th class="right">Exact Matches</th>
+          <th class="right">Fuzzy Matches</th>
+          <th class="right">All Blank</th>
+          <th class="right">One Transcript</th>
+          <th class="right">Total</th>
+          <th class="right">No Matches</th>
         </tr>
       </thead>
       <tbody>
         {% for row in reconciled %}
         <tr>
-          <td>{{row.name}}</td>
-          <td>{{row.col_type}}</td>
-          <td>{{ '{:,}'.format(row.num_exact_match) }}</td>
-          <td>{{ row.num_fuzzy_match }}</td>
-          <td>{{ '{:,}'.format(row.num_all_blank) }}</td>
-          <td>{{ '{:,}'.format(row.num_onesies) }}</td>
-          <td>{{ '{:,}'.format(row.num_reconciled) }}</td>
-          <td>{{ '{:,}'.format(row.num_no_match) }}</td>
+          <td class="left">{{row.name}}</td>
+          <td class="left">{{row.col_type}}</td>
+          <td class="right">{{ '{:,}'.format(row.num_exact_match) }}</td>
+          <td class="right">{{ row.num_fuzzy_match }}</td>
+          <td class="right">{{ '{:,}'.format(row.num_all_blank) }}</td>
+          <td class="right">{{ '{:,}'.format(row.num_onesies) }}</td>
+          <td class="right">{{ '{:,}'.format(row.num_reconciled) }}</td>
+          <td class="right">{{ '{:,}'.format(row.num_no_match) }}</td>
         </tr>
         {% endfor %}
       </tbody>
