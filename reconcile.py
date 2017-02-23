@@ -3,13 +3,14 @@
 import sys
 import argparse
 from lib.unreconciled_dataframe import create_unreconciled_dataframe
-from lib.reconciled_dataframes import create_reconciled_dataframes
+from lib.reconciled_builder import ReconciledBuilder
 from lib.summary_report import create_summary_report
 import lib.util as util
 
 
 def parse_command_line():
     """Get user input."""
+
     parser = argparse.ArgumentParser(description='''
         This takes raw Notes from Nature classifications and creates a
         reconciliation of the classifications for a particular workflow.
@@ -57,8 +58,8 @@ if __name__ == "__main__":
         util.output_dataframe(UNRECONCILED_DF, ARGS.unreconciled)
 
     if ARGS.reconciled or ARGS.summary:
-        RECONCILED_DF, EXPLANATIONS_DF = create_reconciled_dataframes(
-            UNRECONCILED_DF, ARGS)
+        RECONCILED_DF, EXPLANATIONS_DF = ReconciledBuilder(
+            ARGS, UNRECONCILED_DF).build()
 
         if ARGS.reconciled:
             util.output_dataframe(RECONCILED_DF, ARGS.reconciled)
