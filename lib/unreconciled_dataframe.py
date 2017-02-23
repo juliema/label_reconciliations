@@ -11,7 +11,9 @@ TEXT_COLUMN_FLAG = 't'    # Flag a text column
 
 
 def extract_json_value(subject_json, column=''):
-    """Pull fields out of a json object object as a string value."""
+    """Pull a field out of a json object and put it into its own column
+    (as a string value).
+    """
 
     if column in list(subject_json.values())[0]:
         return list(subject_json.values())[0][column]
@@ -121,7 +123,7 @@ def create_unreconciled_dataframe(workflow_id, classifications):
     unreconciled_df = pd.read_csv(classifications)
     workflow_id = get_workflow_id(workflow_id, unreconciled_df)
 
-    # We need to do this by workflow because each one's annotations have a
+    # We need to do this by workflow because each workflow's annotations have a
     # different structure
     # pylint: disable=no-member
     unreconciled_df = unreconciled_df.loc[

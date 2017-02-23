@@ -5,7 +5,7 @@ import sys
 from datetime import datetime
 import pandas as pd
 from jinja2 import Environment, PackageLoader
-import util
+import lib.util as util
 
 # These depend on the patterns put into explanations_df
 NO_MATCH_PATTERN = r'^No (?:select|text) match on'
@@ -134,7 +134,7 @@ def create_summary_report(unreconciled_df,
     """Build the report from the template."""
 
     env = Environment(loader=PackageLoader('reconcile', '.'))
-    template = env.get_template('summary_report_template.html')
+    template = env.get_template('lib/summary_report_template.html')
 
     merged_cols, merged_df = merge_dataframes(unreconciled_df,
                                               reconciled_df,

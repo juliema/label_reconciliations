@@ -7,7 +7,7 @@ from functools import reduce
 from collections import Counter, namedtuple
 from itertools import combinations
 from fuzzywuzzy import fuzz
-import util
+import lib.util as util
 
 ARGS = None
 PLACE_HOLDERS = ['placeholder']  # Replace placeholders with an empty string
