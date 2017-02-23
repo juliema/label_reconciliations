@@ -11,6 +11,8 @@ import lib.util as util
 class SummaryReport:
     """Render a summary of the reconciliation process."""
 
+    user_column = 'user_name'
+
     # These depend on the patterns put into explanations_df
     no_match_pattern = r'^No (?:select|text) match on'
     exact_match_pattern = r'^(?:Exact|Normalized exact) match'
@@ -31,23 +33,29 @@ class SummaryReport:
         template = env.get_template('lib/summary_report_template.html')
 
         merged_cols, merged_df = self.merge_dataframes()
+        top_users, user_count = self.user_summary()
 
-        # pylint: disable=no-member
-        summary = template.render(
+        summary = template.render(  # pylint: disable=no-member
             header=self.header_data(),
             row_types=util.ROW_TYPES,
             reconciled=self.reconciled_summary(),
             problems=self.problems(),
+            top_users=top_users,
+            user_count=user_count,
             options=[util.format_name(col)
                      for col in self.explanations_df.columns],
             merged_cols=merged_cols,
             merged_df=merged_df)
-        # pylint: enable=no-member
 
         with open(self.args.summary, 'w') as out_file:
             out_file.write(summary)
-            # out_file.write(merged_df.to_html())  # Not flexible enuf
-            # out_file.write('</section></body></html>')
+
+    def user_summary(self):
+        """Get a list of n top users and how many transcriptions they did."""
+        top_users = self.unreconciled_df.fillna('').groupby(self.user_column)
+        top_users = top_users[self.user_column].count()
+        top_users.sort_values(ascending=False, inplace=True)
+        return top_users[:self.args.top_users], len(top_users)
 
     def get_workflow_name(self):
         """Extract and format the workflow name from the dataframe."""
@@ -67,12 +75,12 @@ class SummaryReport:
         return {
             'date': datetime.strftime(datetime.now(), '%Y-%m-%d %H:%M'),
             'title': 'Summary of {}'.format(self.args.workflow_id),
-            'ratio': '{:.2f}'.format(
-                self.unreconciled_df.shape[0] / self.reconciled_df.shape[0]),
+            'ratio':
+                self.unreconciled_df.shape[0] / self.reconciled_df.shape[0],
             'heading': 'Summary of "{}" ({})'.format(
                 workflow_name, self.args.workflow_id),
-            'subjects': '{:,}'.format(self.reconciled_df.shape[0]),
-            'transcripts': '{:,}'.format(self.unreconciled_df.shape[0]),
+            'subjects': self.reconciled_df.shape[0],
+            'transcripts': self.unreconciled_df.shape[0],
             'workflow_name': workflow_name,
         }
 
@@ -88,10 +96,9 @@ class SummaryReport:
 
             num_fuzzy_match = ''
             if col_type == 'text':
-                num_fuzzy_match = '{:,}'.format(
-                    self.explanations_df[
-                        self.explanations_df[col].str.contains(
-                            self.fuzz_match_pattern)].shape[0])
+                num_fuzzy_match = '{:,}'.format(self.explanations_df[
+                    self.explanations_df[col].str.contains(
+                        self.fuzz_match_pattern)].shape[0])
 
             num_no_match = self.explanations_df[
                 self.explanations_df[col].str.contains(
@@ -101,21 +108,17 @@ class SummaryReport:
                 'name': util.format_name(col),
                 'col_type': col_type,
                 'num_no_match': num_no_match,
-                'num_exact_match': '{:,}'.format(
-                    self.explanations_df[
-                        self.explanations_df[col].str.contains(
-                            self.exact_match_pattern)].shape[0]),
                 'num_fuzzy_match': num_fuzzy_match,
-                'num_all_blank': '{:,}'.format(
-                    self.explanations_df[
-                        self.explanations_df[col].str.contains(
-                            self.all_blank_pattern)].shape[0]),
-                'num_onesies': '{:,}'.format(
-                    self.explanations_df[
-                        self.explanations_df[col].str.contains(
-                            self.onesies_pattern)].shape[0]),
-                'num_reconciled': '{:,}'.format(
-                    self.explanations_df.shape[0] - num_no_match),
+                'num_reconciled': self.explanations_df.shape[0] - num_no_match,
+                'num_exact_match': self.explanations_df[
+                    self.explanations_df[col].str.contains(
+                        self.exact_match_pattern)].shape[0],
+                'num_all_blank': self.explanations_df[
+                    self.explanations_df[col].str.contains(
+                        self.all_blank_pattern)].shape[0],
+                'num_onesies': self.explanations_df[
+                    self.explanations_df[col].str.contains(
+                        self.onesies_pattern)].shape[0],
             })
         return reconciled
 

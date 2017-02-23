@@ -34,6 +34,8 @@ def parse_command_line():
     parser.add_argument('-s', '--summary',
                         help=('Write a summary of the reconciliation to this '
                               'HTML file.'))
+    parser.add_argument('-t', '--top-users', type=int, default=10,
+                        help=('Show the top n users in the summary report.'))
     parser.add_argument('-f', '--fuzzy-ratio-threshold', default=90, type=int,
                         help=('Sets the cutoff for fuzzy ratio matching '
                               '(0-100, default=90). '

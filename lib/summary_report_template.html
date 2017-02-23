@@ -53,12 +53,14 @@
       background: lightgray;
     }
 
-    #stats thead tr:nth-child(2) th {
+    #stats thead tr:nth-child(2) th,
+    #users thead tr {
       text-decoration: underline;
     }
 
     #stats thead tr:nth-child(2) th:nth-child(1),
-    #stats thead tr:nth-child(2) th:nth-child(2) {
+    #stats thead tr:nth-child(2) th:nth-child(2),
+    #users tr th:nth-child(1) {
       text-align: left;
     }
 
@@ -73,7 +75,9 @@
     #stats tr td:nth-child(7),
     #stats tr th:nth-child(7),
     #stats tr td:nth-child(8),
-    #stats tr th:nth-child(8) {
+    #stats tr th:nth-child(8),
+    #users tr th:nth-child(2),
+    #users tr td:nth-child(2) {
       text-align: right;
     }
 
@@ -88,7 +92,8 @@
     #stats tr td:nth-child(5),
     #stats tr td:nth-child(6),
     #stats tr td:nth-child(7),
-    #stats tr td:nth-child(8) {
+    #stats tr td:nth-child(8),
+    #users tr td:nth-child(2) {
       padding-right: 12px;
     }
 
@@ -156,10 +161,30 @@
   <header>
     <h1>{{header.heading}}</h1>
     <div><label>Date:</label><span>{{header.date}}</span></div>
-    <div><label>Number of Subjects:</label><span>{{header.subjects}}</span></div>
-    <div><label>Number of Transcripts:</label><span>{{header.transcripts}}</span></div>
-    <div><label>Transcripts per Subject:</label><span>{{header.ratio}}</span></div>
+    <div><label>Number of Subjects:</label><span>{{ '{:,}'.format(header.subjects) }}</span></div>
+    <div><label>Number of Transcripts:</label><span>{{ '{:,}'.format(header.transcripts) }}</span></div>
+    <div><label>Transcripts per Subject:</label><span>{{ '{:.2f}'.format(header.ratio) }}</span></div>
+    <div><label>User Count:</label><span>{{ '{:,}'.format(user_count) }}</span></div>
   </header>
+  <section id="users">
+    <h2>User Summary</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>User</th>
+          <th>Count</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for name, count in top_users.iteritems() %}
+        <tr>
+          <td>{{name}}</td>
+          <td>{{ '{:,}'.format(count) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
   <section id="stats">
     <h2>Reconciliation Summary</h2>
     <table>
@@ -185,12 +210,12 @@
         <tr>
           <td>{{row.name}}</td>
           <td>{{row.col_type}}</td>
-          <td>{{row.num_exact_match}}</td>
-          <td>{{row.num_fuzzy_match}}</td>
-          <td>{{row.num_all_blank}}</td>
-          <td>{{row.num_onesies}}</td>
-          <td>{{row.num_reconciled}}</td>
-          <td>{{row.num_no_match}}</td>
+          <td>{{ '{:,}'.format(row.num_exact_match) }}</td>
+          <td>{{ row.num_fuzzy_match }}</td>
+          <td>{{ '{:,}'.format(row.num_all_blank) }}</td>
+          <td>{{ '{:,}'.format(row.num_onesies) }}</td>
+          <td>{{ '{:,}'.format(row.num_reconciled) }}</td>
+          <td>{{ '{:,}'.format(row.num_no_match) }}</td>
         </tr>
         {% endfor %}
       </tbody>
