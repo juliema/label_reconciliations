@@ -4,7 +4,7 @@ import sys
 import argparse
 from lib.unreconciled_builder import UnreconciledBuilder
 from lib.reconciled_builder import ReconciledBuilder
-from lib.summary_report import create_summary_report
+from lib.summary_report import SummaryReport
 import lib.util as util
 
 
@@ -65,6 +65,7 @@ if __name__ == "__main__":
             util.output_dataframe(RECONCILED_DF, ARGS.reconciled)
 
         if ARGS.summary:
-            create_summary_report(UNRECONCILED_DF,
-                                  RECONCILED_DF,
-                                  EXPLANATIONS_DF, ARGS)
+            SummaryReport(ARGS,
+                          UNRECONCILED_DF,
+                          RECONCILED_DF,
+                          EXPLANATIONS_DF).report()

@@ -7,7 +7,7 @@ from functools import reduce
 from collections import Counter, namedtuple
 from itertools import combinations
 from fuzzywuzzy import fuzz
-import lib.util as util  # pylint: disable=E0401
+import lib.util as util
 
 
 class ReconciledBuilder:
