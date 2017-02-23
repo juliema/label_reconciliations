@@ -2,7 +2,7 @@
 
 import sys
 import argparse
-from lib.unreconciled_dataframe import create_unreconciled_dataframe
+from lib.unreconciled_builder import UnreconciledBuilder
 from lib.reconciled_builder import ReconciledBuilder
 from lib.summary_report import create_summary_report
 import lib.util as util
@@ -48,8 +48,8 @@ def parse_command_line():
 if __name__ == "__main__":
     ARGS = parse_command_line()
 
-    UNRECONCILED_DF = create_unreconciled_dataframe(ARGS.workflow_id,
-                                                    ARGS.classifications)
+    UNRECONCILED_DF = UnreconciledBuilder(ARGS.workflow_id,
+                                          ARGS.classifications).build()
     if UNRECONCILED_DF.shape[0] == 0:
         print('Workflow {} has no data.'.format(ARGS.workflow_id))
         sys.exit(1)
