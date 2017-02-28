@@ -84,8 +84,7 @@ class SummaryReport:
                 workflow_name, self.args.workflow_id),
             'subjects': self.reconciled_df.shape[0],
             'transcripts': self.unreconciled_df.shape[0],
-            'workflow_name': workflow_name,
-        }
+            'workflow_name': workflow_name}
 
     def reconciled_summary(self):
         """Build a summary of how each field was reconciled."""
@@ -121,8 +120,7 @@ class SummaryReport:
                         self.all_blank_pattern)].shape[0],
                 'num_onesies': self.explanations_df[
                     self.explanations_df[col].str.contains(
-                        self.onesies_pattern)].shape[0],
-            })
+                        self.onesies_pattern)].shape[0]})
         return reconciled
 
     def merge_dataframes(self):

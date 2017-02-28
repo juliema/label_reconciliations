@@ -9,8 +9,7 @@ TEXT_COLUMN_PATTERN = r'^T\d+t:'    # How text columns are labeled
 ROW_TYPES = {  # Row types and their sort order
     'explanations': 'A',
     'reconciled': 'B',
-    'unreconciled': 'C',
-}
+    'unreconciled': 'C'}
 
 
 def format_name(name):
