@@ -142,8 +142,9 @@
     <div><label>Number of Subjects:</label><span>{{ '{:,}'.format(header.subjects) }}</span></div>
     <div><label>Number of Transcripts:</label><span>{{ '{:,}'.format(header.transcripts) }}</span></div>
     <div><label>Transcripts per Subject:</label><span>{{ '{:.2f}'.format(header.ratio) }}</span></div>
-    <div><label>Transcriber Count:</label><span>{{ '{:,}'.format(user_count) }}</span></div>
+    <div><label>Transcriber Count:</label><span>{{ '{:,}'.format(transcriber_count) }}</span></div>
   </header>
+  {% if show_transcribers %}
   <section id="users">
     <h2>Transcriber Summary</h2>
     <table>
@@ -154,7 +155,7 @@
         </tr>
       </thead>
       <tbody>
-        {% for name, count in top_users.iteritems() %}
+        {% for name, count in top_transcribers.iteritems() %}
         <tr>
           <td class="left">{{name}}</td>
           <td class="right">{{ '{:,}'.format(count) }}</td>
@@ -163,6 +164,7 @@
       </tbody>
     </table>
   </section>
+  {% endif %}
   <section id="stats">
     <h2>Reconciliation Summary</h2>
     <table>

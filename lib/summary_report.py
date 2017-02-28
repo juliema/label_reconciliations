@@ -33,15 +33,16 @@ class SummaryReport:
         template = env.get_template('lib/summary_report_template.html')
 
         merged_cols, merged_df = self.merge_dataframes()
-        top_users, user_count = self.user_summary()
+        top_transcribers, transcriber_count = self.user_summary()
 
         summary = template.render(  # pylint: disable=no-member
             header=self.header_data(),
             row_types=util.ROW_TYPES,
             reconciled=self.reconciled_summary(),
             problems=self.problems(),
-            top_users=top_users,
-            user_count=user_count,
+            top_transcribers=top_transcribers,
+            transcriber_count=transcriber_count,
+            show_transcribers=self.args.top_transcribers,
             options=[util.format_name(col)
                      for col in self.explanations_df.columns],
             merged_cols=merged_cols,
@@ -52,10 +53,12 @@ class SummaryReport:
 
     def user_summary(self):
         """Get a list of n top users and how many transcriptions they did."""
-        top_users = self.unreconciled_df.fillna('').groupby(self.user_column)
-        top_users = top_users[self.user_column].count()
-        top_users.sort_values(ascending=False, inplace=True)
-        return top_users[:self.args.top_users], len(top_users)
+        top_transcribers = self.unreconciled_df.fillna('').groupby(
+            self.user_column)
+        top_transcribers = top_transcribers[self.user_column].count()
+        top_transcribers.sort_values(ascending=False, inplace=True)
+        return top_transcribers[:self.args.top_transcribers], len(
+            top_transcribers)
 
     def get_workflow_name(self):
         """Extract and format the workflow name from the dataframe."""
@@ -123,8 +126,8 @@ class SummaryReport:
         return reconciled
 
     def merge_dataframes(self):
-        """Combine the dataframes so that we can print them out in order for the
-        detail report.
+        """Combine the dataframes so that we can print them out in order for
+        the detail report.
         """
 
         # Make subject_id a column
