@@ -17,7 +17,8 @@ def parse_command_line():
         That is, it reduces n classifications per subject to the "best" values.
         The summary file will provide explanations of how the reconciliations
         were done.
-    ''')
+        ''')
+
     parser.add_argument('classifications',
                         help=('The Notes from Nature classifications CSV '
                               'input file.'))
