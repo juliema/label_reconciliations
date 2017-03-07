@@ -75,7 +75,7 @@ if __name__ == "__main__":
         sys.exit(1)
 
     if ARGS.unreconciled:
-        util.output_dataframe(UNRECONCILED_DF, ARGS.unreconciled)
+        util.output_dataframe(UNRECONCILED_DF, ARGS.unreconciled, index=False)
 
     if ARGS.reconciled or ARGS.summary:
         RECONCILED_DF, EXPLANATIONS_DF = ReconciledBuilder(
