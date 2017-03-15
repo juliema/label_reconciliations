@@ -42,7 +42,6 @@ class SummaryReport:
             problems=self.problems(),
             top_transcribers=top_transcribers,
             transcriber_count=transcriber_count,
-            show_transcribers=self.args.top_transcribers,
             options=[util.format_name(col)
                      for col in self.explanations_df.columns],
             merged_cols=merged_cols,
@@ -57,8 +56,7 @@ class SummaryReport:
             self.user_column)
         top_transcribers = top_transcribers[self.user_column].count()
         top_transcribers.sort_values(ascending=False, inplace=True)
-        return top_transcribers[:self.args.top_transcribers], len(
-            top_transcribers)
+        return top_transcribers, len(top_transcribers)
 
     def get_workflow_name(self):
         """Extract and format the workflow name from the dataframe."""

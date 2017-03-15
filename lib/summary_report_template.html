@@ -132,6 +132,35 @@
       padding: 2px;
     }
 
+    #users .users-container {
+      display: inline-block;
+      overflow-y: scroll;
+      height: 280px;
+      min-height: 280px;
+      padding-right: 8px;
+      margin-bottom: 12px;
+      transition: height 300ms ease;
+    }
+
+    #users .users-container.expanded {
+      height: 100%;
+      min-height: 100%;
+      transition: height 300ms ease;
+    }
+
+    #users button {
+      display: block;
+      margin: 12px 0;
+    }
+
+    #users button:before {
+      content: 'Show All';
+    }
+
+    #users button.expanded:before {
+      content: 'Show Fewer';
+    }
+
   </style>
 </head>
 
@@ -144,27 +173,28 @@
     <div><label>Transcripts per Subject:</label><span>{{ '{:.2f}'.format(header.ratio) }}</span></div>
     <div><label>Transcriber Count:</label><span>{{ '{:,}'.format(transcriber_count) }}</span></div>
   </header>
-  {% if show_transcribers %}
   <section id="users">
     <h2>Transcriber Summary</h2>
-    <table>
-      <thead>
-        <tr>
-          <th class="left">Transcriber</th>
-          <th class="right">Count</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for name, count in top_transcribers.iteritems() %}
-        <tr>
-          <td class="left">{{name}}</td>
-          <td class="right">{{ '{:,}'.format(count) }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+    <button title="Expand or collapse the top transcribers table"></button>
+    <div class="users-container">
+      <table>
+        <thead>
+          <tr>
+            <th class="left">Transcriber</th>
+            <th class="right">Count</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for name, count in top_transcribers.iteritems() %}
+          <tr>
+            <td class="left">{{name}}</td>
+            <td class="right">{{ '{:,}'.format(count) }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
   </section>
-  {% endif %}
   <section id="stats">
     <h2>Reconciliation Summary</h2>
     <table>
@@ -266,10 +296,17 @@
   </section>
 
   <script>
+    const users = document.querySelector('#users button');
     const tbody = document.querySelector('#details tbody');
     const thead = document.querySelector('#details thead');
     const filter = document.querySelector('#details select');
     const detailRows = document.querySelectorAll('#details tbody tr');
+
+    function toggleUsers(event) {
+      const div = document.querySelector('#users .users-container');
+      div.classList.toggle('expanded');
+      event.target.classList.toggle('expanded');
+    }
 
     function toggleClosed(event) {
       if (! event.target.matches('button')) { return; }
@@ -316,6 +353,7 @@
       }
     }
 
+    users.addEventListener('click', toggleUsers);
     tbody.addEventListener('click', toggleClosed);
     thead.addEventListener('click', toggleAllClosed);
     filter.addEventListener('change', filterChange);

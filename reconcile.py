@@ -35,10 +35,6 @@ def parse_command_line():
     parser.add_argument('-s', '--summary',
                         help=('Write a summary of the reconciliation to this '
                               'HTML file.'))
-    parser.add_argument('-t', '--top-transcribers', type=int, default=10,
-                        help=('Show the top n transcribers in the summary '
-                              'report. The default is 10. To turn this off '
-                              'set it to zero.'))
     parser.add_argument('-f', '--fuzzy-ratio-threshold', default=90, type=int,
                         help=('Sets the cutoff for fuzzy ratio matching '
                               '(0-100, default=90). '
@@ -49,10 +45,6 @@ def parse_command_line():
                               'See https://github.com/seatgeek/fuzzywuzzy.'))
 
     args = parser.parse_args()
-
-    if args.top_transcribers < 0:
-        print('--top-transcribers must be zero or more.')
-        sys.exit(1)
 
     if args.fuzzy_ratio_threshold < 0 or args.fuzzy_ratio_threshold > 100:
         print('--fuzzy-ratio-threshold must be between 0 and 100.')
