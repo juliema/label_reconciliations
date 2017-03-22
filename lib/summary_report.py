@@ -2,6 +2,7 @@
 
 import re
 import sys
+import json
 from datetime import datetime
 import pandas as pd
 from jinja2 import Environment, PackageLoader
@@ -33,30 +34,43 @@ class SummaryReport:
         template = env.get_template('lib/summary_report_template.html')
 
         merged_cols, merged_df = self.merge_dataframes()
-        top_transcribers, transcriber_count = self.user_summary()
+        transcribers, transcriber_count = self.user_summary()
 
-        summary = template.render(  # pylint: disable=no-member
+        with open('lib/d3/d3.min.js') as js_file:
+            d3 = js_file.readlines()
+
+        for _, group in merged_df:
+            first = True
+            for row in group.itertuples():
+                if first and row.row_type != util.ROW_TYPES['explanations']:
+                    print(row.subject_id, row.row_type)
+                first = False
+
+        summary = template.render(
             header=self.header_data(),
             row_types=util.ROW_TYPES,
             reconciled=self.reconciled_summary(),
             problems=self.problems(),
-            top_transcribers=top_transcribers,
+            transcribers=transcribers,
             transcriber_count=transcriber_count,
             options=[util.format_name(col)
                      for col in self.explanations_df.columns],
             merged_cols=merged_cols,
-            merged_df=merged_df)
+            merged_df=merged_df,
+            d3=d3)
 
         with open(self.args.summary, 'w') as out_file:
             out_file.write(summary)
 
     def user_summary(self):
-        """Get a list of n top users and how many transcriptions they did."""
-        top_transcribers = self.unreconciled_df.fillna('').groupby(
-            self.user_column)
-        top_transcribers = top_transcribers[self.user_column].count()
-        top_transcribers.sort_values(ascending=False, inplace=True)
-        return top_transcribers, len(top_transcribers)
+        """Get a list of users and how many transcriptions they did."""
+
+        series = self.unreconciled_df.fillna('').groupby(self.user_column)
+        series = series[self.user_column].count()
+        series.sort_values(ascending=False, inplace=True)
+        transcribers = [{'name': name, 'count': count}
+                        for name, count in series.iteritems()]
+        return transcribers, len(transcribers)
 
     def get_workflow_name(self):
         """Extract and format the workflow name from the dataframe."""
