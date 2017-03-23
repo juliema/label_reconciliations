@@ -320,180 +320,186 @@
   {%- endfor %}
   </script>
 
-  <script>
+<script>
 
-  const data = {{ transcribers | safe }};
+const data = {{ transcribers | safe }};
 
-  const formatCount = d3.format(',.0f');
+const formatCount = d3.format(',.0f');
 
-  const svg = d3.select('#users-chart svg');
+const svg = d3.select('#users-chart svg');
 
-  const padding = { top: 20, bottom: 100, left: 100, right: 100 };
-  const width = +svg.attr('width') - padding.left - padding.right;
-  const height = +svg.attr('height') - padding.top - padding.bottom;
-  const g = svg.append('g').attr('transform', 'translate(' + padding.left + ',' + padding.top + ')');
-  const ticks = 20;
-  const minBarHeight = 15;
-  const barHeights = [];
+const pad = { top: 20, bottom: 100, left: 100, right: 100 };
+const width_lo = 40;
+const width_hi = +svg.attr('width') - pad.left - pad.right - width_lo;
+const height = +svg.attr('height') - pad.top - pad.bottom;
+const g = svg.append('g').attr('transform', 'translate(' + pad.left + ',' + pad.top + ')');
 
-  const x = d3.scaleLinear()
-    .domain([0, Math.ceil(data[0].count / 5) * 5])
-    .rangeRound([0, width]);
+const x_lo = d3.scaleLinear()
+  .domain([1, 3])
+  .rangeRound([0, width_lo]);
 
-  const bins = d3.histogram()
-    .value(function(d) { return d.count; })
-    .domain(x.domain())
-    .thresholds(x.ticks(ticks))
-    (data);
+const x_hi = d3.scaleLinear()
+  .domain([3, Math.ceil(d3.max(data, function(d) { return d.count; } ) / 5) * 5])
+  .rangeRound([3, width_hi]);
 
-  if (bins[0].x1 - bins[0].x0 > 2) {
+const bins_lo = d3.histogram()
+  .value(function(d) { return d.count; })
+  .domain(x_lo.domain())
+  .thresholds(x_lo.ticks(2))
+  (data);
 
-    bin0 = bins[0].filter(function(d) { return d.count == 1; });
-    bin0.length = bin0.length;
-    bin0.x0 = 1;
-    bin0.x1 = 2;
+const bins_hi = d3.histogram()
+  .value(function(d) { return d.count; })
+  .domain(x_hi.domain())
+  .thresholds(x_hi.ticks(20))
+  (data);
 
-    bin1 = bins[0].filter(function(d) { return d.count == 2; });
-    bin1.length = bin1.length;
-    bin1.x0 = 2;
-    bin1.x1 = 3;
+const y = d3.scaleLinear()
+  .domain([0, d3.max(bins_lo.concat(bins_hi), function(d) { return d.length; })])
+  .range([height, 0]);
 
-    bin2 = bins[0].filter(function(d) { return d.count > 2; });
-    bin2.length = bin2.length;
-    bin2.x0 = 3;
-    bin2.x1 = bins[0].x1;
-
-    bins.shift();                   // Get rid of first element
-    bins.unshift(bin0, bin1, bin2); // Add our new elements
-}
-
-  const y = d3.scaleLinear()
-    .domain([0, d3.max(bins, function(d) { return d.length; })])
-    .range([height, 0]);
-
-  const bar = g.selectAll('.bar')
-    .data(bins)
-    .enter().append('g')
-      .attr('class', 'bar')
+const bar_lo = g.selectAll('.bar-lo')
+  .data(bins_lo)
+  .enter()
+    .append('g')
+      .attr('class', 'bar bar-lo')
       .attr('transform', function(d) {
-        return 'translate(' + x(d.x0) + ',' + y(d.length) + ')';
+        return 'translate(' + x_lo(d.x0) + ',' + y(d.length) + ')';
       });
 
-  bar.append('rect')
-    .attr('x', 1)
-    .attr('width', function(d) {
-      const width = x(d.x1) - x(d.x0) - 1;
-      return width < 10 ? 10 : width;
-    })
-    .attr('height', function(d) {
-      const bh = height - y(d.length);
-      barHeights.push(bh);
-      return bh;
-     });
+const bar_hi = g.selectAll('.bar-hi')
+  .data(bins_lo)
+  .enter()
+    .append('g')
+      .attr('class', 'bar bar-hi')
+      .attr('transform', function(d) {
+        return 'translate(' + x_hi(d.x0) + ',' + y(d.length) + ')';
+      });
 
-  bar.append('text')
-    .attr('dy', '0.75em')
-    .attr('y', 6)
-    .attr('x', function(d) { return (x(d.x1) - x(d.x0)) / 2 })
-    .attr('text-anchor', 'middle')
-    .text(function(d, i) {
-      return barHeights[i] >= minBarHeight ? formatCount(d.length) : '';
-    });
+bar_lo.append('rect')
+  .attr('x', 1)
+  .attr('width', function(d) { return x_lo(d.x1) - x_lo(d.x0) - 1; })
+  .attr('height', function(d) {
+    const h = height - y(d.length);
+    d.height = h;
+    return h;
+   });
 
-  bar.append('svg:title')
-    .text(function(d) {
-      const span = d.x1 - d.x0 - 1;
-      if (span) {
-        return formatCount(d.length) + ' transcribers with between ' + d.x0 + ' and ' + (d.x0 + span) + ' transcriptions';
-      } else if (d.x0 == 1) {
-        return formatCount(d.length) + ' transcribers with ' + d.x0 + ' transcription';
+bar_hi.append('rect')
+ .attr('x', 1)
+ .attr('width', function(d) { return x_lo(d.x1) - x_lo(d.x0) - 1; })
+ .attr('height', function(d) {
+   const h = height - y(d.length);
+   d.height = h;
+   return h;
+  });
+
+bar_lo.append('text')
+  .attr('dy', '0.75em')
+  .attr('y', 6)
+  .attr('x', function(d) { return (x_lo(d.x1) - x_lo(d.x0)) / 2 })
+  .attr('text-anchor', 'middle')
+  .text(function(d) {
+    return d.height >= 15 ? formatCount(d.length) : '';
+  });
+
+bar_lo.append('svg:title')
+  .text(function(d) {
+    const span = d.x1 - d.x0 - 1;
+    if (span > 1) {
+      return formatCount(d.length) + ' transcribers with between ' + d.x0 + ' and ' + (d.x0 + span) + ' transcriptions';
+    } else if (d.x0 == 1) {
+      return formatCount(d.length) + ' transcribers with ' + d.x0 + ' transcription';
+    } else {
+      return formatCount(d.length) + ' transcribers with ' + d.x0 + ' transcriptions';
+    }
+  });
+
+// g.append('g')
+//   .attr('class', 'axis')
+//   .attr('transform', 'translate(0,' + height + ')')
+//   .scale(x_lo)
+//   .ticks(3)
+//   .orient('bottom');
+//   .call(d3.axisBottom(x_lo));
+
+svg.append('text')
+  .attr('text-anchor', 'middle')
+  .attr('font-size', '1.25em')
+  .attr('transform', 'translate(' + (pad.left * 0.75) + ',' + ((height + pad.top + pad.bottom) / 2) + ')rotate(-90)')
+  .text('Number of Transcribers');
+
+svg.append('text')
+  .attr('text-anchor', 'middle')
+  .attr('font-size', '1.25em')
+  .attr('transform', 'translate(' + ((width_hi + pad.left + pad.right) / 2) + ',' + (height + pad.top + (pad.bottom / 2)) + ')')
+  .text('Number of Transcriptions');
+
+</script>
+
+<script>
+const users = document.querySelector('#users button');
+const tbody = document.querySelector('#details tbody');
+const thead = document.querySelector('#details thead');
+const filter = document.querySelector('#details select');
+const detailRows = document.querySelectorAll('#details tbody tr');
+
+function toggleUsers(event) {
+  const div = document.querySelector('#users .users-container');
+  div.classList.toggle('expanded');
+  event.target.classList.toggle('expanded');
+}
+
+function toggleClosed(event) {
+  if (! event.target.matches('button')) { return; }
+  const tr = event.target.parentElement.parentElement;
+  const subjectId = tr.dataset.subjectId;
+  const selector = '#details tbody tr[data-subject-id="' + subjectId + '"]';
+  const trs = document.querySelectorAll(selector);
+  trs.forEach(function(r) { r.classList.toggle('closed'); });
+}
+
+function toggleAllClosed(event) {
+  if (! event.target.matches('button')) { return; }
+  const tr = event.target.parentElement.parentElement;
+  const selector = '#details tbody tr';
+  const trs = document.querySelectorAll(selector);
+  tr.classList.toggle('closed');
+  if (tr.classList.contains('closed')) {
+    trs.forEach(function(r) { r.classList.add('closed'); });
+  } else {
+    trs.forEach(function(r) { r.classList.remove('closed'); });
+  }
+}
+
+function filterChange() {
+  const filterValue = this.value;
+  if (filterValue == '__off__') {
+    detailRows.forEach(function(row) { row.classList.remove('hide'); });
+  } else if (filterValue == '__all__') {
+    detailRows.forEach(function(row) {
+      if (row.dataset.problems) {
+        row.classList.remove('hide');
       } else {
-        return formatCount(d.length) + ' transcribers with ' + d.x0 + ' transcriptions';
+        row.classList.add('hide');
       }
     });
-
-  g.append('g')
-    .attr('class', 'axis axis--x')
-    .attr('transform', 'translate(0,' + height + ')')
-    .call(d3.axisBottom(x));
-
-  svg.append('text')
-    .attr('text-anchor', 'middle')
-    .attr('font-size', '1.25em')
-    .attr('transform', 'translate(' + (padding.left * 0.75) + ',' + ((height + padding.top + padding.bottom) / 2) + ')rotate(-90)')
-    .text('Number of Transcribers');
-
-  svg.append('text')
-    .attr('text-anchor', 'middle')
-    .attr('font-size', '1.25em')
-    .attr('transform', 'translate(' + ((width + padding.left + padding.right) / 2) + ',' + (height + padding.top + (padding.bottom / 2)) + ')')
-    .text('Number of Transcriptions');
-
-  </script>
-
-  <script>
-    const users = document.querySelector('#users button');
-    const tbody = document.querySelector('#details tbody');
-    const thead = document.querySelector('#details thead');
-    const filter = document.querySelector('#details select');
-    const detailRows = document.querySelectorAll('#details tbody tr');
-
-    function toggleUsers(event) {
-      const div = document.querySelector('#users .users-container');
-      div.classList.toggle('expanded');
-      event.target.classList.toggle('expanded');
-    }
-
-    function toggleClosed(event) {
-      if (! event.target.matches('button')) { return; }
-      const tr = event.target.parentElement.parentElement;
-      const subjectId = tr.dataset.subjectId;
-      const selector = '#details tbody tr[data-subject-id="' + subjectId + '"]';
-      const trs = document.querySelectorAll(selector);
-      trs.forEach(function(r) { r.classList.toggle('closed'); });
-    }
-
-    function toggleAllClosed(event) {
-      if (! event.target.matches('button')) { return; }
-      const tr = event.target.parentElement.parentElement;
-      const selector = '#details tbody tr';
-      const trs = document.querySelectorAll(selector);
-      tr.classList.toggle('closed');
-      if (tr.classList.contains('closed')) {
-        trs.forEach(function(r) { r.classList.add('closed'); });
+  } else {
+    detailRows.forEach(function(row) {
+      if (row.dataset.problems.indexOf(filterValue) > -1) {
+        row.classList.remove('hide');
       } else {
-        trs.forEach(function(r) { r.classList.remove('closed'); });
+        row.classList.add('hide');
       }
-    }
+    });
+  }
+}
 
-    function filterChange() {
-      const filterValue = this.value;
-      if (filterValue == '__off__') {
-        detailRows.forEach(function(row) { row.classList.remove('hide'); });
-      } else if (filterValue == '__all__') {
-        detailRows.forEach(function(row) {
-          if (row.dataset.problems) {
-            row.classList.remove('hide');
-          } else {
-            row.classList.add('hide');
-          }
-        });
-      } else {
-        detailRows.forEach(function(row) {
-          if (row.dataset.problems.indexOf(filterValue) > -1) {
-            row.classList.remove('hide');
-          } else {
-            row.classList.add('hide');
-          }
-        });
-      }
-    }
-
-    users.addEventListener('click', toggleUsers);
-    tbody.addEventListener('click', toggleClosed);
-    thead.addEventListener('click', toggleAllClosed);
-    filter.addEventListener('change', filterChange);
-  </script>
+users.addEventListener('click', toggleUsers);
+tbody.addEventListener('click', toggleClosed);
+thead.addEventListener('click', toggleAllClosed);
+filter.addEventListener('change', filterChange);
+</script>
 
 </body>
 </html>
