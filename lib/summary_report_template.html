@@ -315,6 +315,123 @@
   </section>
 
   <script>
+  {% for line in d3 -%}
+    {{line | safe }}
+  {%- endfor %}
+  </script>
+
+  <script>
+
+  const data = {{ transcribers | safe }};
+
+  const formatCount = d3.format(',.0f');
+
+  const svg = d3.select('#users-chart svg');
+
+  const padding = { top: 20, bottom: 100, left: 100, right: 100 };
+  const width = +svg.attr('width') - padding.left - padding.right;
+  const height = +svg.attr('height') - padding.top - padding.bottom;
+  const g = svg.append('g').attr('transform', 'translate(' + padding.left + ',' + padding.top + ')');
+  const ticks = 20;
+  const minBarHeight = 15;
+  const barHeights = [];
+
+  const x = d3.scaleLinear()
+    .domain([0, Math.ceil(data[0].count / 5) * 5])
+    .rangeRound([0, width]);
+
+  const bins = d3.histogram()
+    .value(function(d) { return d.count; })
+    .domain(x.domain())
+    .thresholds(x.ticks(ticks))
+    (data);
+
+  if (bins[0].x1 - bins[0].x0 > 2) {
+
+    bin0 = bins[0].filter(function(d) { return d.count == 1; });
+    bin0.length = bin0.length;
+    bin0.x0 = 1;
+    bin0.x1 = 2;
+
+    bin1 = bins[0].filter(function(d) { return d.count == 2; });
+    bin1.length = bin1.length;
+    bin1.x0 = 2;
+    bin1.x1 = 3;
+
+    bin2 = bins[0].filter(function(d) { return d.count > 2; });
+    bin2.length = bin2.length;
+    bin2.x0 = 3;
+    bin2.x1 = bins[0].x1;
+
+    bins.shift();                   // Get rid of first element
+    bins.unshift(bin0, bin1, bin2); // Add our new elements
+}
+
+  const y = d3.scaleLinear()
+    .domain([0, d3.max(bins, function(d) { return d.length; })])
+    .range([height, 0]);
+
+  const bar = g.selectAll('.bar')
+    .data(bins)
+    .enter().append('g')
+      .attr('class', 'bar')
+      .attr('transform', function(d) {
+        return 'translate(' + x(d.x0) + ',' + y(d.length) + ')';
+      });
+
+  bar.append('rect')
+    .attr('x', 1)
+    .attr('width', function(d) {
+      const width = x(d.x1) - x(d.x0) - 1;
+      return width < 10 ? 10 : width;
+    })
+    .attr('height', function(d) {
+      const bh = height - y(d.length);
+      barHeights.push(bh);
+      return bh;
+     });
+
+  bar.append('text')
+    .attr('dy', '0.75em')
+    .attr('y', 6)
+    .attr('x', function(d) { return (x(d.x1) - x(d.x0)) / 2 })
+    .attr('text-anchor', 'middle')
+    .text(function(d, i) {
+      return barHeights[i] >= minBarHeight ? formatCount(d.length) : '';
+    });
+
+  bar.append('svg:title')
+    .text(function(d) {
+      const span = d.x1 - d.x0 - 1;
+      if (span) {
+        return formatCount(d.length) + ' transcribers with between ' + d.x0 + ' and ' + (d.x0 + span) + ' transcriptions';
+      } else if (d.x0 == 1) {
+        return formatCount(d.length) + ' transcribers with ' + d.x0 + ' transcription';
+      } else {
+        return formatCount(d.length) + ' transcribers with ' + d.x0 + ' transcriptions';
+      }
+    });
+
+  g.append('g')
+    .attr('class', 'axis axis--x')
+    .attr('transform', 'translate(0,' + height + ')')
+    .call(d3.axisBottom(x));
+
+  svg.append('text')
+    .attr('text-anchor', 'middle')
+    .attr('font-size', '1.25em')
+    .attr('transform', 'translate(' + (padding.left * 0.75) + ',' + ((height + padding.top + padding.bottom) / 2) + ')rotate(-90)')
+    .text('Number of Transcribers');
+
+  svg.append('text')
+    .attr('text-anchor', 'middle')
+    .attr('font-size', '1.25em')
+    .attr('transform', 'translate(' + ((width + padding.left + padding.right) / 2) + ',' + (height + padding.top + (padding.bottom / 2)) + ')')
+    .text('Number of Transcriptions');
+
+  </script>
+
+  <script>
     const users = document.querySelector('#users button');
     const tbody = document.querySelector('#details tbody');
     const thead = document.querySelector('#details thead');
@@ -377,93 +494,6 @@
     thead.addEventListener('click', toggleAllClosed);
     filter.addEventListener('change', filterChange);
   </script>
-
-<script>
-{% for line in d3 -%}
-  {{line | safe }}
-{%- endfor %}
-</script>
-
-<script>
-
-const transcribers = {{ transcribers | safe }};
-
-const data = [];
-transcribers.forEach(function(transcriber) {
-  data.push(transcriber.count);
-});
-
-const formatCount = d3.format(',.0f');
-
-const svg = d3.select('#users-chart svg');
-
-const padding = { top: 20, bottom: 100, left: 100, right: 100 };
-const width = +svg.attr('width') - padding.left - padding.right;
-const height = +svg.attr('height') - padding.top - padding.bottom;
-const g = svg.append('g').attr('transform', 'translate(' + padding.left + ',' + padding.top + ')');
-const ticks = 20;
-const minBarHeight = 15;
-const barHeights = [];
-
-const x = d3.scaleLinear()
-  .domain([0, Math.ceil(data[0] / 5) * 5])
-  .rangeRound([0, width]);
-
-const bins = d3.histogram()
-  .domain(x.domain())
-  .thresholds(x.ticks(ticks))
-  (data);
-
-const y = d3.scaleLinear()
-  .domain([0, d3.max(bins, function(d) { return d.length; })])
-  .range([height, 0]);
-
-const bar = g.selectAll('.bar')
-  .data(bins)
-  .enter().append('g')
-    .attr('class', 'bar')
-    .attr('transform', function(d) { return 'translate(' + x(d.x0) + ',' + y(d.length) + ')'; });
-
-bar.append('rect')
-  .attr('x', 1)
-  .attr('width', x(bins[0].x1) - x(bins[0].x0) - 1)
-  .attr('height', function(d) {
-    const bh = height - y(d.length);
-    barHeights.push(bh);
-    return bh;
-   });
-
-bar.append('text')
-  .attr('dy', '0.75em')
-  .attr('y', 6)
-  .attr('x', (x(bins[0].x1) - x(bins[0].x0)) / 2)
-  .attr('text-anchor', 'middle')
-  .text(function(d, i) {
-    return barHeights[i] >= minBarHeight ? formatCount(d.length) : '';
-  });
-
-bar.append('svg:title')
-  .text(function(d, i) { return 'Number of transcribers: ' + formatCount(d.length) });
-
-
-g.append('g')
-  .attr('class', 'axis axis--x')
-  .attr('transform', 'translate(0,' + height + ')')
-  .call(d3.axisBottom(x));
-
-svg.append('text')
-  .attr('text-anchor', 'middle')
-  .attr('font-size', '1.25em')
-  .attr('transform', 'translate(' + (padding.left * 0.75) + ',' + ((height + padding.top + padding.bottom) / 2) + ')rotate(-90)')
-  .text('Number of Transcribers');
-
-svg.append('text')
-  .attr('text-anchor', 'middle')
-  .attr('font-size', '1.25em')
-  .attr('transform', 'translate(' + ((width + padding.left + padding.right) / 2) + ',' + (height + padding.top + (padding.bottom / 2)) + ')')
-  .text('Number of Transcriptions');
-
-</script>
 
 </body>
 </html>
