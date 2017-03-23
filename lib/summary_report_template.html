@@ -207,6 +207,7 @@
     </div>
 
     <div id="users-chart">
+      <h2>Transcriptions per Transcriber</h2>
       <svg width="960" height="500"></svg>
     </div>
 
@@ -395,11 +396,14 @@ transcribers.forEach(function(transcriber) {
 const formatCount = d3.format(',.0f');
 
 const svg = d3.select('#users-chart svg');
-const margin = {top: 10, right: 30, bottom: 30, left: 30};
-const width = +svg.attr('width') - margin.left - margin.right;
-const height = +svg.attr('height') - margin.top - margin.bottom;
-const g = svg.append('g').attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
+
+const padding = { top: 20, bottom: 100, left: 100, right: 100 };
+const width = +svg.attr('width') - padding.left - padding.right;
+const height = +svg.attr('height') - padding.top - padding.bottom;
+const g = svg.append('g').attr('transform', 'translate(' + padding.left + ',' + padding.top + ')');
 const ticks = 20;
+const minBarHeight = 15;
+const barHeights = [];
 
 const x = d3.scaleLinear()
   .domain([0, Math.ceil(data[0] / 5) * 5])
@@ -423,19 +427,41 @@ const bar = g.selectAll('.bar')
 bar.append('rect')
   .attr('x', 1)
   .attr('width', x(bins[0].x1) - x(bins[0].x0) - 1)
-  .attr('height', function(d) { return height - y(d.length); });
+  .attr('height', function(d) {
+    const bh = height - y(d.length);
+    barHeights.push(bh);
+    return bh;
+   });
 
 bar.append('text')
   .attr('dy', '0.75em')
   .attr('y', 6)
   .attr('x', (x(bins[0].x1) - x(bins[0].x0)) / 2)
   .attr('text-anchor', 'middle')
-  .text(function(d) { return formatCount(d.length); });
+  .text(function(d, i) {
+    return barHeights[i] >= minBarHeight ? formatCount(d.length) : '';
+  });
+
+bar.append('svg:title')
+  .text(function(d, i) { return 'Number of transcribers: ' + formatCount(d.length) });
+
 
 g.append('g')
   .attr('class', 'axis axis--x')
   .attr('transform', 'translate(0,' + height + ')')
   .call(d3.axisBottom(x));
+
+svg.append('text')
+  .attr('text-anchor', 'middle')
+  .attr('font-size', '1.25em')
+  .attr('transform', 'translate(' + (padding.left * 0.75) + ',' + ((height + padding.top + padding.bottom) / 2) + ')rotate(-90)')
+  .text('Number of Transcribers');
+
+svg.append('text')
+  .attr('text-anchor', 'middle')
+  .attr('font-size', '1.25em')
+  .attr('transform', 'translate(' + ((width + padding.left + padding.right) / 2) + ',' + (height + padding.top + (padding.bottom / 2)) + ')')
+  .text('Number of Transcriptions');
 
 </script>
 
