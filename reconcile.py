@@ -2,7 +2,7 @@
 
 import os
 import sys
-import zlib
+# import zlib
 import zipfile
 import argparse
 from lib.unreconciled_builder import UnreconciledBuilder
@@ -99,29 +99,29 @@ def zip_files(args):
 
 
 if __name__ == "__main__":
-    args = parse_command_line()
+    ARGS = parse_command_line()
 
-    unreconciled_df = UnreconciledBuilder(args.workflow_id,
-                                          args.classifications).build()
-    if unreconciled_df.shape[0] == 0:
-        print('Workflow {} has no data.'.format(args.workflow_id))
+    UNRECONCILED_DF = UnreconciledBuilder(ARGS.workflow_id,
+                                          ARGS.classifications).build()
+    if UNRECONCILED_DF.shape[0] == 0:
+        print('Workflow {} has no data.'.format(ARGS.workflow_id))
         sys.exit(1)
 
-    if args.unreconciled:
-        util.output_dataframe(unreconciled_df, args.unreconciled, index=False)
+    if ARGS.unreconciled:
+        util.output_dataframe(UNRECONCILED_DF, ARGS.unreconciled, index=False)
 
-    if args.reconciled or args.summary:
-        reconciled_df, explanations_df = ReconciledBuilder(
-            args, unreconciled_df).build()
+    if ARGS.reconciled or ARGS.summary:
+        RECONCILED_DF, EXPLANATIONS_DF = ReconciledBuilder(
+            ARGS, UNRECONCILED_DF).build()
 
-        if args.reconciled:
-            util.output_dataframe(reconciled_df, args.reconciled)
+        if ARGS.reconciled:
+            util.output_dataframe(RECONCILED_DF, ARGS.reconciled)
 
-        if args.summary:
-            SummaryReport(args,
-                          unreconciled_df,
-                          reconciled_df,
-                          explanations_df).report()
+        if ARGS.summary:
+            SummaryReport(ARGS,
+                          UNRECONCILED_DF,
+                          RECONCILED_DF,
+                          EXPLANATIONS_DF).report()
 
-    if args.zip or args.zip_keep:
-        zip_files(args)
+    if ARGS.zip or ARGS.zip_keep:
+        zip_files(ARGS)

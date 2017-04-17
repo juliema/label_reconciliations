@@ -19,11 +19,9 @@ def format_name(name):
     return re.sub(r'\W', '', name)
 
 
-# pylint: disable=invalid-name
 def output_dataframe(df, file_name, index=True):
     """Write a dataframe to a file."""
 
     columns = {c: format_name(c) for c in df.columns}
     new_df = df.rename(columns=columns)
     new_df.to_csv(file_name, sep=',', encoding='utf-8', index=index)
-# pylint: enable=invalid-name

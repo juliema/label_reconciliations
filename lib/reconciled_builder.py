@@ -145,7 +145,6 @@ class ReconciledBuilder:
             (lambda x, y: x + y.count), filled, 0)
         return record_count, blank_count
 
-    # pylint: disable=too-many-arguments
     def format_explanation(self, form, record_count=None, blank_count=None,
                            match_count=None, match_type=None, score=None):
         """Build an explanation for the group's best choice."""
@@ -168,7 +167,6 @@ class ReconciledBuilder:
                      list(blank_words.items()) +
                      list(std_words.items()))
         return form.format(**words)
-    # pylint: enable=too-many-arguments
 
     def explain_all_blank(self, values):
         """Explain case where all values in the group are blank."""
@@ -212,7 +210,6 @@ class ReconciledBuilder:
                                         blank_count=blank_count,
                                         match_type=match_type), value)
 
-    # pylint: disable=too-many-arguments
     def explain_fuzzy_match(self, value, values, filled, score, match_type):
         """Explain the case where we do a fuzzy match on the group."""
 
@@ -224,7 +221,6 @@ class ReconciledBuilder:
                                         blank_count=blank_count,
                                         match_type=match_type,
                                         score=score), value)
-    # pylint: enable=too-many-arguments
 
     def only_filled_values(self, values):
         """Get the items in the group where they are filled and sort by frequency.

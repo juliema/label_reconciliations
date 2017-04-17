@@ -23,10 +23,8 @@ class UnreconciledBuilder:
 
         # We need to do this by workflow because each workflow's annotations
         # may have a different structure
-        # pylint: disable=no-member
         unreconciled_df = unreconciled_df.loc[
             unreconciled_df.workflow_id == workflow_id, :]
-        # pylint: enable=no-member
 
         # bring the last column to be the first
         cols = unreconciled_df.columns.tolist()
