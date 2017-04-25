@@ -86,13 +86,14 @@ class SummaryReport:
         """Data that goes into the report header."""
 
         workflow_name = self.get_workflow_name()
+        workflow_id = self.unreconciled_df.loc[0, 'workflow_id']
         return {
             'date': datetime.strftime(datetime.now(), '%Y-%m-%d %H:%M'),
-            'title': 'Summary of {}'.format(self.args.workflow_id),
+            'title': 'Summary of {}'.format(workflow_id),
             'ratio':
                 self.unreconciled_df.shape[0] / self.reconciled_df.shape[0],
             'heading': 'Summary of "{}" ({})'.format(
-                workflow_name, self.args.workflow_id),
+                workflow_name, workflow_id),
             'subjects': self.reconciled_df.shape[0],
             'transcripts': self.unreconciled_df.shape[0],
             'workflow_name': workflow_name}
