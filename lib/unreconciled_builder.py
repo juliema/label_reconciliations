@@ -51,37 +51,6 @@ class UnreconciledBuilder:
 
         return self.df
 
-    def rename_columns(self):
-        """Change column names for readablity.
-        Rename subject_ids to subject_id.
-        Rename duplicate tasks to replace the column count with a group number.
-        """
-
-        renames = {}
-        tasks = {}
-
-        # Get all tasks and their associated columns
-        for column in self.df.columns:
-            if re.match(util.COLUMN_PATTERN, column):
-                task = util.format_header(column)
-                task = re.sub(r'_\d+$', '', task)
-                if task not in tasks:
-                    tasks[task] = []
-                tasks[task].append(column)
-
-        # Get new columns names
-        for task, columns in tasks.items():
-            if len(columns) > 1:
-                for i, column in enumerate(columns, 1):
-                    renames[column] = re.sub(r'\d+$', str(i), column)
-            else:
-                column = columns[0]
-                renames[column] = re.sub(r'_\d+$', '', column)
-
-        renames['subject_ids'] = 'subject_id'
-
-        self.df.rename(columns=renames, inplace=True)
-
     def get_workflow_id(self, workflow_id):
         """Pull the workflow ID from the dataframe if it was not given."""
 
@@ -184,3 +153,34 @@ class UnreconciledBuilder:
 
         return dateutil.parser.parse(metadata_json[column]).strftime(
             '%d-%b-%Y %H:%M:%S')
+
+    def rename_columns(self):
+        """Change column names for readablity.
+        Rename subject_ids to subject_id.
+        Rename duplicate tasks to replace the column count with a group number.
+        """
+
+        renames = {}
+        tasks = {}
+
+        # Get all tasks and their associated columns
+        for column in self.df.columns:
+            if re.match(util.COLUMN_PATTERN, column):
+                task = util.format_header(column)
+                task = re.sub(r'_\d+$', '', task)
+                if task not in tasks:
+                    tasks[task] = []
+                tasks[task].append(column)
+
+        # Get new columns names
+        for task, columns in tasks.items():
+            if len(columns) > 1:
+                for i, column in enumerate(columns, 1):
+                    renames[column] = re.sub(r'\d+$', str(i), column)
+            else:
+                column = columns[0]
+                renames[column] = re.sub(r'_\d+$', '', column)
+
+        renames['subject_ids'] = 'subject_id'
+
+        self.df.rename(columns=renames, inplace=True)
