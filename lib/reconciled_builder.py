@@ -223,7 +223,8 @@ class ReconciledBuilder:
                                         score=score), value)
 
     def only_filled_values(self, values):
-        """Get the items in the group where they are filled and sort by frequency.
+        """Get the items in the group where they are filled and sort
+        by frequency.
         """
 
         return [self.ExactScore(cnt[0], cnt[1])
@@ -240,10 +241,8 @@ class ReconciledBuilder:
             return self.explain_all_blank(values)
 
         if filled[0].count > 1:
-            return self.explain_exact_match(filled[0].value,
-                                            values,
-                                            filled,
-                                            'Exact')
+            return self.explain_exact_match(
+                filled[0].value, values, filled, 'Exact')
 
         if len(filled) == 1:
             return self.explain_one_transcript(filled[0].value, values, filled)
@@ -260,10 +259,8 @@ class ReconciledBuilder:
             return self.explain_all_blank(values)
 
         if filled[0].count > 1:
-            return self.explain_exact_match(filled[0].value,
-                                            values,
-                                            filled,
-                                            'Normalized exact')
+            return self.explain_exact_match(
+                filled[0].value, values, filled, 'Normalized exact')
 
         if len(filled) == 1:
             return self.explain_one_transcript(filled[0].value, values, filled)
@@ -271,19 +268,13 @@ class ReconciledBuilder:
         # Check for simple in-place fuzzy matches
         top = self.top_partial_ratio(values)
         if top.score >= self.args.fuzzy_ratio_threshold:
-            return self.explain_fuzzy_match(top.value,
-                                            values,
-                                            filled,
-                                            top.score,
-                                            'Partial ratio')
+            return self.explain_fuzzy_match(
+                top.value, values, filled, top.score, 'Partial ratio')
 
         # Now look for the best token match
         top = self.top_token_set_ratio(values)
         if top.score >= self.args.fuzzy_set_threshold:
-            return self.explain_fuzzy_match(top.value,
-                                            values,
-                                            filled,
-                                            top.score,
-                                            'Token set ratio')
+            return self.explain_fuzzy_match(
+                top.value, values, filled, top.score, 'Token set ratio')
 
         return self.explain_no_match(values, filled, 'text')

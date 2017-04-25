@@ -52,7 +52,7 @@ class SummaryReport:
             problems=self.problems(),
             transcribers=transcribers,
             transcriber_count=transcriber_count,
-            options=[util.format_name(col)
+            options=[util.format_header(col)
                      for col in self.explanations_df.columns],
             merged_cols=merged_cols,
             merged_df=merged_df,
@@ -118,7 +118,7 @@ class SummaryReport:
                     self.no_match_pattern)].shape[0]
 
             reconciled.append({
-                'name': util.format_name(col),
+                'name': util.format_header(col),
                 'col_type': col_type,
                 'num_no_match': num_no_match,
                 'num_fuzzy_match': num_fuzzy_match,
@@ -159,8 +159,9 @@ class SummaryReport:
         merged_cols = [rec_df.columns[0], 'classification_id']
         merged_cols.extend(rec_df.columns[1:])
         merged_df = merged_df.loc[:, merged_cols]
-        merged_df.rename(columns={c: util.format_name(c) for c in merged_cols},
-                         inplace=True)
+        merged_df.rename(
+            columns={c: util.format_header(c) for c in merged_cols},
+            inplace=True)
 
         return merged_df.columns, merged_df.groupby(util.GROUP_BY)
 
@@ -173,5 +174,5 @@ class SummaryReport:
             probs[subject_id] = {}
             for col, value in cols.iteritems():
                 if re.search(pattern, value):
-                    probs[subject_id][util.format_name(col)] = 1
+                    probs[subject_id][util.format_header(col)] = 1
         return probs

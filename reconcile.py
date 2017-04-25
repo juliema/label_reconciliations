@@ -31,13 +31,13 @@ def parse_command_line():
                               'more than one workflow in the classifications '
                               'file.'))
 
-    parser.add_argument('-r', '--reconciled',
-                        help=('Write the reconciled classifications to this '
-                              'CSV file.'))
-
     parser.add_argument('-u', '--unreconciled',
                         help=('Write the unreconciled workflow '
                               'classifications to this CSV file.'))
+
+    parser.add_argument('-r', '--reconciled',
+                        help=('Write the reconciled classifications to this '
+                              'CSV file.'))
 
     parser.add_argument('-s', '--summary',
                         help=('Write a summary of the reconciliation to this '
