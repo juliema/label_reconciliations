@@ -1,5 +1,6 @@
 """Render a summary of the reconciliation process."""
 
+import os
 import re
 import sys
 from datetime import datetime
@@ -35,8 +36,9 @@ class SummaryReport:
         merged_cols, merged_df = self.merge_dataframes()
         transcribers, transcriber_count = self.user_summary()
 
-        with open('lib/d3/d3.min.js') as js_file:
-            d3 = js_file.readlines()
+        curr_dir = os.path.dirname(os.path.realpath(__file__))
+        with open(os.path.join(curr_dir, 'd3', 'd3.min.js')) as js_file:
+            d3_js = js_file.readlines()
 
         for _, group in merged_df:
             first = True
@@ -56,7 +58,7 @@ class SummaryReport:
                      for col in self.explanations_df.columns],
             merged_cols=merged_cols,
             merged_df=merged_df,
-            d3=d3)
+            d3=d3_js)
 
         with open(self.args.summary, 'w') as out_file:
             out_file.write(summary)
