@@ -84,7 +84,7 @@ class ReconciledBuilder:
 
     @staticmethod
     def normalize_text(group):
-        """Collapse space into one space and EOLs into one EOL."""
+        """Collapse spaces into one space and EOLs into one EOL."""
 
         return ['\n'.join([' '.join(ln.split()) for ln in str(g).splitlines()])
                 for g in group]

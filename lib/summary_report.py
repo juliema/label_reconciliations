@@ -1,9 +1,9 @@
 """Render a summary of the reconciliation process."""
 
-import os
 import re
 import sys
 from datetime import datetime
+from urllib.parse import urlparse
 import pandas as pd
 from jinja2 import Environment, PackageLoader
 import lib.util as util
@@ -23,9 +23,9 @@ class SummaryReport:
 
     def __init__(self, args, unreconciled_df, reconciled_df, explanations_df):
         self.args = args
-        self.unreconciled_df = unreconciled_df
-        self.reconciled_df = reconciled_df
-        self.explanations_df = explanations_df
+        self.unreconciled_df = unreconciled_df.applymap(self.create_link)
+        self.reconciled_df = reconciled_df.applymap(self.create_link)
+        self.explanations_df = explanations_df.applymap(self.create_link)
 
     def report(self):
         """Build the report from the template."""
@@ -35,17 +35,6 @@ class SummaryReport:
 
         merged_cols, merged_df = self.merge_dataframes()
         transcribers, transcriber_count = self.user_summary()
-
-        curr_dir = os.path.dirname(os.path.realpath(__file__))
-        with open(os.path.join(curr_dir, 'd3', 'd3.min.js')) as js_file:
-            d3_js = js_file.readlines()
-
-        for _, group in merged_df:
-            first = True
-            for row in group.itertuples():
-                if first and row.row_type != util.ROW_TYPES['explanations']:
-                    print(row.subject_id, row.row_type)
-                first = False
 
         summary = template.render(
             header=self.header_data(),
@@ -57,8 +46,7 @@ class SummaryReport:
             options=[util.format_header(col)
                      for col in self.explanations_df.columns],
             merged_cols=merged_cols,
-            merged_df=merged_df,
-            d3=d3_js)
+            merged_df=merged_df)
 
         with open(self.args.summary, 'w') as out_file:
             out_file.write(summary)
@@ -167,6 +155,19 @@ class SummaryReport:
             inplace=True)
 
         return merged_df.columns, merged_df.groupby(util.GROUP_BY)
+
+    @staticmethod
+    def create_link(value):
+        """Convert a link into an anchor element."""
+
+        try:
+            url = urlparse(value)
+            if url.scheme and url.netloc and url.path:
+                return '<a href="{}" target="_blank">{}</a>'.format(
+                    value, value)
+        except (ValueError, AttributeError):
+            pass
+        return value
 
     def problems(self):
         """Make a list of problems for each subject."""
