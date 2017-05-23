@@ -241,7 +241,7 @@ class ReconciledBuilder:
             longest = sorted(vals, key=len, reverse=True)[0]
             only_filled.append(self.ExactScore(longest, len(vals)))
 
-        return sorted(only_filled, key=lambda s: s[1], reverse=True)
+        return sorted(only_filled, key=lambda s: s.count, reverse=True)
 
     def best_select_value(self, group):
         """Handle the case where the group is for a drop-down select list."""
