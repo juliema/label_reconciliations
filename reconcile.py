@@ -62,7 +62,7 @@ def parse_command_line():
                              'Keep the uncompressed files afterwards.')
 
     parser.add_argument('-V', '--version', action='version',
-                        version='%(prog)s 0.2.3')
+                        version='%(prog)s 0.2.4')
 
     args = parser.parse_args()
 
