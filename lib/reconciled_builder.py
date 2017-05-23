@@ -224,7 +224,8 @@ class ReconciledBuilder:
 
     def only_filled_values(self, values):
         """Get the items in the group where they are filled and sort
-        by frequency.
+        by frequency. Normalize the text by removing spaces and punctuation,
+        and setting all letters to lower case.
         """
 
         all_filled = {}
