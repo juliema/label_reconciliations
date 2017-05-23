@@ -4,7 +4,7 @@ dataframes.
 
 import re
 from functools import reduce
-from collections import Counter, namedtuple
+from collections import namedtuple
 from itertools import combinations
 from fuzzywuzzy import fuzz
 import lib.util as util
@@ -227,8 +227,21 @@ class ReconciledBuilder:
         by frequency.
         """
 
-        return [self.ExactScore(cnt[0], cnt[1])
-                for cnt in Counter([v for v in values if v]).most_common()]
+        all_filled = {}
+        for value in values:
+            value = value.strip()
+            if value:
+                squished = re.sub(r'\W+', '', value)
+                same_values = all_filled.get(squished, [])
+                same_values.append(value)
+                all_filled[squished] = same_values
+
+        only_filled = []
+        for _, vals in all_filled.items():
+            longest = sorted(vals, key=len, reverse=True)[0]
+            only_filled.append(self.ExactScore(longest, len(vals)))
+
+        return sorted(only_filled, key=lambda s: s[1], reverse=True)
 
     def best_select_value(self, group):
         """Handle the case where the group is for a drop-down select list."""
@@ -253,12 +266,11 @@ class ReconciledBuilder:
         """Handle the case where the group is a free-form text field."""
 
         values = self.normalize_text(group)
-        squished = [re.sub(r'\W+', '', v) for v in values]
 
-        filled = self.only_filled_values(squished)
+        filled = self.only_filled_values(values)
 
         if not filled:
-            return self.explain_all_blank(squished)
+            return self.explain_all_blank(values)
 
         if filled[0].count > 1:
             return self.explain_exact_match(
