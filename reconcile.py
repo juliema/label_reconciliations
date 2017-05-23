@@ -61,6 +61,9 @@ def parse_command_line():
                         help='Zip files and put them into this archive. '
                              'Keep the uncompressed files afterwards.')
 
+    parser.add_argument('-V', '--version', action='version',
+                        version='%(prog)s 0.2.3')
+
     args = parser.parse_args()
 
     if args.fuzzy_ratio_threshold < 0 or args.fuzzy_ratio_threshold > 100:
