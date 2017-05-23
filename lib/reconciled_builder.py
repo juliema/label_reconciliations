@@ -84,9 +84,10 @@ class ReconciledBuilder:
 
     @staticmethod
     def normalize_text(group):
-        """Remove all non-word characters."""
+        """Collapse spaces into one space and EOLs into one EOL."""
 
-        return re.sub(r'\W+', '', group)
+        return ['\n'.join([' '.join(ln.split()) for ln in str(g).splitlines()])
+                for g in group]
 
     def top_partial_ratio(self, values):
         """Return the best partial ratio match from fuzzywuzzy module."""
@@ -252,10 +253,12 @@ class ReconciledBuilder:
         """Handle the case where the group is a free-form text field."""
 
         values = self.normalize_text(group)
-        filled = self.only_filled_values(values)
+        squished = [re.sub(r'\W+', '', v) for v in values]
+
+        filled = self.only_filled_values(squished)
 
         if not filled:
-            return self.explain_all_blank(values)
+            return self.explain_all_blank(squished)
 
         if filled[0].count > 1:
             return self.explain_exact_match(
