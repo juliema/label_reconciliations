@@ -230,9 +230,9 @@ class ReconciledBuilder:
 
         all_filled = {}
         for value in values:
-            value = value.strip().lower()
+            value = value.strip()
             if value:
-                squished = re.sub(r'\W+', '', value)
+                squished = re.sub(r'\W+', '', value).lower()
                 same_values = all_filled.get(squished, [])
                 same_values.append(value)
                 all_filled[squished] = same_values
