@@ -84,10 +84,9 @@ class ReconciledBuilder:
 
     @staticmethod
     def normalize_text(group):
-        """Collapse spaces into one space and EOLs into one EOL."""
+        """Remove all non-word characters."""
 
-        return ['\n'.join([' '.join(ln.split()) for ln in str(g).splitlines()])
-                for g in group]
+        return re.sub(r'\W+', '', group)
 
     def top_partial_ratio(self, values):
         """Return the best partial ratio match from fuzzywuzzy module."""
