@@ -1,4 +1,4 @@
-"""Common utilites."""
+"""Common utilities."""
 
 import re
 
@@ -30,11 +30,3 @@ def header_label(task_id, label, task_type, task_count):
     label = '{:0>3}{}{:0>3}{}: {}_{}'.format(
         task_count, task_id[0], task_id[1:], task_type, label, task_count)
     return label
-
-
-def output_dataframe(df, file_name, index=True):
-    """Write a dataframe to a file."""
-
-    columns = {c: format_header(c) for c in df.columns}
-    new_df = df.rename(columns=columns)
-    new_df.to_csv(file_name, sep=',', encoding='utf-8', index=index)

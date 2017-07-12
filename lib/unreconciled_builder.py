@@ -86,7 +86,7 @@ class UnreconciledBuilder:
                 task_id = task['task']
                 task_count += 1
                 try:
-                    task_count = self.extract_an_annotaion(
+                    task_count = self.extract_an_annotation(
                         task, task_id, index, task_count)
                 except ValueError:
                     print('Bad transcription for classification {}'.format(
@@ -94,14 +94,14 @@ class UnreconciledBuilder:
                     break
         self.df.drop('annotation_json', axis=1, inplace=True)
 
-    def extract_an_annotaion(self, task, task_id, index, task_count):
+    def extract_an_annotation(self, task, task_id, index, task_count):
         """Hoists an annotation field into the data frame."""
 
         if isinstance(task.get('value'), list):
             for subtask in task['value']:
                 subtask_id = subtask.get('task', task_id)
                 task_count += 1
-                task_count = self.extract_an_annotaion(
+                task_count = self.extract_an_annotation(
                     subtask, subtask_id, index, task_count)
         elif task.get('select_label'):
             header = util.header_label(task_id,
@@ -155,7 +155,7 @@ class UnreconciledBuilder:
             '%d-%b-%Y %H:%M:%S')
 
     def rename_columns(self):
-        """Change column names for readablity.
+        """Change column names for readability.
         Rename subject_ids to subject_id.
         Rename duplicate tasks to replace the column count with a group number.
         """
