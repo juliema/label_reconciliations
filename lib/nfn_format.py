@@ -7,16 +7,16 @@ import sys
 import json
 from dateutil.parser import parse
 import pandas as pd
+import lib.util as util
 
 
-def convert(classification_file, workflow_id=None):
+def read(args):
     """This is the main function that does the conversion."""
 
-    df = pd.read_csv(classification_file)
+    df = pd.read_csv(args.input)
 
     # Workflows must be processed individually
-    if not workflow_id:
-        workflow_id = get_workflow_id(df)
+    workflow_id = util.get_workflow_id(df, args)
 
     # Remove anything not in the workflow
     df = df.loc[df.workflow_id == workflow_id, :]
@@ -34,10 +34,7 @@ def convert(classification_file, workflow_id=None):
     df.drop(['user_id', 'user_ip'], axis=1, inplace=True)
 
     df = sort_columns(df, tasks).fillna('')
-    df.sort_values(['subject_id', 'classification_id'], inplace=True)
-
-    print(df.columns)
-    print(df.head())
+    df.sort_values([args.group_by, args.sort_by], inplace=True)
 
     return df, tasks
 
@@ -82,11 +79,12 @@ def extract_subject_data(df):
 
     for subject in df['json']:
         for value in iter(subject.values()):
-            for column in value.keys():
+            for column, value in value.items():
                 column = re.sub(r'\W+', '_', column)
                 column = re.sub(r'^_+|__$', '', column)
-                df['subject_' + column] = df['json'].apply(
-                    extract_value, column=column)
+                if isinstance(value, dict):
+                    value = json.dumps(value)
+                df['subject_' + column] = value
 
     df.drop(['subject_data', 'json'], axis=1, inplace=True)
 
@@ -168,21 +166,6 @@ def extract_date(metadata, column=''):
     """Extract dates from a json object."""
 
     return parse(metadata[column]).strftime('%d-%b-%Y %H:%M:%S')
-
-
-def extract_value(subject_data, column=''):
-    """Pull a field out of a json object and put it into its own column
-    (as a string value).
-    """
-
-    columns = list(subject_data.values())[0]
-
-    if column in columns:
-        if columns[column] is None:
-            return ''
-        if isinstance(columns[column], dict):
-            return json.dumps(columns[column])
-        return columns[column]
 
 
 def sort_columns(df, tasks):

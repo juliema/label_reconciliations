@@ -1,6 +1,7 @@
 """Common utilities."""
 
 import re
+import sys
 
 GROUP_BY = 'subject_id'                # We group on this column
 COLUMN_PATTERN = r'^\d+T\d+[st]:\s*'   # Either a select or text column
@@ -10,6 +11,21 @@ ROW_TYPES = {  # Row types and their sort order
     'explanations': 'A',
     'reconciled': 'B',
     'unreconciled': 'C'}
+
+
+def get_workflow_id(df, args):
+    """Pull the workflow ID from the dataframe if it was not given."""
+
+    if args.workflow_id:
+        return args.workflow_id
+
+    workflow_ids = df.workflow_id.unique()
+
+    if len(workflow_ids) > 1:
+        sys.exit('There are multiple workflows in this file. '
+                 'You must provide a workflow ID as an argument.')
+
+    return workflow_ids[0]
 
 
 def format_header(header):

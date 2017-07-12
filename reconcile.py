@@ -4,7 +4,9 @@ import os
 import sys
 import zipfile
 import argparse
-import lib.nfn_converter as nfn
+import pandas as pd
+import lib.nfn_format as nfn_format
+import lib.util as util
 # from lib.unreconciled_builder import UnreconciledBuilder
 # from lib.reconciled_builder import ReconciledBuilder
 # from lib.summary_report import SummaryReport
@@ -24,36 +26,66 @@ def parse_command_line():
         were done.
         ''')
 
-    parser.add_argument('classifications',
-                        help=('The Notes from Nature classifications CSV '
-                              'input file.'))
+    parser.add_argument('-i', '--input', required=True,
+                        help='The input file.')
+
+    parser.add_argument('-f', '--format',
+                        choices=['nfn', 'csv', 'json'], default='nfn',
+                        help='The unreconciled data is in what type of file? '
+                             'nfn=A Zooniverse classification data dump. '
+                             'csv=A flat CSV file. json=A JSON file. The '
+                             'default is "nfn". When the format is "csv" or '
+                             '"json" we require the --column-types. If the '
+                             'type is "nfn" we can guess the --column-types '
+                             'but the --column-types option will override our '
+                             'guesses.')
+
+    parser.add_argument('-c', '--column-types',
+                        help='A string with information on how to reconcile '
+                             'each column in the input file. Note: we try to '
+                             'guess the column type when --format="nfn", '
+                             'this will override the guesses.')
+
+    # parser.add_argument('-C', '--column-types-file',
+    #                     help='The file containing information on how to '
+    #                          'reconcile each column in the input file. '
+    #                          'Note: we try to guess the column type when '
+    #                          '--format=nfn')
 
     parser.add_argument('-w', '--workflow-id', type=int,
-                        help=('The workflow to extract. Required if there is '
-                              'more than one workflow in the classifications '
-                              'file.'))
+                        help='The workflow to extract. Required if there is '
+                             'more than one workflow in the classifications '
+                             'file.')
 
     parser.add_argument('-u', '--unreconciled',
                         help=('Write the unreconciled workflow '
                               'classifications to this CSV file.'))
 
     parser.add_argument('-r', '--reconciled',
-                        help=('Write the reconciled classifications to this '
-                              'CSV file.'))
+                        help='Write the reconciled classifications to this '
+                             'CSV file.')
 
     parser.add_argument('-s', '--summary',
-                        help=('Write a summary of the reconciliation to this '
-                              'HTML file.'))
+                        help='Write a summary of the reconciliation to this '
+                             'HTML file.')
 
-    parser.add_argument('-f', '--fuzzy-ratio-threshold', default=90, type=int,
-                        help=('Sets the cutoff for fuzzy ratio matching '
-                              '(0-100, default=90). '
-                              'See https://github.com/seatgeek/fuzzywuzzy.'))
+    parser.add_argument('-G', '--group-by', default='subject_id',
+                        help='Group the rows by this column. '
+                             '(Default=subject_id).')
 
-    parser.add_argument('-F', '--fuzzy-set-threshold', default=50, type=int,
-                        help=('Sets the cutoff for fuzzy set matching (0-100, '
-                              'default=50). '
-                              'See https://github.com/seatgeek/fuzzywuzzy.'))
+    parser.add_argument('-S', '--sort-by', default='classification_id',
+                        help='A secondary sort column. The primary sort is '
+                             'the --group-by (Default=classification_id).')
+
+    parser.add_argument('--fuzzy-ratio-threshold', default=90, type=int,
+                        help='Sets the cutoff for fuzzy ratio matching '
+                             '(0-100, default=90). '
+                             'See https://github.com/seatgeek/fuzzywuzzy.')
+
+    parser.add_argument('--fuzzy-set-threshold', default=50, type=int,
+                        help='Sets the cutoff for fuzzy set matching (0-100, '
+                             'default=50). '
+                             'See https://github.com/seatgeek/fuzzywuzzy.')
 
     parser.add_argument('-z', '--zip',
                         help='Zip files and put them into this archive. '
@@ -103,39 +135,55 @@ def zip_files(args):
         os.remove(args.summary)
 
 
-# def output_dataframe(old_df, file_name, index=True):
-#     """Write a dataframe to a file."""
-#
-#     columns = {c: format_header(c) for c in old_df.columns}
-#     new_df = old_df.rename(columns=columns)
-#     new_df.to_csv(file_name, sep=',', encoding='utf-8', index=index)
+def unreconciled_setup(args, unreconciled):
+    """Simple processing of the unreconciled dataframe. This is not used
+    when there is a large amount of processing of the input."""
+
+    unreconciled = pd.read_csv(args.input)
+
+    # Workflows must be processed individually
+    workflow_id = util.get_workflow_id(unreconciled, args)
+
+    # Remove anything not in the workflow
+    unreconciled = unreconciled.loc[unreconciled.workflow_id == workflow_id, :]
+    unreconciled = unreconciled.fillna('')
+
+    unreconciled.sort_values([args.group_by, args.sort_by], inplace=True)
+
+    return unreconciled
 
 
 if __name__ == "__main__":
     ARGS = parse_command_line()
 
-    UNRECONCILED_DF, TASKS = nfn.convert(
-        ARGS.classifications, ARGS.workflow_id)
+    TYPES = {}  # Column types
 
-    # UNRECONCILED_DF = UnreconciledBuilder(ARGS.workflow_id,
-    #                                       ARGS.classifications).build()
-    # if UNRECONCILED_DF.shape[0] == 0:
-    #     print('Workflow {} has no data.'.format(ARGS.workflow_id))
-    #     sys.exit(1)
-    #
-    # if ARGS.unreconciled:
-    #     output_dataframe(UNRECONCILED_DF, ARGS.unreconciled,index=False)
-    #
+    if ARGS.format == 'nfn':
+        UNRECONCILED, TYPES = nfn_format.read(ARGS)
+    elif ARGS.format == 'csv':
+        UNRECONCILED = pd.read_csv(ARGS.input)
+        UNRECONCILED = unreconciled_setup(ARGS, UNRECONCILED)
+    elif ARGS.format == 'json':
+        UNRECONCILED = pd.read_json(ARGS.input)
+        UNRECONCILED = unreconciled_setup(ARGS, UNRECONCILED)
+
+    if UNRECONCILED.shape[0] == 0:
+        sys.exit('Workflow {} has no data.'.format(ARGS.workflow_id))
+
+    if ARGS.unreconciled:
+        UNRECONCILED.to_csv(
+            ARGS.unreconciled, sep=',', encoding='utf-8', index=False)
+
     # if ARGS.reconciled or ARGS.summary:
     #     RECONCILED_DF, EXPLANATIONS_DF = ReconciledBuilder(
-    #         ARGS, UNRECONCILED_DF).build()
+    #         ARGS, UNRECONCILED).build()
     #
     #     if ARGS.reconciled:
     #         output_dataframe(RECONCILED_DF, ARGS.reconciled)
     #
     #     if ARGS.summary:
     #         SummaryReport(ARGS,
-    #                       UNRECONCILED_DF,
+    #                       UNRECONCILED,
     #                       RECONCILED_DF,
     #                       EXPLANATIONS_DF).report()
     #
