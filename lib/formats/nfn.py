@@ -22,22 +22,31 @@ def read(args):
     df = df.loc[df.workflow_id == workflow_id, :]
 
     # Extract the various json blobs
-    tasks = extract_annotations(df)
-    extract_metadata(df)
-    extract_subject_data(df)
+    column_types = {}
+    extract_annotations(df, column_types)
+    extract_subject_data(df, column_types)
+    extract_metadata(df, column_types)
 
     # Get the subject_id from the subject_ids list, use the first one
     df['subject_id'] = df.subject_ids.map(
         lambda x: int(str(x).split(';')[0]))
 
     # Remove unwanted columns
-    df.drop(['user_id', 'user_ip'], axis=1, inplace=True)
+    unwanted_columns = [c for c in df.columns
+                        if c.lower() in [
+                            'user_id',
+                            'user_ip',
+                            'subject_ids',
+                            'subject_data',
+                            'subject: retired',
+                            'subject: subjectId']]
+    df.drop(unwanted_columns, axis=1, inplace=True)
 
-    adjust_column_names(df, tasks)
-    df = sort_columns(df, tasks).fillna('')
+    adjust_column_names(df, column_types)
+    df = sort_columns(df, column_types).fillna('')
     df.sort_values([args.group_by, args.sort_by], inplace=True)
 
-    return df, tasks
+    return df, column_types
 
 
 def get_workflow_id(df):
@@ -52,7 +61,7 @@ def get_workflow_id(df):
     return workflow_ids[0]
 
 
-def extract_metadata(df):
+def extract_metadata(df, column_types):
     """One column in the expedition CSV file contains a json object with
     metadata about the transcription event. We only need a few fields from this
     object.
@@ -60,15 +69,20 @@ def extract_metadata(df):
 
     df['json'] = df['metadata'].map(json.loads)
 
-    df['classification_started_at'] = df['json'].apply(
-        extract_date, column='started_at')
-    df['classification_finished_at'] = df['json'].apply(
-        extract_date, column='finished_at')
+    last = max([v['order'] for v in column_types.values()], default=1)
+
+    name = 'Classification started at'
+    df[name] = df['json'].apply(extract_date, column='started_at')
+    column_types[name] = {'type': 'same', 'order': last + 1, 'name': name}
+
+    name = 'Classification finished at'
+    df[name] = df['json'].apply(extract_date, column='finished_at')
+    column_types[name] = {'type': 'same', 'order': last + 2, 'name': name}
 
     df.drop(['metadata', 'json'], axis=1, inplace=True)
 
 
-def extract_subject_data(df):
+def extract_subject_data(df, column_types):
     """Extract the subject data from the json object in the subject_data
     column. We prefix the new column names with "subject_" to keep them
     separate from the other df columns.
@@ -78,6 +92,7 @@ def extract_subject_data(df):
 
     df['json'] = df['subject_data'].map(json.loads)
 
+    # Put the subject data into the data frame
     for subject in df['json']:
         for subject_dict in iter(subject.values()):
             for column, value in subject_dict.items():
@@ -87,27 +102,30 @@ def extract_subject_data(df):
                     value = json.dumps(value)
                 df['subject: ' + column] = value
 
+    # Get rid of unwanted data
     df.drop(['subject_data', 'json'], axis=1, inplace=True)
 
-    if 'subject_id' in df.columns:
-        df.rename(columns={'subject_id': 'subject_id_external'}, inplace=True)
+    # Put the subject columns into the column_types: They're all 'same'
+    last = max([v['order'] for v in column_types.values()], default=1)
+    for name in df.columns:
+        if name.startswith('subject: '):
+            last += 1
+            column_types[name] = {'type': 'same', 'order': last, 'name': name}
 
 
-def extract_annotations(df):
+def extract_annotations(df, column_types):
     """Extract annotations from the json object in the annotations column.
     Annotations are nested json blobs with a peculiar data format.
     """
 
     df['json'] = df['annotations'].map(json.loads)
 
-    all_tasks = {}
-
-    for classification_id, tasks in df.iterrows():
+    for classification_id, row in df.iterrows():
         tasks_seen = {}
-        for task in tasks['json']:
+        for task in row['json']:
             try:
                 extract_tasks(
-                    df, classification_id, task, all_tasks, tasks_seen)
+                    df, classification_id, task, column_types, tasks_seen)
             except ValueError:
                 print('Bad transcription for classification {}'.format(
                     classification_id))
@@ -115,32 +133,30 @@ def extract_annotations(df):
 
     df.drop(['annotations', 'json'], axis=1, inplace=True)
 
-    return all_tasks
 
-
-def extract_tasks(df, classification_id, task, all_tasks, tasks_seen):
+def extract_tasks(df, classification_id, task, column_types, tasks_seen):
     """Hoists a task annotation field into the data frame."""
 
     if isinstance(task.get('value'), list):
         for subtask in task['value']:
             extract_tasks(
-                df, classification_id, subtask, all_tasks, tasks_seen)
+                df, classification_id, subtask, column_types, tasks_seen)
     elif task.get('select_label'):
         header = create_header(
-            task['select_label'], all_tasks, tasks_seen, 'select')
+            task['select_label'], column_types, tasks_seen, 'select')
         df.loc[classification_id, header] = task.get('label', '')
     elif task.get('task_label'):
         header = create_header(
-            task['task_label'], all_tasks, tasks_seen, 'text')
+            task['task_label'], column_types, tasks_seen, 'text')
         df.loc[classification_id, header] = task.get('value', '')
     else:
         raise ValueError()
 
 
-def create_header(label, all_tasks, tasks_seen, reconciler):
+def create_header(label, column_types, tasks_seen, reconciler):
     """Create a header from the given label. We need to handle name collisions.
     tasks_seen = all of the columns so far in the row
-    all_tasks = all of the columns so far in the entire dataframe
+    column_types = all of the columns so far in the entire data frame
     """
 
     # Strip out problematic characters from the label
@@ -153,11 +169,11 @@ def create_header(label, all_tasks, tasks_seen, reconciler):
         header = '{} #{}'.format(label, tie_breaker)
     tasks_seen[header] = 1
 
-    if not all_tasks.get(header):
-        last = max([v['order'] for v in all_tasks.values()], default=1)
-        all_tasks[header] = {'type': reconciler,
-                             'order': last + 1,
-                             'name': header}
+    if not column_types.get(header):
+        last = max([v['order'] for v in column_types.values()], default=1)
+        column_types[header] = {'type': reconciler,
+                                'order': last + 1,
+                                'name': header}
 
     return header
 
@@ -168,32 +184,33 @@ def extract_date(metadata, column=''):
     return parse(metadata[column]).strftime('%d-%b-%Y %H:%M:%S')
 
 
-def adjust_column_names(df, tasks):
+def adjust_column_names(df, column_types):
     """Rename columns to add a "#1" suffix if there is a corresponding column
     with a "#2" suffix.
     """
 
     rename = {}
-    for name in tasks.keys():
+    for name in column_types.keys():
         old_name = name[:-3]
-        if name.endswith('#2') and tasks.get(old_name):
+        if name.endswith('#2') and column_types.get(old_name):
             rename[old_name] = old_name + ' #1'
 
     for old_name, new_name in rename.items():
-        new_task = tasks[old_name]
+        new_task = column_types[old_name]
         new_task['name'] = new_name
-        tasks[new_name] = new_task
-        del tasks[old_name]
+        column_types[new_name] = new_task
+        del column_types[old_name]
 
     df.rename(columns=rename, inplace=True)
 
 
-def sort_columns(df, tasks):
+def sort_columns(df, column_types):
     """Put columns into an order useful for displaying."""
 
     columns = ['subject_id', 'classification_id']
     columns.extend([v['name'] for v
-                    in sorted(tasks.values(), key=lambda x: x['order'])])
+                    in sorted(column_types.values(),
+                              key=lambda x: x['order'])])
     columns.extend([c for c in df.columns if c not in columns])
 
     return df.reindex_axis(columns, axis=1)

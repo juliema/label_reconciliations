@@ -2,6 +2,11 @@
 
 import re
 import sys
+import importlib
+from glob import glob
+from os.path import join, dirname, splitext, basename
+import pandas as pd
+
 
 GROUP_BY = 'subject_id'                # We group on this column
 COLUMN_PATTERN = r'^\d+T\d+[st]:\s*'   # Either a select or text column
@@ -13,13 +18,51 @@ ROW_TYPES = {  # Row types and their sort order
     'unreconciled': 'C'}
 
 
-def get_workflow_id(dataframe, args):
-    """Pull the workflow ID from the dataframe if it was not given."""
+def get_plugins(subdir):
+    """Get the plug-ins from the reconcilers directory."""
+
+    pattern = join(dirname(__file__), subdir, '*.py')
+
+    names = [splitext(basename(p))[0] for p in glob(pattern)
+             if p.find('__init__') == -1]
+
+    plugins = {}
+
+    for name in names:
+        module_name = 'lib.{}.{}'.format(subdir, name)
+        spec = importlib.util.find_spec(module_name)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        plugins[name] = module
+
+    return plugins
+
+
+def unreconciled_setup(args, unreconciled):
+    """Simple processing of the unreconciled dataframe. This is not used
+    when there is a large amount of processing of the input."""
+
+    unreconciled = pd.read_csv(args.input)
+
+    # Workflows must be processed individually
+    workflow_id = get_workflow_id(unreconciled, args)
+
+    # Remove anything not in the workflow
+    unreconciled = unreconciled.loc[unreconciled.workflow_id == workflow_id, :]
+    unreconciled = unreconciled.fillna('')
+
+    unreconciled.sort_values([args.group_by, args.sort_by], inplace=True)
+
+    return unreconciled
+
+
+def get_workflow_id(df, args):
+    """Pull the workflow ID from the data-frame if it was not given."""
 
     if args.workflow_id:
         return args.workflow_id
 
-    workflow_ids = dataframe.workflow_id.unique()
+    workflow_ids = df.workflow_id.unique()
 
     if len(workflow_ids) > 1:
         sys.exit('There are multiple workflows in this file. '

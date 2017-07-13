@@ -3,6 +3,7 @@ junk.*
 temp.*
 .~lock*
 temp/
+test/
 __pycache__/
 venv/*
 *.pyc
