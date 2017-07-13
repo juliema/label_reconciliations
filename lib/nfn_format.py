@@ -33,6 +33,7 @@ def read(args):
     # Remove unwanted columns
     df.drop(['user_id', 'user_ip'], axis=1, inplace=True)
 
+    adjust_column_names(df, tasks)
     df = sort_columns(df, tasks).fillna('')
     df.sort_values([args.group_by, args.sort_by], inplace=True)
 
@@ -78,13 +79,13 @@ def extract_subject_data(df):
     df['json'] = df['subject_data'].map(json.loads)
 
     for subject in df['json']:
-        for value in iter(subject.values()):
-            for column, value in value.items():
+        for subject_dict in iter(subject.values()):
+            for column, value in subject_dict.items():
                 column = re.sub(r'\W+', '_', column)
                 column = re.sub(r'^_+|__$', '', column)
                 if isinstance(value, dict):
                     value = json.dumps(value)
-                df['subject_' + column] = value
+                df['subject: ' + column] = value
 
     df.drop(['subject_data', 'json'], axis=1, inplace=True)
 
@@ -126,31 +127,30 @@ def extract_tasks(df, classification_id, task, all_tasks, tasks_seen):
                 df, classification_id, subtask, all_tasks, tasks_seen)
     elif task.get('select_label'):
         header = create_header(
-            task['select_label'], df, all_tasks, tasks_seen, 'select')
+            task['select_label'], all_tasks, tasks_seen, 'select')
         df.loc[classification_id, header] = task.get('label', '')
     elif task.get('task_label'):
         header = create_header(
-            task['task_label'], df, all_tasks, tasks_seen, 'text')
+            task['task_label'], all_tasks, tasks_seen, 'text')
         df.loc[classification_id, header] = task.get('value', '')
     else:
         raise ValueError()
 
 
-def create_header(label, df, all_tasks, tasks_seen, reconciler):
+def create_header(label, all_tasks, tasks_seen, reconciler):
     """Create a header from the given label. We need to handle name collisions.
     tasks_seen = all of the columns so far in the row
     all_tasks = all of the columns so far in the entire dataframe
     """
 
     # Strip out problematic characters from the label
-    label = re.sub(r'\W+', '_', label)
-    label = re.sub(r'^_+|_+$', '', label)
+    label = re.sub(r'^\s+|\s+$', '', label)
 
     tie_breaker = 1  # Tie breaker for duplicate column names
     header = label   # Start with the label
     while header in tasks_seen:
         tie_breaker += 1
-        header = '{}_{}'.format(label, tie_breaker)
+        header = '{} #{}'.format(label, tie_breaker)
     tasks_seen[header] = 1
 
     if not all_tasks.get(header):
@@ -166,6 +166,26 @@ def extract_date(metadata, column=''):
     """Extract dates from a json object."""
 
     return parse(metadata[column]).strftime('%d-%b-%Y %H:%M:%S')
+
+
+def adjust_column_names(df, tasks):
+    """Rename columns to add a "#1" suffix if there is a corresponding column
+    with a "#2" suffix.
+    """
+
+    rename = {}
+    for name in tasks.keys():
+        old_name = name[:-3]
+        if name.endswith('#2') and tasks.get(old_name):
+            rename[old_name] = old_name + ' #1'
+
+    for old_name, new_name in rename.items():
+        new_task = tasks[old_name]
+        new_task['name'] = new_name
+        tasks[new_name] = new_task
+        del tasks[old_name]
+
+    df.rename(columns=rename, inplace=True)
 
 
 def sort_columns(df, tasks):

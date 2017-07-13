@@ -1,5 +1,5 @@
-"""Take the unreconciled dataframe and build the reconciled and explanations
-dataframes.
+"""Take the unreconciled data-frame and build the reconciled and explanations
+data-frames.
 """
 
 import re
@@ -11,7 +11,7 @@ import lib.util as util
 
 
 class ReconciledBuilder:
-    """Build the reconciled dataframe from the unreconciled dataframe."""
+    """Build the reconciled data-frame from the unreconciled data-frame."""
 
     place_holders = ['placeholder']  # Replace placeholders with empty string
 

@@ -13,13 +13,13 @@ ROW_TYPES = {  # Row types and their sort order
     'unreconciled': 'C'}
 
 
-def get_workflow_id(df, args):
+def get_workflow_id(dataframe, args):
     """Pull the workflow ID from the dataframe if it was not given."""
 
     if args.workflow_id:
         return args.workflow_id
 
-    workflow_ids = df.workflow_id.unique()
+    workflow_ids = dataframe.workflow_id.unique()
 
     if len(workflow_ids) > 1:
         sys.exit('There are multiple workflows in this file. '
