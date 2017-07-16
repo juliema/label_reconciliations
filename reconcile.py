@@ -31,11 +31,8 @@ def parse_command_line():
               select: Reconcile a fixed list of options.
               text:   Reconcile free text entries.
               same:   Check that all items in a group are the same.
+              mmm:    Show the mean, median, and mode for each group.
             * Note:   If a column is not listed it will not be reconciled."""))
-    #   median:   Show the median for groups in this column.
-    #   mode:     Show the mode for groups in this column.
-    #   mean:     Show the mean for groups in this column.
-    #   mmm:      Show the mean, median, and mode for groups.
 
     parser.add_argument('input_file', metavar="INPUT-FILE",
                         help="""The input file.""")

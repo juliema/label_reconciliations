@@ -6,7 +6,6 @@ from itertools import combinations
 from fuzzywuzzy import fuzz
 import inflect
 
-PLACEHOLDERS = ['placeholder']
 E = inflect.engine()
 E.defnoun('The', 'All')
 P = E.plural
