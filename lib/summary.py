@@ -30,7 +30,7 @@ def report(args, unreconciled, reconciled, explanations, column_types):
 
     # Get the report template
     env = Environment(loader=PackageLoader('reconcile', '.'))
-    template = env.get_template('lib/summary_report_template.html')
+    template = env.get_template('lib/summary/template.html')
 
     # Merge the data frames into one data frame in an order the report can use
     merged_cols, merged = merge_dataframes(

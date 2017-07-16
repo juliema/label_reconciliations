@@ -2,11 +2,15 @@
 dumps into the format that will be input into the rest of the modules.
 """
 
+# pylint: disable=invalid-name
+
 import re
 import json
 from dateutil.parser import parse
 import pandas as pd
 import lib.util as util
+
+SUBJECT_PREFIX = 'Subject '
 
 
 def read(args):
@@ -37,8 +41,8 @@ def read(args):
                             'user_ip',
                             'subject_ids',
                             'subject_data',
-                            'subject retired',
-                            'subject subjectId']]
+                            (SUBJECT_PREFIX + 'retired').lower(),
+                            (SUBJECT_PREFIX + 'subjectId').lower()]]
     df.drop(unwanted_columns, axis=1, inplace=True)
 
     adjust_column_names(df, column_types)
@@ -83,7 +87,7 @@ def extract_subject_data(df, column_types):
                 column = re.sub(r'^_+|__$', '', column)
                 if isinstance(value, dict):
                     value = json.dumps(value)
-                df['subject ' + column] = value
+                df[SUBJECT_PREFIX + column] = value
 
     # Get rid of unwanted data
     df.drop(['subject_data', 'json'], axis=1, inplace=True)
@@ -91,7 +95,7 @@ def extract_subject_data(df, column_types):
     # Put the subject columns into the column_types: They're all 'same'
     last = max([v['order'] for v in column_types.values()], default=1)
     for name in df.columns:
-        if name.startswith('subject: '):
+        if name.startswith(SUBJECT_PREFIX):
             last += 1
             column_types[name] = {'type': 'same', 'order': last, 'name': name}
 

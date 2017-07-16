@@ -10,7 +10,7 @@ import lib.util as util
 def build(args, unreconciled, column_types):
     """This function builds the reconciled and explanations data-frames."""
 
-    plugins = util.get_plugins('reconcilers')
+    plugins = util.get_plugins('column_types')
     reconcilers = {k: plugins[v['type']] for k, v in column_types.items()}
 
     # Get group and then reconcile the data
@@ -23,8 +23,9 @@ def build(args, unreconciled, column_types):
     explanations = pd.DataFrame()
     for column in reconciled.columns:
         reconciler = reconcilers.get(column)
-        if reconciler and reconciler.HAS_EXPLANATIONS:
-            explanations[column] = reconciled[column].apply(lambda x: x[0])
+        if reconciler:
+            if column_types[column]['type'] != 'same':
+                explanations[column] = reconciled[column].apply(lambda x: x[0])
             reconciled[column] = reconciled[column].apply(lambda x: x[1])
 
     return reconciled, explanations

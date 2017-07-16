@@ -6,8 +6,6 @@ from itertools import combinations
 from fuzzywuzzy import fuzz
 import inflect
 
-HAS_EXPLANATIONS = True
-
 PLACEHOLDERS = ['placeholder']
 E = inflect.engine()
 E.defnoun('The', 'All')

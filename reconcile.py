@@ -38,7 +38,7 @@ def parse_command_line():
     parser.add_argument('input_file', metavar="INPUT-FILE",
                         help="""The input file.""")
 
-    parser.add_argument('--format',
+    parser.add_argument('-f', '--format',
                         choices=['nfn', 'csv', 'json'], default='nfn',
                         help="""The unreconciled data is in what type of file?
                              nfn=A Zooniverse classification data dump.
@@ -49,15 +49,15 @@ def parse_command_line():
                              but the --column-types option will override our
                              guesses.""")
 
-    parser.add_argument('-R', '--reconcilers', action='append',
+    parser.add_argument('-c', '--column-types', action='append',
                         help="""A string with information on how to reconcile
-                             each column in the input file. Note: we try to
-                             guess the column type when --format="nfn",
-                             this will override the guesses. The format is
-                             --reconcilers="foo x:select,bar:text,baz:text".
+                             each column in the input file. The format is
+                             --column-types "foo x:select,bar:text,baz:text".
                              The list is comma separated with the column
                              label going before the colon and the
-                             reconciliation type after the colon.""")
+                             reconciliation type after the colon. Note: This
+                             overrides any column type guesses.
+                             """)
 
     parser.add_argument('-w', '--workflow-id', type=int,
                         help="""The workflow to extract. Required if there is
@@ -139,9 +139,6 @@ def zip_files(args):
         if args.summary:
             zippy.write(args.summary, compress_type=zipfile.ZIP_DEFLATED)
 
-    if args.zip_keep:
-        return
-
     if args.unreconciled:
         os.remove(args.unreconciled)
     if args.reconciled:
@@ -150,17 +147,17 @@ def zip_files(args):
         os.remove(args.summary)
 
 
-def get_column_types(args, reconcilers):
+def get_column_types(args, column_types):
     """Append the argument column types to the inferred column types."""
 
-    if args.reconcilers:
-        for arg in args.reconcilers:
+    if args.column_types:
+        for arg in args.column_types:
             for option in arg.split(','):
                 column, recon = option.split(':')
                 column = column.strip()
                 recon = recon.strip()
 
-    return reconcilers
+    return column_types
 
 
 def main():
@@ -173,7 +170,7 @@ def main():
     if unreconciled.shape[0] == 0:
         sys.exit('Workflow {} has no data.'.format(args.workflow_id))
 
-    reconcilers = get_column_types(args, column_types)
+    column_types = get_column_types(args, column_types)
 
     if args.unreconciled:
         unreconciled.to_csv(
@@ -181,7 +178,7 @@ def main():
 
     if args.reconciled or args.summary:
         reconciled, explanations = reconciler.build(
-            args, unreconciled, reconcilers)
+            args, unreconciled, column_types)
 
         if args.reconciled:
             reconciled.to_csv(
@@ -191,7 +188,7 @@ def main():
             summary.report(
                 args, unreconciled, reconciled, explanations, column_types)
 
-    if args.zip or args.zip_keep:
+    if args.zip:
         zip_files(args)
 
 

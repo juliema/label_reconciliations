@@ -6,6 +6,8 @@ from glob import glob
 from os.path import join, dirname, splitext, basename
 import pandas as pd
 
+# pylint: disable=invalid-name
+
 
 def get_plugins(subdir):
     """Get the plug-ins from the reconcilers directory."""

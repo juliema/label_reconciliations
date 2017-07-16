@@ -4,15 +4,13 @@ vocabulary."""
 from collections import Counter
 import inflect
 
-HAS_EXPLANATIONS = True
-
 PLACEHOLDERS = ['placeholder']
 E = inflect.engine()
 E.defnoun('The', 'All')
 P = E.plural
 
 
-def reconcile(group, args=None):
+def reconcile(group, args=None):  # pylint: disable=unused-argument
     """Reconcile the data."""
 
     values = [str(g) if str(g).lower() not in PLACEHOLDERS else ''
