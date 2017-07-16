@@ -1,21 +1,10 @@
 """Common utilities."""
 
-import re
 import sys
 import importlib
 from glob import glob
 from os.path import join, dirname, splitext, basename
 import pandas as pd
-
-
-GROUP_BY = 'subject_id'                # We group on this column
-COLUMN_PATTERN = r'^\d+T\d+[st]:\s*'   # Either a select or text column
-SELECT_COLUMN_PATTERN = r'^\d+T\d+s:'  # How select columns are labeled
-TEXT_COLUMN_PATTERN = r'^\d+T\d+t:'    # How text columns are labeled
-ROW_TYPES = {  # Row types and their sort order
-    'explanations': 'A',
-    'reconciled': 'B',
-    'unreconciled': 'C'}
 
 
 def get_plugins(subdir):
@@ -39,7 +28,7 @@ def get_plugins(subdir):
 
 
 def unreconciled_setup(args, unreconciled):
-    """Simple processing of the unreconciled dataframe. This is not used
+    """Simple processing of the unreconciled data frame. This is not used
     when there is a large amount of processing of the input."""
 
     unreconciled = pd.read_csv(args.input)
@@ -62,7 +51,7 @@ def get_workflow_id(df, args):
     if args.workflow_id:
         return args.workflow_id
 
-    workflow_ids = df.workflow_id.unique()
+    workflow_ids = df[args.workflow_id_column].unique()
 
     if len(workflow_ids) > 1:
         sys.exit('There are multiple workflows in this file. '
@@ -71,21 +60,16 @@ def get_workflow_id(df, args):
     return workflow_ids[0]
 
 
-def format_header(header):
-    """Remove tag ID and type flag from the column header."""
+def sort_columns(args, df, column_types):
+    """Put columns into an order useful for displaying."""
 
-    header = re.sub(COLUMN_PATTERN, '', header)
-    header = re.sub(r'\W', '_', header)
-    header = re.sub(r'__+', '_', header)
-    return header
+    columns = [args.group_by, args.sort_by]
+    columns.extend([v['name'] for v
+                    in sorted(column_types.values(),
+                              key=lambda x: x['order'])])
+    columns.extend([c for c in df.columns
+                    if c not in columns and c not in ['row_type']])
+    if 'row_type' in df.columns:
+        columns.append('row_type')
 
-
-def header_label(task_id, label, task_type, task_count):
-    """Build a column header from the annotations json object. It contains
-    flags for later processing and a tiebreaker (task_count) to handle
-    duplicate task IDs.
-    """
-
-    label = '{:0>3}{}{:0>3}{}: {}_{}'.format(
-        task_count, task_id[0], task_id[1:], task_type, label, task_count)
-    return label
+    return df.reindex_axis(columns, axis=1)

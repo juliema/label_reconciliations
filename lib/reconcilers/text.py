@@ -1,7 +1,7 @@
 """Reconcile free text fields."""
 
 import re
-from collections import Counter, namedtuple
+from collections import namedtuple
 from itertools import combinations
 from fuzzywuzzy import fuzz
 import inflect
@@ -15,52 +15,78 @@ P = E.plural
 
 FuzzyRatioScore = namedtuple('FuzzyRatioScore', 'score value')
 FuzzySetScore = namedtuple('FuzzySetScore', 'score value tokens')
+ExactScore = namedtuple('ExactScore', 'value count')
 
 
 def reconcile(group, args=None):
     """Reconcile the data."""
 
-    values = [re.sub(r'\W+', '', str(v)).lower() for v in group]
-    print(values)
+    values = ['\n'.join([' '.join(ln.split()) for ln in str(g).splitlines()])
+              for g in group]
 
-    filled = Counter([v for v in values if v.strip()]).most_common()
+    filled = only_filled_values(values)
+
     count = len(values)
-    blanks = count - sum([f[1] for f in filled])
+    blanks = count - sum([f.count for f in filled])
 
     if not filled:
-        reason = [P('The', count), str(count), P('record', count),
-                  P('is', count), 'blank']
-        return ' '.join(reason), ''
+        reason = '{} {} {} {} blank'.format(
+            P('The', count), count, P('record', count), P('is', count))
+        return reason, ''
 
-    if filled[0][1] > 1:
-        reason = ['Normalized exact match,', filled[0][1], 'of',
-                  str(count), P('record', count), 'with', str(blanks),
-                  P('blank', blanks)]
-        return ' '.join(reason), filled[0][0]
+    if filled[0].count > 1:
+        reason = 'Normalized exact match, {} of {} {} with {} {}'.format(
+            filled[0].count, count, P('record', count),
+            blanks, P('blank', blanks))
+        return reason, filled[0].value
 
-    if filled[0][1] == 1:
-        reason = ['Only 1 transcript in', str(count), P('record', count)]
-        return ' '.join(reason), filled[0][0]
+    if len(filled) == 1:
+        reason = 'Only 1 transcript in {} {}'.format(count, P('record', count))
+        return reason, filled[0].value
 
     # Check for simple in-place fuzzy matches
     top = top_partial_ratio(values)
     if top.score >= args.fuzzy_ratio_threshold:
-        reason = ['Partial ratio match on', str(count), P('record', count),
-                  'with', str(blanks), P('blank', blanks),
-                  'score=', str(top.score)]
-        return ' '.join(reason), top.value
+        reason = 'Partial ratio match on {} {} with {} {}, score={}'.format(
+            count, P('record', count), blanks, P('blank', blanks), top.score)
+        return reason, top.value
 
     # Now look for the best token match
     top = top_token_set_ratio(values)
     if top.score >= args.fuzzy_set_threshold:
-        reason = ['Token set ratio match on', str(count), P('record', count),
-                  'with', str(blanks), P('blank', blanks),
-                  'score=', str(top.score)]
-        return ' '.join(reason), top.value
+        reason = 'Token set ratio match on {} {} with {} {}, score={}'.format(
+            count, P('record', count), blanks, P('blank', blanks), top.score)
+        return reason, top.value
 
-    reason = ['No exact match on', str(count), P('record', count),
-              'with', str(blanks), P('blank', blanks)]
-    return ' '.join(reason), ''
+    reason = 'No text match on {} {} with {} {}'.format(
+        count, P('record', count), blanks, P('blank', blanks))
+    return reason, ''
+
+
+def only_filled_values(values):
+    """Get the items in the group where they are filled and sort
+    by frequency. Normalize the text for comparison by removing spaces and
+    punctuation, and setting all letters to lower case. We return the longest
+    value in a normalized group. So the following three items will normalize to
+    the same value ("atestlabel") but we will return the second one:
+      "A test label"  "a test label."   "A TEST LABEL"
+    """
+
+    all_filled = {}
+    for value in values:
+        value = value.strip()
+        if value:
+            squished = re.sub(r'\W+', '', value).lower()
+            same_values = all_filled.get(squished, [])
+            same_values.append(value)
+            all_filled[squished] = same_values
+
+    only_filled = []
+    for _, vals in all_filled.items():
+        longest = sorted(vals, key=len, reverse=True)[0]
+        only_filled.append(ExactScore(longest, len(vals)))
+
+    return sorted(only_filled, key=lambda s: s.count, reverse=True)
 
 
 def top_partial_ratio(values):

@@ -7,6 +7,7 @@ import argparse
 import textwrap
 import lib.util as util
 import lib.reconciler as reconciler
+import lib.summary as summary
 
 VERSION = '0.3.0'
 
@@ -26,15 +27,16 @@ def parse_command_line():
             Current reconciliation types
             ----------------------------
               select: Reconcile a fixed list of options.
-              text:   Reconcile free text entry.
-              same:   All items are the same. Pick an arbitrary first one.
-              none:   Do not reconcile this field. This is the default."""))
+              text:   Reconcile free text entries.
+              same:   Check that all items in a group are the same.
+            * Note:   If a column is not listed it will not be reconciled."""))
     #   median:   Show the median for groups in this column.
     #   mode:     Show the mode for groups in this column.
     #   mean:     Show the mean for groups in this column.
     #   mmm:      Show the mean, median, and mode for groups.
 
-    parser.add_argument('--input', required=True, help="""The input file.""")
+    parser.add_argument('input_file', metavar="INPUT-FILE",
+                        help="""The input file.""")
 
     parser.add_argument('--format',
                         choices=['nfn', 'csv', 'json'], default='nfn',
@@ -47,7 +49,7 @@ def parse_command_line():
                              but the --column-types option will override our
                              guesses.""")
 
-    parser.add_argument('--reconcilers', action='append',
+    parser.add_argument('-R', '--reconcilers', action='append',
                         help="""A string with information on how to reconcile
                              each column in the input file. Note: we try to
                              guess the column type when --format="nfn",
@@ -57,30 +59,26 @@ def parse_command_line():
                              label going before the colon and the
                              reconciliation type after the colon.""")
 
-    parser.add_argument('--workflow-id', type=int,
+    parser.add_argument('-w', '--workflow-id', type=int,
                         help="""The workflow to extract. Required if there is
                              more than one workflow in the classifications
                              file.""")
 
-    parser.add_argument('--unreconciled',
+    parser.add_argument('-u', '--unreconciled',
                         help="""Write the unreconciled workflow
                             classifications to this CSV file.""")
 
-    parser.add_argument('--reconciled',
+    parser.add_argument('-r', '--reconciled',
                         help="""Write the reconciled classifications to this
                             CSV file.""")
 
-    parser.add_argument('--summary',
+    parser.add_argument('-s', '--summary',
                         help="""Write a summary of the reconciliation to this
                             HTML file.""")
 
-    parser.add_argument('--group-by', default='subject_id',
-                        help="""Group the rows by this column.
-                            (Default=subject_id).""")
-
-    parser.add_argument('--sort-by', default='classification_id',
-                        help="""A secondary sort column. The primary sort is
-                             the --group-by (Default=classification_id).""")
+    parser.add_argument('-z', '--zip',
+                        help="""Zip files and put them into this archive.
+                            Remove the uncompressed files afterwards.""")
 
     parser.add_argument('--fuzzy-ratio-threshold', default=90, type=int,
                         help="""Sets the cutoff for fuzzy ratio matching
@@ -92,13 +90,25 @@ def parse_command_line():
                             default=50).
                             See https://github.com/seatgeek/fuzzywuzzy.""")
 
-    parser.add_argument('--zip',
-                        help="""Zip files and put them into this archive.
-                            Remove the uncompressed files afterwards.""")
+    parser.add_argument('--group-by', default='subject_id',
+                        help="""Group the rows by this column.
+                            (Default=subject_id).""")
 
-    parser.add_argument('--zip-keep',
-                        help="""Zip files and put them into this archive.
-                            Keep the uncompressed files afterwards.""")
+    parser.add_argument('--sort-by', default='classification_id',
+                        help="""A secondary sort column. The primary sort is
+                             the --group-by (Default=classification_id).""")
+
+    parser.add_argument('--user-column', default='user_name',
+                        help="""Which column to use to get a count of user
+                        transcripts (Default=user_name).""")
+
+    parser.add_argument('--workflow-id-column', default='workflow_id',
+                        help="""Which column holds the workflow_name used in
+                        the summary report (Default=workflow_name).""")
+
+    parser.add_argument('--workflow-name-column', default='workflow_name',
+                        help="""Which column holds the workflow name used in
+                        the summary report (Default=workflow_name).""")
 
     parser.add_argument('-V', '--version', action='version',
                         version='%(prog)s {}'.format(VERSION))
@@ -146,10 +156,9 @@ def get_column_types(args, reconcilers):
     if args.reconcilers:
         for arg in args.reconcilers:
             for option in arg.split(','):
-                column, reconciler = option.split(':')
+                column, recon = option.split(':')
                 column = column.strip()
-                reconciler = reconciler.strip()
-        print(args.reconcilers)
+                recon = recon.strip()
 
     return reconcilers
 
@@ -178,11 +187,9 @@ def main():
             reconciled.to_csv(
                 args.reconciled, sep=',', encoding='utf-8', index=False)
 
-    #     if args.summary:
-    #         SummaryReport(args,
-    #                       unreconciled,
-    #                       reconciled,
-    #                       explanations).report()
+        if args.summary:
+            summary.report(
+                args, unreconciled, reconciled, explanations, column_types)
 
     if args.zip or args.zip_keep:
         zip_files(args)

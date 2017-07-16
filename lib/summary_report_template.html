@@ -94,8 +94,8 @@
     <select>
       <option value="__off__" selected="true">Show All</option>
       <option value="__all__">Show All Problems</option>
-      {% for opt in options %}
-        <option value="{{opt}}">Show Problems with: {{opt}}</option>
+      {% for val, col in problem_options %}
+        <option value="{{val}}">Show Problems with: {{col}}</option>
       {% endfor %}
     </select>
     <table>
@@ -108,11 +108,11 @@
       </tr>
       </thead>
       <tbody>
-        {% for _, group in merged_df %}
+        {% for _, group in merged %}
           {% for row in group.itertuples() %}
             {% if row.row_type == row_types.explanations %}
               {% set explanations = row %}
-              {% set row_problems = ','.join(problems[row.subject_id]) %}
+              {% set row_problems = ','.join(problems[row.subject_id].values()) %}
             {% elif row.row_type == row_types.reconciled %}
               <tr class="closed" data-subject-id="{{row.subject_id}}"
                   data-row-type="{{row.row_type}}" data-problems="{{row_problems}}">
@@ -121,8 +121,8 @@
                 <td></td>
                 {% for col in merged_cols[2:-1] %}
                   <td class="{{'problem' if problems[row.subject_id].get(col, None) else ''}}"
-                      title="{{explanations[col]}}">
-                    {{row[col]}}
+                      title="{{explanations[loop.index + 2]}}">
+                    {{row[loop.index + 2]}}
                   </td>
                 {% endfor %}
               </tr>
@@ -132,7 +132,7 @@
                 <td></td>
                 <td></td>
                 {% for col in merged_cols[2:-1] %}
-                  <td class="{{'filled' if explanations[col] else ''}}">{{explanations[col]}}</td>
+                  <td class="{{'filled' if explanations[loop.index + 2] else ''}}">{{explanations[loop.index + 2]}}</td>
                 {% endfor %}
               </tr>
             {% elif row.row_type == row_types.unreconciled %}
@@ -142,7 +142,7 @@
                 <td></td>
                 <td>{{row.classification_id | int('')}}</td>
                 {% for col in merged_cols[2:-1] %}
-                  <td>{{row[col]}}</td>
+                  <td>{{row[loop.index + 2]}}</td>
                 {% endfor %}
               </tr>
             {% endif %}

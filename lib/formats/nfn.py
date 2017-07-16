@@ -3,7 +3,6 @@ dumps into the format that will be input into the rest of the modules.
 """
 
 import re
-import sys
 import json
 from dateutil.parser import parse
 import pandas as pd
@@ -13,22 +12,22 @@ import lib.util as util
 def read(args):
     """This is the main function that does the conversion."""
 
-    df = pd.read_csv(args.input)
+    df = pd.read_csv(args.input_file)
 
     # Workflows must be processed individually
     workflow_id = util.get_workflow_id(df, args)
 
     # Remove anything not in the workflow
-    df = df.loc[df.workflow_id == workflow_id, :]
+    df = df.loc[df[args.workflow_id_column] == workflow_id, :]
 
     # Extract the various json blobs
     column_types = {}
     extract_annotations(df, column_types)
     extract_subject_data(df, column_types)
-    extract_metadata(df, column_types)
+    extract_metadata(df)
 
     # Get the subject_id from the subject_ids list, use the first one
-    df['subject_id'] = df.subject_ids.map(
+    df[args.group_by] = df.subject_ids.map(
         lambda x: int(str(x).split(';')[0]))
 
     # Remove unwanted columns
@@ -38,30 +37,18 @@ def read(args):
                             'user_ip',
                             'subject_ids',
                             'subject_data',
-                            'subject: retired',
-                            'subject: subjectId']]
+                            'subject retired',
+                            'subject subjectId']]
     df.drop(unwanted_columns, axis=1, inplace=True)
 
     adjust_column_names(df, column_types)
-    df = sort_columns(df, column_types).fillna('')
+    df = util.sort_columns(args, df, column_types).fillna('')
     df.sort_values([args.group_by, args.sort_by], inplace=True)
 
     return df, column_types
 
 
-def get_workflow_id(df):
-    """Pull the workflow ID from the df if it was not given."""
-
-    workflow_ids = df.workflow_id.unique()
-
-    if len(workflow_ids) > 1:
-        sys.exit('There are multiple workflows in this file. '
-                 'You must provide a workflow ID as an argument.')
-
-    return workflow_ids[0]
-
-
-def extract_metadata(df, column_types):
+def extract_metadata(df):
     """One column in the expedition CSV file contains a json object with
     metadata about the transcription event. We only need a few fields from this
     object.
@@ -69,15 +56,11 @@ def extract_metadata(df, column_types):
 
     df['json'] = df['metadata'].map(json.loads)
 
-    last = max([v['order'] for v in column_types.values()], default=1)
-
     name = 'Classification started at'
     df[name] = df['json'].apply(extract_date, column='started_at')
-    column_types[name] = {'type': 'same', 'order': last + 1, 'name': name}
 
     name = 'Classification finished at'
     df[name] = df['json'].apply(extract_date, column='finished_at')
-    column_types[name] = {'type': 'same', 'order': last + 2, 'name': name}
 
     df.drop(['metadata', 'json'], axis=1, inplace=True)
 
@@ -100,7 +83,7 @@ def extract_subject_data(df, column_types):
                 column = re.sub(r'^_+|__$', '', column)
                 if isinstance(value, dict):
                     value = json.dumps(value)
-                df['subject: ' + column] = value
+                df['subject ' + column] = value
 
     # Get rid of unwanted data
     df.drop(['subject_data', 'json'], axis=1, inplace=True)
@@ -202,15 +185,3 @@ def adjust_column_names(df, column_types):
         del column_types[old_name]
 
     df.rename(columns=rename, inplace=True)
-
-
-def sort_columns(df, column_types):
-    """Put columns into an order useful for displaying."""
-
-    columns = ['subject_id', 'classification_id']
-    columns.extend([v['name'] for v
-                    in sorted(column_types.values(),
-                              key=lambda x: x['order'])])
-    columns.extend([c for c in df.columns if c not in columns])
-
-    return df.reindex_axis(columns, axis=1)

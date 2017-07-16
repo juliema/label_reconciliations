@@ -24,19 +24,20 @@ def reconcile(group, args=None):
     blanks = count - sum([f[1] for f in filled])
 
     if not filled:
-        reason = [P('The', count), str(count), P('record', count),
-                  P('is', count), 'blank']
-        return ' '.join(reason), ''
+        reason = '{} {} {} {} blank'.format(
+            P('The', count), count, P('record', count), P('is', count))
+        return reason, ''
 
     if filled[0][1] > 1:
-        reason = ['Exact match,', filled[0][1], 'of', str(count),
-                  P('record', count), 'with', str(blanks), P('blank', blanks)]
-        return ' '.join(reason), filled[0][0]
+        reason = 'Exact match, {} of {} {} with {} {}'.format(
+            filled[0][1], count, P('record', count),
+            blanks, P('blank', blanks))
+        return reason, filled[0][0]
 
-    if filled[0][1] == 1:
-        reason = ['Only 1 transcript in', str(count), P('record', count)]
-        return ' '.join(reason), filled[0][0]
+    if len(filled) == 1:
+        reason = 'Only 1 transcript in {} {}'.format(count, P('record', count))
+        return reason, filled[0][0]
 
-    reason = ['No exact match on', str(count), P('record', count),
-              'with', str(blanks), P('blank', blanks)]
-    return ' '.join(reason), ''
+    reason = 'No select match on {} {} with {} {}'.format(
+        count, P('record', count), blanks, P('blank', blanks))
+    return reason, ''
