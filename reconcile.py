@@ -17,12 +17,14 @@ def parse_command_line():
 
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawDescriptionHelpFormatter,
+        fromfile_prefix_chars='@',
         description=textwrap.dedent("""
             This takes raw Notes from Nature classifications and creates a
             reconciliation of the classifications for a particular workflow.
             That is, it reduces n classifications per subject to the "best"
             values. The summary file will provide explanations of how the
-            reconciliations were done."""),
+            reconciliations were done. NOTE: You may use a file to hold the
+            command-line arguments like: @foo.txt."""),
         epilog=textwrap.dedent("""
             Current reconciliation types
             ----------------------------
@@ -46,8 +48,8 @@ def parse_command_line():
                              default is "nfn". When the format is "csv" or
                              "json" we require the --column-types. If the
                              type is "nfn" we can guess the --column-types
-                             but the --column-types option will override our
-                             guesses.""")
+                             but the --column-types option will still override
+                             our guesses.""")
 
     parser.add_argument('-c', '--column-types', action='append',
                         help="""A string with information on how to reconcile
@@ -57,9 +59,7 @@ def parse_command_line():
                              label going before the colon and the
                              reconciliation type after the colon. Note: This
                              overrides any column type guesses. You may use
-                             this multiple times. Quotes around the value
-                             are recommended.
-                             """)
+                             this multiple times.""")
 
     parser.add_argument('-w', '--workflow-id', type=int,
                         help="""The workflow to extract. Required if there is
