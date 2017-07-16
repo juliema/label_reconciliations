@@ -93,7 +93,7 @@ def extract_subject_data(df, column_types):
     df.drop(['subject_data', 'json'], axis=1, inplace=True)
 
     # Put the subject columns into the column_types: They're all 'same'
-    last = max([v['order'] for v in column_types.values()], default=1)
+    last = util.last_column_type(column_types)
     for name in df.columns:
         if name.startswith(SUBJECT_PREFIX):
             last += 1
@@ -157,7 +157,7 @@ def create_header(label, column_types, tasks_seen, reconciler):
     tasks_seen[header] = 1
 
     if not column_types.get(header):
-        last = max([v['order'] for v in column_types.values()], default=1)
+        last = util.last_column_type(column_types)
         column_types[header] = {'type': reconciler,
                                 'order': last + 1,
                                 'name': header}

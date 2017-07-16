@@ -56,7 +56,9 @@ def parse_command_line():
                              The list is comma separated with the column
                              label going before the colon and the
                              reconciliation type after the colon. Note: This
-                             overrides any column type guesses.
+                             overrides any column type guesses. You may use
+                             this multiple times. Quotes around the value
+                             are recommended.
                              """)
 
     parser.add_argument('-w', '--workflow-id', type=int,
@@ -150,13 +152,21 @@ def zip_files(args):
 def get_column_types(args, column_types):
     """Append the argument column types to the inferred column types."""
 
+    last = util.last_column_type(column_types)
     if args.column_types:
         for arg in args.column_types:
             for option in arg.split(','):
-                column, recon = option.split(':')
-                column = column.strip()
-                recon = recon.strip()
-
+                name, col_type = option.split(':')
+                name = name.strip()
+                col_type = col_type.strip()
+                if column_types.get(name):
+                    order = column_types[name]['order']
+                else:
+                    last += 1
+                    order = last
+                column_types[name] = {'type': col_type,
+                                      'order': order,
+                                      'name': name}
     return column_types
 
 

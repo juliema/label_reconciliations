@@ -4,7 +4,6 @@ import sys
 import importlib
 from glob import glob
 from os.path import join, dirname, splitext, basename
-import pandas as pd
 
 # pylint: disable=invalid-name
 
@@ -32,8 +31,6 @@ def get_plugins(subdir):
 def unreconciled_setup(args, unreconciled):
     """Simple processing of the unreconciled data frame. This is not used
     when there is a large amount of processing of the input."""
-
-    unreconciled = pd.read_csv(args.input)
 
     # Workflows must be processed individually
     workflow_id = get_workflow_id(unreconciled, args)
@@ -75,3 +72,9 @@ def sort_columns(args, df, column_types):
         columns.append('row_type')
 
     return df.reindex_axis(columns, axis=1)
+
+
+def last_column_type(column_types):
+    """Return the max order in the order types."""
+
+    return max([v['order'] for v in column_types.values()], default=0)
