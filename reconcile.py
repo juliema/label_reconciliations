@@ -58,11 +58,6 @@ def parse_command_line():
                              overrides any column type guesses. You may use
                              this multiple times.""")
 
-    parser.add_argument('-w', '--workflow-id', type=int,
-                        help="""The workflow to extract. Required if there is
-                             more than one workflow in the classifications
-                             file.""")
-
     parser.add_argument('-u', '--unreconciled',
                         help="""Write the unreconciled workflow
                             classifications to this CSV file.""")
@@ -79,6 +74,28 @@ def parse_command_line():
                         help="""Zip files and put them into this archive.
                             Remove the uncompressed files afterwards.""")
 
+    parser.add_argument('-w', '--workflow-id', type=int,
+                        help="""The workflow to extract. Required if there is
+                             more than one workflow in the classifications
+                             file. This is only used for nfn formats.""")
+
+    parser.add_argument('--title', default='',
+                        help="""The title to put on the summary report. We will
+                            build this when the format is nfn. For other
+                            formats the default is the INPUT-FILE.""")
+
+    parser.add_argument('--group-by', default='subject_id',
+                        help="""Group the rows by this column.
+                            (Default=subject_id).""")
+
+    parser.add_argument('--key-column', default='classification_id',
+                        help="""A secondary sort column.
+                            (Default=classification_id).""")
+
+    parser.add_argument('--user-column', default='user_name',
+                        help="""Which column to use to get a count of user
+                            transcripts (Default=user_name).""")
+
     parser.add_argument('--fuzzy-ratio-threshold', default=90, type=int,
                         help="""Sets the cutoff for fuzzy ratio matching
                             (0-100, default=90).
@@ -88,26 +105,6 @@ def parse_command_line():
                         help="""Sets the cutoff for fuzzy set matching (0-100,
                             default=50).
                             See https://github.com/seatgeek/fuzzywuzzy.""")
-
-    parser.add_argument('--group-by', default='subject_id',
-                        help="""Group the rows by this column.
-                            (Default=subject_id).""")
-
-    parser.add_argument('--sort-by', default='classification_id',
-                        help="""A secondary sort column. The primary sort is
-                             the --group-by (Default=classification_id).""")
-
-    parser.add_argument('--user-column', default='user_name',
-                        help="""Which column to use to get a count of user
-                        transcripts (Default=user_name).""")
-
-    parser.add_argument('--workflow-id-column', default='workflow_id',
-                        help="""Which column holds the workflow_name used in
-                        the summary report (Default=workflow_id).""")
-
-    parser.add_argument('--workflow-name-column', default='workflow_name',
-                        help="""Which column holds the workflow name used in
-                        the summary report (Default=workflow_name).""")
 
     parser.add_argument('-V', '--version', action='version',
                         version='%(prog)s {}'.format(VERSION))
@@ -167,12 +164,12 @@ def get_column_types(args, column_types):
     return column_types
 
 
-def validate_columns(args, column_types, unreconciled):
+def validate_columns(args, column_types, unreconciled, plugins=None):
     """Validate that the columns are in the unreconciled data frame and that
     the column types are an existing plug-in."""
 
     has_errors = False
-    types = list(util.get_plugins('column_types').keys())
+    types = list(plugins.keys())
     for column, column_type in column_types.items():
         if column not in unreconciled.columns:
             has_errors = True
@@ -182,8 +179,7 @@ def validate_columns(args, column_types, unreconciled):
             print('ERROR: "{}" is not a column type'.format(
                 column_type['type']))
 
-    for column in [args.group_by, args.sort_by, args.user_column,
-                   args.workflow_id_column, args.workflow_name_column]:
+    for column in [args.group_by, args.key_column, args.user_column]:
         if column not in unreconciled.columns:
             has_errors = True
             print('ERROR: "{}" is not a column header'.format(column))
@@ -208,8 +204,9 @@ def main():
     if unreconciled.shape[0] == 0:
         sys.exit('Workflow {} has no data.'.format(args.workflow_id))
 
+    plugins = util.get_plugins('column_types')
     column_types = get_column_types(args, column_types)
-    validate_columns(args, column_types, unreconciled)
+    validate_columns(args, column_types, unreconciled, plugins=plugins)
 
     if args.unreconciled:
         unreconciled.to_csv(
@@ -217,7 +214,7 @@ def main():
 
     if args.reconciled or args.summary:
         reconciled, explanations = reconciler.build(
-            args, unreconciled, column_types)
+            args, unreconciled, column_types, plugins=plugins)
 
         if args.reconciled:
             reconciled.to_csv(

@@ -14,7 +14,7 @@
 <body>
 
   <header>
-    <h1>{{header.heading}}</h1>
+    <h1>{{header.title}}</h1>
     <div><label>Date:</label><span>{{header.date}}</span></div>
     <div><label>Number of Subjects:</label><span>{{ '{:,}'.format(header.subjects) }}</span></div>
     <div><label>Number of Transcripts:</label><span>{{ '{:,}'.format(header.transcripts) }}</span></div>
@@ -140,7 +140,7 @@
                   data-row-type="{{row.row_type}}" data-problems="{{row_problems}}">
                 <td></td>
                 <td></td>
-                <td>{{row.classification_id | int('')}}</td>
+                <td>{{row[args.key_column]}}</td>
                 {% for col in merged_cols[2:-1] %}
                   <td>{{row[loop.index + 2]}}</td>
                 {% endfor %}

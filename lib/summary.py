@@ -1,7 +1,6 @@
 """Render a summary of the reconciliation process."""
 
 import re
-import sys
 from datetime import datetime
 from urllib.parse import urlparse
 import pandas as pd
@@ -83,7 +82,7 @@ def merge_dataframes(
     # Make the index a column
     rec = reconciled.reset_index()
     exp = explanations.reset_index()
-    unr = unreconciled.copy()
+    unr = unreconciled.astype(object).copy()
 
     # We want the detail rows to come out in this order
     rec['row_type'] = ROW_TYPES['reconciled']
@@ -92,8 +91,9 @@ def merge_dataframes(
 
     # Merge and format the dataframes
     merged = pd.concat([rec, exp, unr]).fillna('')
-    merged = util.sort_columns(args, merged, column_types).astype(object)
-    merged.sort_values([args.group_by, 'row_type', args.sort_by], inplace=True)
+    merged = util.sort_columns(args, merged, column_types)
+    merged.sort_values(
+        [args.group_by, 'row_type', args.key_column], inplace=True)
 
     return merged.columns, merged.groupby(args.group_by)
 
@@ -112,28 +112,13 @@ def user_summary(args, unreconciled):
 def header_data(args, unreconciled, reconciled):
     """Data that goes into the report header."""
 
-    workflow_name = get_workflow_name(unreconciled, args)
-    workflow_id = util.get_workflow_id(unreconciled, args)
+    title = args.title if args.title else args.input_file
     return {
         'date': datetime.strftime(datetime.now(), '%Y-%m-%d %H:%M'),
-        'title': 'Summary of {}'.format(workflow_id),
+        'title': title,
         'ratio': unreconciled.shape[0] / reconciled.shape[0],
-        'heading': 'Summary of "{}" ({})'.format(
-            workflow_name, workflow_id),
         'subjects': reconciled.shape[0],
-        'transcripts': unreconciled.shape[0],
-        'workflow_name': workflow_name}
-
-
-def get_workflow_name(unreconciled, args):
-    """Extract and format the workflow name from the dataframe."""
-
-    try:
-        workflow_name = unreconciled[args.workflow_name_column].iloc[0]
-        workflow_name = re.sub(r'^[^_]*_', '', workflow_name)
-    except KeyError:
-        sys.exit('Workflow name not found in classifications file.')
-    return workflow_name
+        'transcripts': unreconciled.shape[0]}
 
 
 def reconciled_summary(explanations, column_types):

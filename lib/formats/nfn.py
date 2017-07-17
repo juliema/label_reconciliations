@@ -5,6 +5,7 @@ dumps into the format that will be input into the rest of the modules.
 # pylint: disable=invalid-name
 
 import re
+import sys
 import json
 from dateutil.parser import parse
 import pandas as pd
@@ -19,10 +20,14 @@ def read(args):
     df = pd.read_csv(args.input_file)
 
     # Workflows must be processed individually
-    workflow_id = util.get_workflow_id(df, args)
+    workflow_id = get_workflow_id(df, args)
 
     # Remove anything not in the workflow
-    df = df.loc[df[args.workflow_id_column] == workflow_id, :]
+    df = df.loc[df.workflow_id == workflow_id, :]
+
+    workflow_name = get_workflow_name(df)
+    if not args.title:
+        args.title = 'Summary of "{}" ({})'.format(workflow_name, workflow_id)
 
     # Extract the various json blobs
     column_types = {}
@@ -47,9 +52,35 @@ def read(args):
 
     adjust_column_names(df, column_types)
     df = util.sort_columns(args, df, column_types).fillna('')
-    df.sort_values([args.group_by, args.sort_by], inplace=True)
+    df.sort_values([args.group_by, args.key_column], inplace=True)
 
     return df, column_types
+
+
+def get_workflow_id(df, args):
+    """Pull the workflow ID from the data-frame if it was not given."""
+
+    if args.workflow_id:
+        return args.workflow_id
+
+    workflow_ids = df.workflow_id.unique()
+
+    if len(workflow_ids) > 1:
+        sys.exit('There are multiple workflows in this file. '
+                 'You must provide a workflow ID as an argument.')
+
+    return workflow_ids[0]
+
+
+def get_workflow_name(df):
+    """Extract and format the workflow name from the data frame."""
+
+    try:
+        workflow_name = df.workflow_name.iloc[0]
+        workflow_name = re.sub(r'^[^_]*_', '', workflow_name)
+    except KeyError:
+        sys.exit('Workflow name not found in classifications file.')
+    return workflow_name
 
 
 def extract_metadata(df):
@@ -107,35 +138,35 @@ def extract_annotations(df, column_types):
 
     df['json'] = df['annotations'].map(json.loads)
 
-    for classification_id, row in df.iterrows():
+    for key, row in df.iterrows():
         tasks_seen = {}
         for task in row['json']:
             try:
                 extract_tasks(
-                    df, classification_id, task, column_types, tasks_seen)
+                    df, key, task, column_types, tasks_seen)
             except ValueError:
                 print('Bad transcription for classification {}'.format(
-                    classification_id))
+                    key))
                 break
 
     df.drop(['annotations', 'json'], axis=1, inplace=True)
 
 
-def extract_tasks(df, classification_id, task, column_types, tasks_seen):
+def extract_tasks(df, key, task, column_types, tasks_seen):
     """Hoists a task annotation field into the data frame."""
 
     if isinstance(task.get('value'), list):
         for subtask in task['value']:
             extract_tasks(
-                df, classification_id, subtask, column_types, tasks_seen)
+                df, key, subtask, column_types, tasks_seen)
     elif task.get('select_label'):
         header = create_header(
             task['select_label'], column_types, tasks_seen, 'select')
-        df.loc[classification_id, header] = task.get('label', '')
+        df.loc[key, header] = task.get('label', '')
     elif task.get('task_label'):
         header = create_header(
             task['task_label'], column_types, tasks_seen, 'text')
-        df.loc[classification_id, header] = task.get('value', '')
+        df.loc[key, header] = task.get('value', '')
     else:
         raise ValueError()
 
