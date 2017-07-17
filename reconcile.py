@@ -103,7 +103,7 @@ def parse_command_line():
 
     parser.add_argument('--workflow-id-column', default='workflow_id',
                         help="""Which column holds the workflow_name used in
-                        the summary report (Default=workflow_name).""")
+                        the summary report (Default=workflow_id).""")
 
     parser.add_argument('--workflow-name-column', default='workflow_name',
                         help="""Which column holds the workflow name used in

@@ -1,7 +1,7 @@
 """Common utilities."""
 
 import sys
-import importlib
+from importlib.machinery import SourceFileLoader
 from glob import glob
 from os.path import join, dirname, splitext, basename
 
@@ -13,16 +13,14 @@ def get_plugins(subdir):
 
     pattern = join(dirname(__file__), subdir, '*.py')
 
-    names = [splitext(basename(p))[0] for p in glob(pattern)
-             if p.find('__init__') == -1]
-
     plugins = {}
 
-    for name in names:
+    for path in glob(pattern):
+        if path.find('__init__') > -1:
+            continue
+        name = splitext(basename(path))[0]
         module_name = 'lib.{}.{}'.format(subdir, name)
-        spec = importlib.util.find_spec(module_name)
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
+        module = SourceFileLoader(module_name, path).load_module()
         plugins[name] = module
 
     return plugins
