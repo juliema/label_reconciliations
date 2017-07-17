@@ -7,17 +7,21 @@ import pandas as pd
 from jinja2 import Environment, PackageLoader
 import lib.util as util
 
+# pylint: disable=invalid-name
+
 ROW_TYPES = {  # Row types and their sort order
     'explanations': 'A',
     'reconciled': 'B',
     'unreconciled': 'C'}
 
 # These depend on the patterns put into explanations
-NO_MATCH_PATTERN = r'^No (?:select|text) match on'
+NO_MATCH_PATTERN = (r'^(?:No (?:select|text) match on'
+                    r'|There (?:was|were) no numbers? in)')
 EXACT_MATCH_PATTERN = r'^(?:Exact|Normalized exact) match'
 FUZZ_MATCH_PATTERN = r'^(?:Partial|Token set) ratio match'
 ALL_BLANK_PATTERN = r'^(?:All|The) \d+ record'
 ONESIES_PATTERN = r'^Only 1 transcript in'
+MMM_PATTERN = r'^There (?:was|were) (?:\d+) numbers? in'
 
 
 def report(args, unreconciled, reconciled, explanations, column_types):
@@ -125,7 +129,7 @@ def reconciled_summary(explanations, column_types):
     """Build a summary of how each field was reconciled."""
 
     how_reconciled = []
-    for col in explanations.columns:
+    for col in order_column_names(explanations, column_types):
 
         col_type = column_types.get(col, {'type': 'text'})['type']
 
@@ -136,6 +140,11 @@ def reconciled_summary(explanations, column_types):
 
         num_no_match = explanations[
             explanations[col].str.contains(NO_MATCH_PATTERN)].shape[0]
+
+        num_mmm = ''
+        if col_type == 'mmm':
+            num_mmm = '{:,}'.format(explanations[
+                explanations[col].str.contains(MMM_PATTERN)].shape[0])
 
         how_reconciled.append({
             'name': col,
@@ -148,8 +157,18 @@ def reconciled_summary(explanations, column_types):
             'num_all_blank': explanations[
                 explanations[col].str.contains(ALL_BLANK_PATTERN)].shape[0],
             'num_onesies': explanations[
-                explanations[col].str.contains(ONESIES_PATTERN)].shape[0]})
+                explanations[col].str.contains(ONESIES_PATTERN)].shape[0],
+            'num_mmm': num_mmm})
     return how_reconciled
+
+
+def order_column_names(df, column_types):
+    """Return explanation columns in the same order as merged data frame."""
+
+    columns = [v['name'] for v
+               in sorted(column_types.values(), key=lambda x: x['order'])
+               if v['name'] in df.columns]
+    return columns
 
 
 def problems(explanations, column_types):

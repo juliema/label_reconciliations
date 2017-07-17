@@ -64,6 +64,7 @@
           <th class="left">Field</th>
           <th class="left">Type</th>
           <th class="right">Exact Matches</th>
+          <th class="right">Mean Median Mode</th>
           <th class="right">Fuzzy Matches</th>
           <th class="right">All Blank</th>
           <th class="right">One Transcript</th>
@@ -77,6 +78,7 @@
           <td class="left">{{row.name}}</td>
           <td class="left">{{row.col_type}}</td>
           <td class="right">{{ '{:,}'.format(row.num_exact_match) }}</td>
+          <td class="right">{{ row.num_mmm }}</td>
           <td class="right">{{ row.num_fuzzy_match }}</td>
           <td class="right">{{ '{:,}'.format(row.num_all_blank) }}</td>
           <td class="right">{{ '{:,}'.format(row.num_onesies) }}</td>

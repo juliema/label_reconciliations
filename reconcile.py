@@ -85,11 +85,11 @@ def parse_command_line():
                             formats the default is the INPUT-FILE.""")
 
     parser.add_argument('--group-by', default='subject_id',
-                        help="""Group the rows by this column.
+                        help="""Group the rows by this column
                             (Default=subject_id).""")
 
     parser.add_argument('--key-column', default='classification_id',
-                        help="""A secondary sort column.
+                        help="""The column containing the primary key
                             (Default=classification_id).""")
 
     parser.add_argument('--user-column', default='user_name',
