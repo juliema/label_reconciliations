@@ -167,6 +167,37 @@ def get_column_types(args, column_types):
     return column_types
 
 
+def validate_columns(args, column_types, unreconciled):
+    """Validate that the columns are in the unreconciled data frame and that
+    the column types are an existing plug-in."""
+
+    has_errors = False
+    types = list(util.get_plugins('column_types').keys())
+    for column, column_type in column_types.items():
+        if column not in unreconciled.columns:
+            has_errors = True
+            print('ERROR: "{}" is not a column header'.format(column))
+        if column_type['type'] not in types:
+            has_errors = True
+            print('ERROR: "{}" is not a column type'.format(
+                column_type['type']))
+
+    for column in [args.group_by, args.sort_by, args.user_column,
+                   args.workflow_id_column, args.workflow_name_column]:
+        if column not in unreconciled.columns:
+            has_errors = True
+            print('ERROR: "{}" is not a column header'.format(column))
+
+        if has_errors:
+            print('\nPlease remember that "--format=nfn" may rename column '
+                  'headers.\n')
+            print('Valid column types are: {}\n'.format(types))
+            print('Valid column headers are:')
+            for column in unreconciled.columns:
+                print('\t{}'.format(column))
+            sys.exit(1)
+
+
 def main():
     """The main function."""
     args = parse_command_line()
@@ -178,6 +209,7 @@ def main():
         sys.exit('Workflow {} has no data.'.format(args.workflow_id))
 
     column_types = get_column_types(args, column_types)
+    validate_columns(args, column_types, unreconciled)
 
     if args.unreconciled:
         unreconciled.to_csv(
