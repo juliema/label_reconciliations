@@ -189,12 +189,12 @@ def validate_columns(args, column_types, unreconciled):
             print('ERROR: "{}" is not a column header'.format(column))
 
         if has_errors:
-            print('\nPlease remember that "--format=nfn" may rename column '
-                  'headers.\n')
-            print('Valid column types are: {}\n'.format(types))
+            print('\nValid column types are: {}\n'.format(types))
+            print('Please remember that "--format=nfn" may rename column '
+                  'headers.')
             print('Valid column headers are:')
-            for column in unreconciled.columns:
-                print('\t{}'.format(column))
+            for col in unreconciled.columns:
+                print('\t{}'.format(col))
             sys.exit(1)
 
 
