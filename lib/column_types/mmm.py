@@ -20,6 +20,12 @@ def reconcile(group, args=None):  # pylint: disable=unused-argument
         except ValueError:
             pass
 
+    if not numbers:
+        reason = 'There {} no {} in {} {}'.format(
+            P('was', len(numbers)), P('number', len(numbers)),
+            len(values), P('value', len(values)))
+        return reason, ''
+
     mean = np.mean(numbers)
     median = np.median(numbers)
     mode = stats.mode(numbers)
@@ -27,7 +33,8 @@ def reconcile(group, args=None):  # pylint: disable=unused-argument
     value = 'mean={}, median={}, mode={} (occurs {} {})'.format(
         mean, median, mode.mode[0], mode.count[0], P('time', mode.count[0]))
 
-    reason = 'There were {} {} out of {} {}'.format(
+    reason = 'There {} {} {} in {} {}'.format(
+        P('was', len(numbers)),
         len(numbers), P('number', len(numbers)),
         len(values), P('value', len(values)))
 
