@@ -47,6 +47,7 @@ def report(args, unreconciled, reconciled, explanations, column_types):
         args=vars(args),
         header=header_data(args, unreconciled, reconciled),
         row_types=ROW_TYPES,
+        explanations=explanations,
         reconciled=reconciled_summary(explanations, column_types),
         problem_options=problem_options,
         problems=row_problems,
