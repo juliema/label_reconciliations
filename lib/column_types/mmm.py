@@ -30,7 +30,7 @@ def reconcile(group, args=None):  # pylint: disable=unused-argument
     median = np.median(numbers)
     mode = stats.mode(numbers)
 
-    value = 'mean={:2f}, median={:2f}, mode={:2f} (occurs {} {})'.format(
+    value = 'mean={:.2f}, median={:.2f}, mode={:.2f} (occurs {} {})'.format(
         mean, median, mode.mode[0], mode.count[0], P('time', mode.count[0]))
 
     reason = 'There {} {} {} in {} {}'.format(

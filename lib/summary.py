@@ -15,11 +15,11 @@ ROW_TYPES = {  # Row types and their sort order
     'unreconciled': 'C'}
 
 # These depend on the patterns put into explanations
-NO_MATCH_PATTERN = (r'^(?:No (?:select|text) match on'
-                    r'|There (?:was|were) no numbers? in)')
+NO_MATCH_PATTERN = r'^No (?:select|text) match on'
 EXACT_MATCH_PATTERN = r'^(?:Exact|Normalized exact) match'
 FUZZ_MATCH_PATTERN = r'^(?:Partial|Token set) ratio match'
-ALL_BLANK_PATTERN = r'^(?:All|The) \d+ record'
+ALL_BLANK_PATTERN = (r'^(?:(?:All|The) \d+ record'
+                     r'|There (?:was|were) no numbers? in)')
 ONESIES_PATTERN = r'^Only 1 transcript in'
 MMM_PATTERN = r'^There (?:was|were) (?:\d+) numbers? in'
 
