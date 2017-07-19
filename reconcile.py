@@ -92,9 +92,12 @@ def parse_command_line():
                         help="""The column containing the primary key
                             (Default=classification_id).""")
 
-    parser.add_argument('--user-column', default='user_name',
+    parser.add_argument('--user-column',
                         help="""Which column to use to get a count of user
-                            transcripts (Default=user_name).""")
+                            transcripts. For --format=nfn the
+                            default=user_name for other formats there is no
+                            default. This will affect which sections appear
+                            on the summary report.""")
 
     parser.add_argument('--fuzzy-ratio-threshold', default=90, type=int,
                         help="""Sets the cutoff for fuzzy ratio matching

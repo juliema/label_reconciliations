@@ -25,9 +25,7 @@ def read(args):
     # Remove anything not in the workflow
     df = df.loc[df.workflow_id == workflow_id, :]
 
-    workflow_name = get_workflow_name(df)
-    if not args.title:
-        args.title = 'Summary of "{}" ({})'.format(workflow_name, workflow_id)
+    get_nfn_only_defaults(df, args, workflow_id)
 
     # Extract the various json blobs
     column_types = {}
@@ -55,6 +53,19 @@ def read(args):
     df.sort_values([args.group_by, args.key_column], inplace=True)
 
     return df, column_types
+
+
+def get_nfn_only_defaults(df, args, workflow_id):
+    """Set nfn-only argument defaults."""
+
+    if args.summary:
+        workflow_name = get_workflow_name(df)
+
+    if not args.title and args.summary:
+        args.title = 'Summary of "{}" ({})'.format(workflow_name, workflow_id)
+
+    if not args.user_column and args.summary:
+        args.user_column = 'user_name'
 
 
 def get_workflow_id(df, args):
