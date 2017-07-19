@@ -9,7 +9,7 @@ import lib.util as util
 import lib.reconciler as reconciler
 import lib.summary as summary
 
-VERSION = '0.3.0'
+VERSION = '0.3.1'
 
 
 def parse_command_line():
