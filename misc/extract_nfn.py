@@ -24,12 +24,13 @@ def parse_command_line():
     parser.add_argument('-o', '--output-prefix', required=True,
                         help="""The output files' prefix.""")
 
-    parser.add_argument('-c', '--column', required=True,
-                        help="""Which column has the key value to split.""")
-
     parser.add_argument('-p', '--pattern', required=True,
                         help="""What are we looking for inclusion in the column
                             to include in the new CSV file.""")
+
+    parser.add_argument('-c', '--column', default='dynamicProperties',
+                        help="""Which column has the key value to split
+                            (default=dynamicProperties)""")
 
     parser.add_argument('--group-by', default='occurrenceID',
                         help="""Group the rows by this column

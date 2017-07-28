@@ -105,6 +105,9 @@ def merge_dataframes(
 def user_summary(args, unreconciled):
     """Get a list of users and how many transcriptions they did."""
 
+    if not args.user_column:
+        return {}, 0
+
     series = unreconciled.groupby(args.user_column)
     series = series[args.user_column].count()
     series.sort_values(ascending=False, inplace=True)

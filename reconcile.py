@@ -182,18 +182,18 @@ def validate_columns(args, column_types, unreconciled, plugins=None):
             print('ERROR: "{}" is not a column type'.format(
                 column_type['type']))
 
-    for column in [args.group_by, args.key_column, args.user_column]:
+    for column in [args.group_by, args.key_column]:
         if column not in unreconciled.columns:
             has_errors = True
             print('ERROR: "{}" is not a column header'.format(column))
 
         if has_errors:
             print('\nValid column types are: {}\n'.format(types))
-            print('Please remember that "--format=nfn" may rename column '
-                  'headers.')
             print('Valid column headers are:')
             for col in unreconciled.columns:
                 print('\t{}'.format(col))
+            print('* Please remember that "--format=nfn" may rename column '
+                  'headers.')
             sys.exit(1)
 
 

@@ -22,34 +22,36 @@
     <div><label>Transcriber Count:</label><span>{{ '{:,}'.format(transcriber_count) }}</span></div>
   </header>
 
-  <section id="users">
-    <h2>Transcriber Summary</h2>
-    <button title="Expand or collapse the top transcribers table"></button>
-    <div class="users-container">
-      <table>
-        <thead>
-          <tr>
-            <th class="left">Transcriber</th>
-            <th class="right">Count</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for transcriber in transcribers %}
-          <tr>
-            <td class="left">{{transcriber.name}}</td>
-            <td class="right">{{ '{:,}'.format(transcriber.count) }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
+  {% if args.user_column %}
+    <section id="users">
+      <h2>Transcriber Summary</h2>
+      <button title="Expand or collapse the top transcribers table"></button>
+      <div class="users-container">
+        <table>
+          <thead>
+            <tr>
+              <th class="left">Transcriber</th>
+              <th class="right">Count</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for transcriber in transcribers %}
+            <tr>
+              <td class="left">{{transcriber.name}}</td>
+              <td class="right">{{ '{:,}'.format(transcriber.count) }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
 
-    <div id="users-chart">
-      <h2>Transcriptions per Transcriber</h2>
-      <svg width="960" height="500"></svg>
-    </div>
+      <div id="users-chart">
+        <h2>Transcriptions per Transcriber</h2>
+        <svg width="960" height="500"></svg>
+      </div>
 
-  </section>
+    </section>
+  {% endif %}
 
   <section id="stats">
     <h2>Reconciliation Summary</h2>
@@ -114,21 +116,21 @@
           {% for row in group.itertuples() %}
             {% if row.row_type == row_types.explanations %}
               {% set explanations = row %}
-              {% set row_problems = ','.join(problems[row.subject_id].values()) %}
+              {% set row_problems = ','.join(problems[row[args.group_by]].values()) %}
             {% elif row.row_type == row_types.reconciled %}
-              <tr class="closed" data-subject-id="{{row.subject_id}}"
+              <tr class="closed" data-subject-id="{{row[args.group_by]}}"
                   data-row-type="{{row.row_type}}" data-problems="{{row_problems}}">
                 <td><button title="Open or close this subject"></button></td>
-                <td>{{row.subject_id}}</td>
+                <td>{{row[args.group_by]}}</td>
                 <td></td>
                 {% for col in merged_cols[2:-1] %}
-                  <td class="{{'problem' if problems[row.subject_id].get(col, None) else ''}}"
+                  <td class="{{'problem' if problems[row[args.group_by]].get(col, None) else ''}}"
                       title="{{explanations[loop.index + 2]}}">
                     {{row[loop.index + 2]}}
                   </td>
                 {% endfor %}
               </tr>
-              <tr class="closed" data-subject-id="{{explanations.subject_id}}"
+              <tr class="closed" data-subject-id="{{explanations[args.group_by]}}"
                   data-row-type="{{explanations.row_type}}" data-problems="{{row_problems}}">
                 <td></td>
                 <td></td>
@@ -138,7 +140,7 @@
                 {% endfor %}
               </tr>
             {% elif row.row_type == row_types.unreconciled %}
-              <tr class="closed" data-subject-id="{{row.subject_id}}"
+              <tr class="closed" data-subject-id="{{row[args.group_by]}}"
                   data-row-type="{{row.row_type}}" data-problems="{{row_problems}}">
                 <td></td>
                 <td></td>
