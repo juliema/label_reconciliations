@@ -89,21 +89,21 @@ td.right{
   content: '+';
 }
 
-#details tr.closed[data-row-type="{{row_types.explanations}}"],
-#details tr.closed[data-row-type="{{row_types.unreconciled}}"] {
+#details tr.closed.explanations,
+#details tr.closed.unreconciled {
   display: none;
 }
 
-#details tr[data-row-type="{{row_types.explanations}}"] td.filled {
+#details tr.explanations td.filled {
   background-color: var(--bg-gray);
 }
 
-#details tr[data-row-type="{{row_types.unreconciled}}"] td {
+#details tr.unreconciled td {
   background-color: var(--bg-unreconciled);
 }
 
-#details tr[data-row-type="{{row_types.unreconciled}}"] td:first-child,
-#details tr[data-row-type="{{row_types.unreconciled}}"] td:nth-child(2) {
+#details tr.unreconciled td:first-child,
+#details tr.unreconciled td:nth-child(2) {
   background-color: white;
 }
 

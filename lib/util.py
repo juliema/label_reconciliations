@@ -43,10 +43,12 @@ def sort_columns(args, df, column_types):
                               key=lambda x: x['order'])])
     columns.extend([c for c in df.columns
                     if c not in columns and c not in ['row_type']])
+
+    # TODO: Delete this
     if 'row_type' in df.columns:
         columns.append('row_type')
 
-    return df.reindex_axis(columns, axis=1)
+    return columns
 
 
 def last_column_type(column_types):

@@ -3,16 +3,10 @@
 import re
 from datetime import datetime
 from urllib.parse import urlparse
-import pandas as pd
 from jinja2 import Environment, PackageLoader
 import lib.util as util
 
 # pylint: disable=invalid-name
-
-ROW_TYPES = {  # Row types and their sort order
-    'explanations': 'A',
-    'reconciled': 'B',
-    'unreconciled': 'C'}
 
 # These depend on the patterns put into explanations
 NO_MATCH_PATTERN = r'^No (?:select|text) match on'
@@ -35,12 +29,15 @@ def report(args, unreconciled, reconciled, explanations, column_types):
     env = Environment(loader=PackageLoader('reconcile', '.'))
     template = env.get_template('lib/summary/template.html')
 
-    # Merge the data frames into one data frame in an order the report can use
-    merged_cols, merged = merge_dataframes(
+    # Create the detail dataset
+    details = get_details(
         args, unreconciled, reconciled, explanations, column_types)
 
+    # Create filter lists
+    filters = get_filters(details)
+
     # Get transcriber summary data
-    transcribers, transcriber_count = user_summary(args, unreconciled)
+    transcribers = user_summary(args, unreconciled)
 
     # Get transcription problems
     row_problems, problem_options = problems(explanations, column_types)
@@ -48,20 +45,57 @@ def report(args, unreconciled, reconciled, explanations, column_types):
     # Build the summary report
     summary = template.render(
         args=vars(args),
-        header=header_data(args, unreconciled, reconciled),
-        row_types=ROW_TYPES,
+        header=header_data(args, unreconciled, reconciled, transcribers),
+        details=details,
+        filters=filters,
+        transcribers=transcribers,
         reconciled=reconciled_summary(explanations, column_types),
         problem_options=problem_options,
-        problems=row_problems,
-        transcribers=transcribers,
-        transcriber_count=transcriber_count,
-        merged_cols=merged_cols,
-        merged=merged,
-        column_types=column_types)
+        problems=row_problems)
 
     # Output the report
     with open(args.summary, 'w') as out_file:
         out_file.write(summary)
+
+
+def get_details(args, unreconciled, reconciled, explanations, column_types):
+    """Convert the dataframes into dictionaries."""
+
+    details = {}
+
+    details['columns'] = util.sort_columns(args, unreconciled, column_types)
+
+    # Convert keys to strings
+    reconciled.reset_index(inplace=True)
+    reconciled[args.group_by] = reconciled[args.group_by].apply(str)
+    reconciled.set_index(args.group_by, inplace=True)
+
+    explanations.reset_index(inplace=True)
+    explanations[args.group_by] = explanations[args.group_by].apply(str)
+    explanations.set_index(args.group_by, inplace=True)
+
+    # Convert dataframes to dictionaries
+    details['reconciled'] = reconciled.to_dict(orient='index')
+    details['explanations'] = explanations.to_dict(orient='index')
+
+    details['unreconciled'] = {}
+    for _, row in unreconciled.iterrows():
+        key = str(row[args.group_by])
+        array = details['unreconciled'].get(key, [])
+        array.append(row.to_dict())
+        details['unreconciled'][key] = array
+
+    return details
+
+
+def get_filters(detail):
+    """Create list of subject IDs that will be used to filter detail rows."""
+
+    filters = {}
+
+    filters['Show All'] = sorted(detail['reconciled'].keys())
+
+    return filters
 
 
 def create_link(value):
@@ -77,59 +111,37 @@ def create_link(value):
     return value
 
 
-def merge_dataframes(
-        args, unreconciled, reconciled, explanations, column_types):
-    """Combine the dataframes so that we can print them out in order for
-    the detail report.
-    """
-
-    # Make the index a column
-    rec = reconciled.reset_index()
-    exp = explanations.reset_index()
-    unr = unreconciled.astype(object).copy()
-
-    # We want the detail rows to come out in this order
-    rec['row_type'] = ROW_TYPES['reconciled']
-    exp['row_type'] = ROW_TYPES['explanations']
-    unr['row_type'] = ROW_TYPES['unreconciled']
-
-    # Merge and format the dataframes
-    merged = pd.concat([rec, exp, unr]).fillna('')
-    merged = util.sort_columns(args, merged, column_types)
-    merged.sort_values(
-        [args.group_by, 'row_type', args.key_column], inplace=True)
-
-    return merged.columns, merged.groupby(args.group_by)
-
-
 def user_summary(args, unreconciled):
     """Get a list of users and how many transcriptions they did."""
+    # TODO: Delete this
 
     if not args.user_column:
-        return {}, 0
+        return {}
 
     series = unreconciled.groupby(args.user_column)
     series = series[args.user_column].count()
     series.sort_values(ascending=False, inplace=True)
     transcribers = [{'name': name, 'count': count}
                     for name, count in series.iteritems()]
-    return transcribers, len(transcribers)
+    return transcribers
 
 
-def header_data(args, unreconciled, reconciled):
+def header_data(args, unreconciled, reconciled, transcribers):
     """Data that goes into the report header."""
+    # TODO: Delete this
 
-    title = args.title if args.title else args.input_file
     return {
         'date': datetime.strftime(datetime.now(), '%Y-%m-%d %H:%M'),
-        'title': title,
+        'title': args.title if args.title else args.input_file,
         'ratio': unreconciled.shape[0] / reconciled.shape[0],
         'subjects': reconciled.shape[0],
-        'transcripts': unreconciled.shape[0]}
+        'transcripts': unreconciled.shape[0],
+        'transcribers': len(transcribers)}
 
 
 def reconciled_summary(explanations, column_types):
     """Build a summary of how each field was reconciled."""
+    # TODO: Delete this
 
     how_reconciled = []
     for col in order_column_names(explanations, column_types):
@@ -166,7 +178,8 @@ def reconciled_summary(explanations, column_types):
 
 
 def order_column_names(df, column_types):
-    """Return explanation columns in the same order as merged data frame."""
+    """Sort column names by the column order."""
+    # TODO: Delete this
 
     columns = [v['name'] for v
                in sorted(column_types.values(), key=lambda x: x['order'])
@@ -176,6 +189,7 @@ def order_column_names(df, column_types):
 
 def problems(explanations, column_types):
     """Make a list of problems for each subject."""
+    # TODO: Delete this
 
     probs = {}
     opts = None

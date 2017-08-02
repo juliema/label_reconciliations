@@ -8,8 +8,9 @@ import textwrap
 import lib.util as util
 import lib.reconciler as reconciler
 import lib.summary as summary
+import lib.merged as merged
 
-VERSION = '0.3.1'
+VERSION = '0.4.0'
 
 
 def parse_command_line():
@@ -70,6 +71,10 @@ def parse_command_line():
                         help="""Write a summary of the reconciliation to this
                             HTML file.""")
 
+    parser.add_argument('-m', '--merged',
+                        help="""Write the merged reconciled data, explanations,
+                            and unreconciled data to this CSV file.""")
+
     parser.add_argument('-z', '--zip',
                         help="""Zip files and put them into this archive.
                             Remove the uncompressed files afterwards.""")
@@ -98,6 +103,10 @@ def parse_command_line():
                             default=user_name for other formats there is no
                             default. This will affect which sections appear
                             on the summary report.""")
+
+    parser.add_argument('--page-size', default=20, type=int,
+                        help="""Page size for the summary report's detail
+                            section (Default=20).""")
 
     parser.add_argument('--fuzzy-ratio-threshold', default=90, type=int,
                         help="""Sets the cutoff for fuzzy ratio matching
@@ -137,6 +146,8 @@ def zip_files(args):
             zippy.write(args.reconciled, compress_type=zipfile.ZIP_DEFLATED)
         if args.summary:
             zippy.write(args.summary, compress_type=zipfile.ZIP_DEFLATED)
+        if args.merged:
+            zippy.write(args.merged, compress_type=zipfile.ZIP_DEFLATED)
 
     if args.unreconciled:
         os.remove(args.unreconciled)
@@ -144,6 +155,8 @@ def zip_files(args):
         os.remove(args.reconciled)
     if args.summary:
         os.remove(args.summary)
+    if args.merged:
+        os.remove(args.merged)
 
 
 def get_column_types(args, column_types):
@@ -215,7 +228,7 @@ def main():
         unreconciled.to_csv(
             args.unreconciled, sep=',', encoding='utf-8', index=False)
 
-    if args.reconciled or args.summary:
+    if args.reconciled or args.summary or args.combined:
         reconciled, explanations = reconciler.build(
             args, unreconciled, column_types, plugins=plugins)
 
@@ -225,6 +238,10 @@ def main():
 
         if args.summary:
             summary.report(
+                args, unreconciled, reconciled, explanations, column_types)
+
+        if args.merged:
+            merged.merge(
                 args, unreconciled, reconciled, explanations, column_types)
 
     if args.zip:

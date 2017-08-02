@@ -49,7 +49,8 @@ def read(args):
     df.drop(unwanted_columns, axis=1, inplace=True)
 
     adjust_column_names(df, column_types)
-    df = util.sort_columns(args, df, column_types).fillna('')
+    columns = util.sort_columns(args, df, column_types)
+    df = df.reindex_axis(columns, axis=1).fillna('')
     df.sort_values([args.group_by, args.key_column], inplace=True)
 
     return df, column_types

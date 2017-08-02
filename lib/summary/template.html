@@ -19,7 +19,7 @@
     <div><label>Number of Subjects:</label><span>{{ '{:,}'.format(header.subjects) }}</span></div>
     <div><label>Number of Transcripts:</label><span>{{ '{:,}'.format(header.transcripts) }}</span></div>
     <div><label>Transcripts per Subject:</label><span>{{ '{:.2f}'.format(header.ratio) }}</span></div>
-    <div><label>Transcriber Count:</label><span>{{ '{:,}'.format(transcriber_count) }}</span></div>
+    <div><label>Transcriber Count:</label><span>{{ '{:,}'.format(header.transcribers) }}</span></div>
   </header>
 
   {% if args.user_column %}
@@ -96,8 +96,6 @@
     <h2>Reconciliation Detail</h2>
     <label>Filter Rows:</label>
     <select>
-      <option value="__off__" selected="true">Show All</option>
-      <option value="__all__">Show All Problems</option>
       {% for val, col in problem_options %}
         <option value="{{val}}">Show Problems with: {{col}}</option>
       {% endfor %}
@@ -106,54 +104,17 @@
       <thead>
         <tr class="closed">
           <th class="no-ul"><button title="Open or close all subjects"></button></th>
-          {% for col in merged_cols[:-1] %}
+          {% for col in details['columns'] %}
             <th>{{col}}</th>
           {% endfor %}
-      </tr>
+        </tr>
       </thead>
       <tbody>
-        {% for _, group in merged %}
-          {% for row in group.itertuples() %}
-            {% if row.row_type == row_types.explanations %}
-              {% set explanations = row %}
-              {% set row_problems = ','.join(problems[row[args.group_by]].values()) %}
-            {% elif row.row_type == row_types.reconciled %}
-              <tr class="closed" data-subject-id="{{row[args.group_by]}}"
-                  data-row-type="{{row.row_type}}" data-problems="{{row_problems}}">
-                <td><button title="Open or close this subject"></button></td>
-                <td>{{row[args.group_by]}}</td>
-                <td></td>
-                {% for col in merged_cols[2:-1] %}
-                  <td class="{{'problem' if problems[row[args.group_by]].get(col, None) else ''}}"
-                      title="{{explanations[loop.index + 2]}}">
-                    {{row[loop.index + 2]}}
-                  </td>
-                {% endfor %}
-              </tr>
-              <tr class="closed" data-subject-id="{{explanations[args.group_by]}}"
-                  data-row-type="{{explanations.row_type}}" data-problems="{{row_problems}}">
-                <td></td>
-                <td></td>
-                <td></td>
-                {% for col in merged_cols[2:-1] %}
-                  <td class="{{'filled' if explanations[loop.index + 2] else ''}}">{{explanations[loop.index + 2]}}</td>
-                {% endfor %}
-              </tr>
-            {% elif row.row_type == row_types.unreconciled %}
-              <tr class="closed" data-subject-id="{{row[args.group_by]}}"
-                  data-row-type="{{row.row_type}}" data-problems="{{row_problems}}">
-                <td></td>
-                <td></td>
-                <td>{{row[args.key_column]}}</td>
-                {% for col in merged_cols[2:-1] %}
-                  <td>{{row[loop.index + 2]}}</td>
-                {% endfor %}
-              </tr>
-            {% endif %}
-          {% endfor %}
-        {% endfor %}
       </tbody>
     </table>
+    <div>
+      <button id="next-page">Next Page</button>
+    </div>
   </section>
 
 <script>
@@ -162,6 +123,10 @@
 
 <script>
   {% include 'lib/summary/transcriptions.js' -%}
+</script>
+
+<script>
+  {% include 'lib/summary/users.js' -%}
 </script>
 
 <script>
