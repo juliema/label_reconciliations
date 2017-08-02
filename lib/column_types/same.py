@@ -1,5 +1,5 @@
 """Reconcile a group where all values are the same. We first check that this
-is true If it is then we return the one item. If it isn't then we return
+is true. If it is then we return the one item. If it isn't then we return
 a blank."""
 
 

@@ -228,13 +228,13 @@ def main():
         unreconciled.to_csv(
             args.unreconciled, sep=',', encoding='utf-8', index=False)
 
-    if args.reconciled or args.summary or args.combined:
+    if args.reconciled or args.summary or args.merged:
         reconciled, explanations = reconciler.build(
             args, unreconciled, column_types, plugins=plugins)
 
         if args.reconciled:
             reconciled.to_csv(
-                args.reconciled, sep=',', encoding='utf-8', index=False)
+                args.reconciled, sep=',', encoding='utf-8', index=True)
 
         if args.summary:
             summary.report(
