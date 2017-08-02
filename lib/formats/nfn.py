@@ -123,14 +123,14 @@ def extract_subject_data(df, column_types):
     df['json'] = df['subject_data'].map(json.loads)
 
     # Put the subject data into the data frame
-    for subject in df['json']:
-        for subject_dict in iter(subject.values()):
+    for key, row in df.iterrows():
+        for subject_dict in iter(row['json'].values()):
             for column, value in subject_dict.items():
                 column = re.sub(r'\W+', '_', column)
                 column = re.sub(r'^_+|__$', '', column)
                 if isinstance(value, dict):
                     value = json.dumps(value)
-                df[SUBJECT_PREFIX + column] = value
+                df.loc[key, SUBJECT_PREFIX + column] = value
 
     # Get rid of unwanted data
     df.drop(['subject_data', 'json'], axis=1, inplace=True)
