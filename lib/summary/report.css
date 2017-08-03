@@ -159,6 +159,16 @@ td.right{
 }
 
 .bar text {
-  fill: #fff;
+  fill: #ffffff;
   font: 10px sans-serif;
+}
+
+.pager-container {
+  margin-top: 12px;
+}
+
+.pager {
+  min-width: 100px;
+  text-align: center;
+  font-size: 20px;
 }

@@ -44,10 +44,6 @@ def sort_columns(args, df, column_types):
     columns.extend([c for c in df.columns
                     if c not in columns and c not in ['row_type']])
 
-    # TODO: Delete this
-    if 'row_type' in df.columns:
-        columns.append('row_type')
-
     return columns
 
 

@@ -30,8 +30,7 @@ def report(args, unreconciled, reconciled, explanations, column_types):
     template = env.get_template('lib/summary/template.html')
 
     # Create the detail dataset
-    details = get_details(
-        args, unreconciled, reconciled, explanations, column_types)
+    details = get_details(args, unreconciled, reconciled, explanations)
 
     # Create filter lists
     filters = get_filters(details)
@@ -48,6 +47,7 @@ def report(args, unreconciled, reconciled, explanations, column_types):
         header=header_data(args, unreconciled, reconciled, transcribers),
         details=details,
         filters=filters,
+        columns=util.sort_columns(args, unreconciled, column_types),
         transcribers=transcribers,
         reconciled=reconciled_summary(explanations, column_types),
         problem_options=problem_options,
@@ -58,32 +58,25 @@ def report(args, unreconciled, reconciled, explanations, column_types):
         out_file.write(summary)
 
 
-def get_details(args, unreconciled, reconciled, explanations, column_types):
+def get_details(args, unreconciled, reconciled, explanations):
     """Convert the dataframes into dictionaries."""
 
     details = {}
 
-    details['columns'] = util.sort_columns(args, unreconciled, column_types)
+    # Put reconciled data into the dictionary
+    for key, row in reconciled.iterrows():
+        details[str(key)] = {'reconciled': row.to_dict()}
 
-    # Convert keys to strings
-    reconciled.reset_index(inplace=True)
-    reconciled[args.group_by] = reconciled[args.group_by].apply(str)
-    reconciled.set_index(args.group_by, inplace=True)
+    # Put explanations data into the dictionary
+    for key, row in explanations.iterrows():
+        details[str(key)]['explanations'] = row.to_dict()
 
-    explanations.reset_index(inplace=True)
-    explanations[args.group_by] = explanations[args.group_by].apply(str)
-    explanations.set_index(args.group_by, inplace=True)
-
-    # Convert dataframes to dictionaries
-    details['reconciled'] = reconciled.to_dict(orient='index')
-    details['explanations'] = explanations.to_dict(orient='index')
-
-    details['unreconciled'] = {}
+    # Put unreconciled data into the dictionary
     for _, row in unreconciled.iterrows():
         key = str(row[args.group_by])
-        array = details['unreconciled'].get(key, [])
+        array = details[key].get('unreconciled', [])
         array.append(row.to_dict())
-        details['unreconciled'][key] = array
+        details[key]['unreconciled'] = array
 
     return details
 
@@ -91,9 +84,9 @@ def get_details(args, unreconciled, reconciled, explanations, column_types):
 def get_filters(detail):
     """Create list of subject IDs that will be used to filter detail rows."""
 
-    filters = {}
+    filters = {'__select__': ['Show All', 'Show All Problems']}
 
-    filters['Show All'] = sorted(detail['reconciled'].keys())
+    filters['Show All'] = sorted(detail.keys())
 
     return filters
 

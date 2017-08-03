@@ -95,42 +95,44 @@
   <section id="details">
     <h2>Reconciliation Detail</h2>
     <label>Filter Rows:</label>
-    <select>
-      {% for val, col in problem_options %}
-        <option value="{{val}}">Show Problems with: {{col}}</option>
+    <select class="filter">
+      {% for val in filters.__select__ %}
+        <option {% if loop.first %} selected="selected" {% endif %}>{{val}}</option>
       {% endfor %}
     </select>
     <table>
       <thead>
         <tr class="closed">
           <th class="no-ul"><button title="Open or close all subjects"></button></th>
-          {% for col in details['columns'] %}
-            <th>{{col}}</th>
+          {% for column in columns %}
+            <th>{{column}}</th>
           {% endfor %}
         </tr>
       </thead>
       <tbody>
       </tbody>
     </table>
-    <div>
-      <button id="next-page">Next Page</button>
+    <div class="pager-container">
+      <label>Page:</label>
+      <input class="pager" type="number" min="1" step="1" value="1"/>
+      <label class="max-page"></label>
     </div>
   </section>
 
 <script>
-  {% include 'lib/d3/d3.min.js' -%}
+{% include 'lib/d3/d3.min.js' -%}
 </script>
 
 <script>
-  {% include 'lib/summary/transcriptions.js' -%}
+{% include 'lib/summary/transcriptions.js' -%}
 </script>
 
 <script>
-  {% include 'lib/summary/users.js' -%}
+{% include 'lib/summary/users.js' -%}
 </script>
 
 <script>
-  {% include 'lib/summary/reconciliation.js' -%}
+{% include 'lib/summary/reconciliation.js' -%}
 </script>
 
 </body>
