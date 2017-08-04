@@ -13,7 +13,7 @@ NO_MATCH_PATTERN = r'^No (?:select|text) match on'
 EXACT_MATCH_PATTERN = r'^(?:Exact|Normalized exact) match'
 FUZZ_MATCH_PATTERN = r'^(?:Partial|Token set) ratio match'
 ALL_BLANK_PATTERN = (r'^(?:(?:All|The) \d+ record'
-                     r'|There (?:was|were) no numbers? in)')
+                     r'|^There (?:was|were) no numbers? in)')
 ONESIES_PATTERN = r'^Only 1 transcript in'
 MMM_PATTERN = r'^There (?:was|were) (?:\d+) numbers? in'
 
@@ -24,9 +24,13 @@ PROBLEM_PATTERN = '|'.join([NO_MATCH_PATTERN, ONESIES_PATTERN])
 def report(args, unreconciled, reconciled, explanations, column_types):
     """The main function."""
 
+    # Everything as strings
+    reconciled = reconciled.applymap(str)
+    unreconciled = unreconciled.applymap(str)
+
     # Convert links into anchor elements
-    unreconciled = unreconciled.applymap(create_link)
     reconciled = reconciled.applymap(create_link)
+    unreconciled = unreconciled.applymap(create_link)
 
     # Get the report template
     env = Environment(loader=PackageLoader('reconcile', '.'))
