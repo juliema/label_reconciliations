@@ -7,7 +7,7 @@ import lib.util as util
 def read(args):
     """This is the main function that does the conversion."""
 
-    unreconciled = pd.read_csv(args.input_file)
+    unreconciled = pd.read_csv(args.input_file, dtype=str)
     unreconciled = util.unreconciled_setup(args, unreconciled)
 
     return unreconciled, {}

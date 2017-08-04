@@ -17,7 +17,7 @@ SUBJECT_PREFIX = 'Subject '
 def read(args):
     """This is the main function that does the conversion."""
 
-    df = pd.read_csv(args.input_file)
+    df = pd.read_csv(args.input_file, dtype=str)
 
     # Workflows must be processed individually
     workflow_id = get_workflow_id(df, args)
