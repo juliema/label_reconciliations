@@ -233,6 +233,10 @@ def main():
             args, unreconciled, column_types, plugins=plugins)
 
         if args.reconciled:
+            columns = util.sort_columns(args, reconciled.columns, column_types)
+            del columns[0]
+            del columns[0]
+            reconciled = reconciled.reindex_axis(columns, axis=1).fillna('')
             reconciled.to_csv(
                 args.reconciled, sep=',', encoding='utf-8', index=True)
 

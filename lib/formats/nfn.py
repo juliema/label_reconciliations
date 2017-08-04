@@ -51,7 +51,7 @@ def read(args):
                     if k not in unwanted_columns}
 
     adjust_column_names(df, column_types)
-    columns = util.sort_columns(args, df, column_types)
+    columns = util.sort_columns(args, df.columns, column_types)
     df = df.reindex_axis(columns, axis=1).fillna('')
     df.sort_values([args.group_by, args.key_column], inplace=True)
 

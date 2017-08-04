@@ -34,16 +34,13 @@ def unreconciled_setup(args, unreconciled):
     return unreconciled
 
 
-def sort_columns(args, df, column_types):
+def sort_columns(args, all_columns, column_types):
     """Put columns into an order useful for displaying."""
 
     columns = [args.group_by, args.key_column]
-    columns.extend([v['name'] for v
-                    in sorted(column_types.values(),
-                              key=lambda x: x['order'])])
-    columns.extend([c for c in df.columns
-                    if c not in columns and c not in ['row_type']])
-
+    columns += [c['name'] for c
+                in sorted(column_types.values(), key=lambda x: x['order'])]
+    columns += [c for c in all_columns if c not in columns]
     return columns
 
 

@@ -17,6 +17,9 @@ ALL_BLANK_PATTERN = (r'^(?:(?:All|The) \d+ record'
 ONESIES_PATTERN = r'^Only 1 transcript in'
 MMM_PATTERN = r'^There (?:was|were) (?:\d+) numbers? in'
 
+# Combine for the problem pattern
+PROBLEM_PATTERN = '|'.join([NO_MATCH_PATTERN, ONESIES_PATTERN])
+
 
 def report(args, unreconciled, reconciled, explanations, column_types):
     """The main function."""
@@ -33,13 +36,10 @@ def report(args, unreconciled, reconciled, explanations, column_types):
     details = get_details(args, unreconciled, reconciled, explanations)
 
     # Create filter lists
-    filters = get_filters(details)
+    filters = get_filters(args, details, column_types)
 
     # Get transcriber summary data
     transcribers = user_summary(args, unreconciled)
-
-    # Get transcription problems
-    row_problems, problem_options = problems(explanations, column_types)
 
     # Build the summary report
     summary = template.render(
@@ -50,8 +50,7 @@ def report(args, unreconciled, reconciled, explanations, column_types):
         columns=util.sort_columns(args, unreconciled, column_types),
         transcribers=transcribers,
         reconciled=reconciled_summary(explanations, column_types),
-        problem_options=problem_options,
-        problems=row_problems)
+        problem_pattern=PROBLEM_PATTERN)
 
     # Output the report
     with open(args.summary, 'w') as out_file:
@@ -81,12 +80,34 @@ def get_details(args, unreconciled, reconciled, explanations):
     return details
 
 
-def get_filters(detail):
+def get_filters(args, detail, column_types):
     """Create list of subject IDs that will be used to filter detail rows."""
 
-    filters = {'__select__': ['Show All', 'Show All Problems']}
+    filters = {
+        '__select__': ['Show All', 'Show All Problems'],
+        'Show All': detail.keys(),
+        'Show All Problems': []}
 
-    filters['Show All'] = sorted(detail.keys())
+    all_problems = {}
+
+    for i, (subject_id, subject) in enumerate(detail.items()):
+        if not i:
+            columns = util.sort_columns(
+                args, subject['explanations'].keys(), column_types)
+            filters['__select__'] += ['Show problems with: ' + c
+                                      for c in columns
+                                      if c in subject['explanations'].keys()]
+            for name in filters['__select__'][2:]:
+                filters[name] = []
+        for column, value in subject['explanations'].items():
+            if re.search(PROBLEM_PATTERN, value):
+                key = 'Show problems with: ' + column
+                all_problems[subject_id] = 1
+                filters[key].append(subject_id)
+
+    filters['Show All Problems'] = all_problems.keys()
+    for name in filters['__select__']:
+        filters[name] = sorted(filters[name])
 
     return filters
 
@@ -187,7 +208,6 @@ def problems(explanations, column_types):
     probs = {}
     opts = None
 
-    pattern = '|'.join([NO_MATCH_PATTERN, ONESIES_PATTERN])
     for group_by, cols in explanations.iterrows():
 
         # Get the list of possible problems
@@ -199,7 +219,7 @@ def problems(explanations, column_types):
         # get the row's problems
         probs[group_by] = {}
         for i, (col, value) in enumerate(cols.iteritems(), 1):
-            if re.search(pattern, value):
+            if re.search(PROBLEM_PATTERN, value):
                 probs[group_by][col] = 'problem-{}'.format(i)
 
     return probs, opts
