@@ -32,11 +32,11 @@ def report(args, unreconciled, reconciled, explanations, column_types):
     env = Environment(loader=PackageLoader('reconcile', '.'))
     template = env.get_template('lib/summary/template.html')
 
-    # Create the detail dataset
-    details = get_details(args, unreconciled, reconciled, explanations)
+    # Create the group dataset
+    groups = get_groups(args, unreconciled, reconciled, explanations)
 
     # Create filter lists
-    filters = get_filters(args, details, column_types)
+    filters = get_filters(args, groups, column_types)
 
     # Get transcriber summary data
     transcribers = user_summary(args, unreconciled)
@@ -45,7 +45,7 @@ def report(args, unreconciled, reconciled, explanations, column_types):
     summary = template.render(
         args=vars(args),
         header=header_data(args, unreconciled, reconciled, transcribers),
-        details=details,
+        groups=groups,
         filters=filters,
         columns=util.sort_columns(args, unreconciled, column_types),
         transcribers=transcribers,
@@ -57,54 +57,58 @@ def report(args, unreconciled, reconciled, explanations, column_types):
         out_file.write(summary)
 
 
-def get_details(args, unreconciled, reconciled, explanations):
+def get_groups(args, unreconciled, reconciled, explanations):
     """Convert the dataframes into dictionaries."""
 
-    details = {}
+    groups = {}
 
     # Put reconciled data into the dictionary
     for key, row in reconciled.iterrows():
-        details[str(key)] = {'reconciled': row.to_dict()}
+        groups[str(key)] = {'reconciled': row.to_dict()}
 
     # Put explanations data into the dictionary
     for key, row in explanations.iterrows():
-        details[str(key)]['explanations'] = row.to_dict()
+        groups[str(key)]['explanations'] = row.to_dict()
 
     # Put unreconciled data into the dictionary
     for _, row in unreconciled.iterrows():
         key = str(row[args.group_by])
-        array = details[key].get('unreconciled', [])
+        array = groups[key].get('unreconciled', [])
         array.append(row.to_dict())
-        details[key]['unreconciled'] = array
+        groups[key]['unreconciled'] = array
 
-    return details
+    return groups
 
 
-def get_filters(args, detail, column_types):
-    """Create list of subject IDs that will be used to filter detail rows."""
+def get_filters(args, groups, column_types):
+    """Create list of group IDs that will be used to filter group rows."""
 
     filters = {
         '__select__': ['Show All', 'Show All Problems'],
-        'Show All': detail.keys(),
+        'Show All': groups.keys(),
         'Show All Problems': []}
 
-    all_problems = {}
+    # Get the remaining filters. They are the columns in the explanations row.
+    group = next(iter(groups.values()))
+    columns = util.sort_columns(
+        args, group['explanations'].keys(), column_types)
+    filters['__select__'] += ['Show problems with: ' + c
+                              for c in columns
+                              if c in group['explanations'].keys()]
+    # Initialize the filters
+    for name in filters['__select__'][2:]:
+        filters[name] = []
 
-    for i, (subject_id, subject) in enumerate(detail.items()):
-        if not i:
-            columns = util.sort_columns(
-                args, subject['explanations'].keys(), column_types)
-            filters['__select__'] += ['Show problems with: ' + c
-                                      for c in columns
-                                      if c in subject['explanations'].keys()]
-            for name in filters['__select__'][2:]:
-                filters[name] = []
-        for column, value in subject['explanations'].items():
+    # Get the problems for each group
+    all_problems = {}
+    for group_by, group in groups.items():
+        for column, value in group['explanations'].items():
             if re.search(PROBLEM_PATTERN, value):
                 key = 'Show problems with: ' + column
-                all_problems[subject_id] = 1
-                filters[key].append(subject_id)
+                all_problems[group_by] = 1
+                filters[key].append(group_by)
 
+    # Sort by the grouping column
     filters['Show All Problems'] = all_problems.keys()
     for name in filters['__select__']:
         filters[name] = sorted(filters[name])
