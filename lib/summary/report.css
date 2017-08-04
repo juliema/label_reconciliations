@@ -125,6 +125,14 @@ td.right{
   padding: 2px;
 }
 
+#groups .previous-page {
+  margin-right: 0.5em;
+}
+
+#groups .next-page {
+  margin-left: 0.5em;
+}
+
 #users .users-container {
   display: inline-block;
   overflow-y: scroll;
