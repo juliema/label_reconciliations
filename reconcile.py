@@ -1,6 +1,7 @@
 """The main program."""
 
 import os
+from os.path import basename
 import sys
 import zipfile
 import argparse
@@ -141,13 +142,21 @@ def zip_files(args):
 
     with zipfile.ZipFile(zip_file, mode='w') as zippy:
         if args.unreconciled:
-            zippy.write(args.unreconciled, compress_type=zipfile.ZIP_DEFLATED)
+            zippy.write(args.unreconciled,
+                        arcname=basename(args.unreconciled),
+                        compress_type=zipfile.ZIP_DEFLATED)
         if args.reconciled:
-            zippy.write(args.reconciled, compress_type=zipfile.ZIP_DEFLATED)
+            zippy.write(args.reconciled,
+                        arcname=basename(args.reconciled),
+                        compress_type=zipfile.ZIP_DEFLATED)
         if args.summary:
-            zippy.write(args.summary, compress_type=zipfile.ZIP_DEFLATED)
+            zippy.write(args.summary,
+                        arcname=basename(args.summary),
+                        compress_type=zipfile.ZIP_DEFLATED)
         if args.merged:
-            zippy.write(args.merged, compress_type=zipfile.ZIP_DEFLATED)
+            zippy.write(args.merged,
+                        arcname=basename(args.merged),
+                        compress_type=zipfile.ZIP_DEFLATED)
 
     if args.unreconciled:
         os.remove(args.unreconciled)
