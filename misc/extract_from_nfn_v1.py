@@ -47,10 +47,9 @@ def parse_command_line():
 def process_csv(args):
     """Get the data from the input CSV."""
 
-    df = pd.read_csv(args.input_file, low_memory=False)
+    df = pd.read_csv(args.input_file, low_memory=False, dtype=str).fillna('')
 
     df = df.loc[df[args.column].str.contains(args.pattern), :]
-    df = df.fillna('').astype(str)
     empty_columns = []
     for column in df.columns:
         values = df[column].unique()
@@ -76,13 +75,13 @@ def write_args(args, df):
         args_file.write('--format=csv\n')
         args_file.write('--group-by={}\n'.format(args.group_by))
         args_file.write('--key-column={}\n'.format(args.key_column))
-        args_file.write('--unreconciled={}\n'.format(
-            args.output_prefix + '_unreconciled.csv'))
+        # args_file.write('--unreconciled={}\n'.format(
+        #     args.output_prefix + '_unreconciled.csv'))
         args_file.write('--reconciled={}\n'.format(
             args.output_prefix + '_reconciled.csv'))
         args_file.write('--summary={}\n'.format(
             args.output_prefix + '_summary.html'))
-        args_file.write('--zip={}\n'.format(args.output_prefix + '.zip'))
+        # args_file.write('--zip={}\n'.format(args.output_prefix + '.zip'))
         skip_columns = [args.group_by, args.key_column]
         for column in [c for c in df.columns if c not in skip_columns]:
             args_file.write('--column-types={}:text\n'.format(column))
