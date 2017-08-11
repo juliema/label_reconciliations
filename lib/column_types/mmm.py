@@ -1,5 +1,4 @@
-"""Get the mean median and mode for the group. Handle blanks and non-numerics.
-"""
+"""Get mean median and mode for the group. Handle blanks and non-numerics."""
 
 import numpy as np
 import scipy.stats as stats
@@ -10,7 +9,6 @@ P = inflect.engine().plural
 
 def reconcile(group, args=None):  # pylint: disable=unused-argument
     """Reconcile the data."""
-
     values = [g for g in group]
 
     numbers = []

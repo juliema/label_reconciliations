@@ -5,8 +5,7 @@ import lib.util as util
 
 
 def read(args):
-    """This is the main function that does the conversion."""
-
+    """Read a JSON file into a data-frame."""
     unreconciled = pd.read_json(args.input_file)
     unreconciled = util.unreconciled_setup(args, unreconciled)
 

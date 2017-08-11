@@ -12,7 +12,6 @@ P = E.plural
 
 def reconcile(group, args=None):  # pylint: disable=unused-argument
     """Reconcile the data."""
-
     values = [str(g) if str(g).lower() not in PLACEHOLDERS else ''
               for g in group]
 

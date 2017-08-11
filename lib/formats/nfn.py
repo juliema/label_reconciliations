@@ -1,6 +1,4 @@
-"""This module is used to convert the Adler's Notes from Nature expedition CSV
-dumps into the format that will be input into the rest of the modules.
-"""
+"""Convert Adler's Notes from Nature expedition CSV format."""
 
 # pylint: disable=invalid-name
 
@@ -15,8 +13,7 @@ SUBJECT_PREFIX = 'Subject '
 
 
 def read(args):
-    """This is the main function that does the conversion."""
-
+    """The main function that does the conversion."""
     df = pd.read_csv(args.input_file, dtype=str)
 
     # Workflows must be processed individually
@@ -60,7 +57,6 @@ def read(args):
 
 def get_nfn_only_defaults(df, args, workflow_id):
     """Set nfn-only argument defaults."""
-
     if args.summary:
         workflow_name = get_workflow_name(df)
 
@@ -73,7 +69,6 @@ def get_nfn_only_defaults(df, args, workflow_id):
 
 def get_workflow_id(df, args):
     """Pull the workflow ID from the data-frame if it was not given."""
-
     if args.workflow_id:
         return args.workflow_id
 
@@ -88,7 +83,6 @@ def get_workflow_id(df, args):
 
 def get_workflow_name(df):
     """Extract and format the workflow name from the data frame."""
-
     try:
         workflow_name = df.workflow_name.iloc[0]
         workflow_name = re.sub(r'^[^_]*_', '', workflow_name)
@@ -98,11 +92,7 @@ def get_workflow_name(df):
 
 
 def extract_metadata(df):
-    """One column in the expedition CSV file contains a json object with
-    metadata about the transcription event. We only need a few fields from this
-    object.
-    """
-
+    """Extract a few fields from the metadata JSON object."""
     df['json'] = df['metadata'].map(json.loads)
 
     name = 'Classification started at'
@@ -115,13 +105,12 @@ def extract_metadata(df):
 
 
 def extract_subject_data(df, column_types):
-    """Extract the subject data from the json object in the subject_data
-    column. We prefix the new column names with "subject_" to keep them
-    separate from the other df columns.
-    The subject data json looks like:
+    """Extract subject data from the json object in the subject_data column.
+
+    We prefix the new column names with "subject_" to keep them separate from
+    the other df columns. The subject data json looks like:
         {subject_id: {"key_1": "value_1", "key_2": "value_2", ...}}
     """
-
     df['json'] = df['subject_data'].map(json.loads)
 
     # Put the subject data into the data frame
@@ -147,9 +136,9 @@ def extract_subject_data(df, column_types):
 
 def extract_annotations(df, column_types):
     """Extract annotations from the json object in the annotations column.
+
     Annotations are nested json blobs with a peculiar data format.
     """
-
     df['json'] = df['annotations'].map(json.loads)
 
     for key, row in df.iterrows():
@@ -167,8 +156,7 @@ def extract_annotations(df, column_types):
 
 
 def extract_tasks(df, key, task, column_types, tasks_seen):
-    """Hoists a task annotation field into the data frame."""
-
+    """Hoist a task annotation field into the data frame."""
     if isinstance(task.get('value'), list):
         for subtask in task['value']:
             extract_tasks(
@@ -186,11 +174,12 @@ def extract_tasks(df, key, task, column_types, tasks_seen):
 
 
 def create_header(label, column_types, tasks_seen, reconciler):
-    """Create a header from the given label. We need to handle name collisions.
-    tasks_seen = all of the columns so far in the row
-    column_types = all of the columns so far in the entire data frame
-    """
+    """Create a header from the given label.
 
+    We need to handle name collisions.
+        tasks_seen = all of the columns so far in the row
+        column_types = all of the columns so far in the entire data frame
+    """
     # Strip out problematic characters from the label
     label = re.sub(r'^\s+|\s+$', '', label)
 
@@ -212,15 +201,11 @@ def create_header(label, column_types, tasks_seen, reconciler):
 
 def extract_date(metadata, column=''):
     """Extract dates from a json object."""
-
     return parse(metadata[column]).strftime('%d-%b-%Y %H:%M:%S')
 
 
 def adjust_column_names(df, column_types):
-    """Rename columns to add a "#1" suffix if there is a corresponding column
-    with a "#2" suffix.
-    """
-
+    """Rename columns to add a "#1" suffix if there exists a "#2" suffix."""
     rename = {}
     for name in column_types.keys():
         old_name = name[:-3]

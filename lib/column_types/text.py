@@ -17,7 +17,6 @@ ExactScore = namedtuple('ExactScore', 'value count')
 
 def reconcile(group, args=None):
     """Reconcile the data."""
-
     values = ['\n'.join([' '.join(ln.split()) for ln in str(g).splitlines()])
               for g in group]
 
@@ -61,14 +60,14 @@ def reconcile(group, args=None):
 
 
 def only_filled_values(values):
-    """Get the items in the group where they are filled and sort
-    by frequency. Normalize the text for comparison by removing spaces and
-    punctuation, and setting all letters to lower case. We return the longest
-    value in a normalized group. So the following three items will normalize to
-    the same value ("atestlabel") but we will return the second one:
+    """Get the filled items items in the group.
+
+    Then sort them by frequency. Normalize the text for comparison by removing
+    spaces and punctuation, and setting all letters to lower case. We return
+    the longest the same value ("atestlabel") but we will return the second
+    one:
       "A test label"  "a test label."   "A TEST LABEL"
     """
-
     all_filled = {}
     for value in values:
         value = value.strip()
@@ -88,7 +87,6 @@ def only_filled_values(values):
 
 def top_partial_ratio(values):
     """Return the best partial ratio match from fuzzywuzzy module."""
-
     scores = []
     for combo in combinations(values, 2):
         score = fuzz.partial_ratio(combo[0], combo[1])
@@ -102,7 +100,6 @@ def top_partial_ratio(values):
 
 def top_token_set_ratio(values):
     """Return the best token set ratio match from fuzzywuzzy module."""
-
     scores = []
     for combo in combinations(values, 2):
         score = fuzz.token_set_ratio(combo[0], combo[1])
