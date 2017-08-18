@@ -1,7 +1,5 @@
 """Split the CSV file based upon the given column and regular expression."""
 
-# pylint: disable=invalid-name
-
 import os
 import argparse
 import textwrap
@@ -10,7 +8,6 @@ import pandas as pd
 
 def parse_command_line():
     """Get user input."""
-
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawDescriptionHelpFormatter,
         fromfile_prefix_chars='@',
@@ -46,7 +43,6 @@ def parse_command_line():
 
 def process_csv(args):
     """Get the data from the input CSV."""
-
     df = pd.read_csv(args.input_file, low_memory=False, dtype=str).fillna('')
 
     df = df.loc[df[args.column].str.contains(args.pattern), :]
@@ -66,7 +62,6 @@ def process_csv(args):
 
 def write_args(args, df):
     """Output an arguments file for reconcile.py."""
-
     args_name = args.output_prefix + '_args.txt'
 
     with open(args_name, 'w') as args_file:
@@ -89,7 +84,6 @@ def write_args(args, df):
 
 def main():
     """Main function."""
-
     args = parse_command_line()
     df = process_csv(args)
     write_args(args, df)

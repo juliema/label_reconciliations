@@ -1,9 +1,6 @@
 """Convert Adler's Notes from Nature expedition CSV format."""
 
-# pylint: disable=invalid-name
-
 import re
-import sys
 import json
 from dateutil.parser import parse
 import pandas as pd
@@ -19,8 +16,7 @@ def read(args):
     # Workflows must be processed individually
     workflow_id = get_workflow_id(df, args)
 
-    # Remove anything not in the workflow
-    df = df.loc[df.workflow_id == workflow_id, :]
+    df = remove_rows_not_in_workflow(df, workflow_id)
 
     get_nfn_only_defaults(df, args, workflow_id)
 
@@ -55,6 +51,11 @@ def read(args):
     return df, column_types
 
 
+def remove_rows_not_in_workflow(df, workflow_id):
+    """Remove all rows not in the dataframe."""
+    return df.loc[df.workflow_id == workflow_id, :]
+
+
 def get_nfn_only_defaults(df, args, workflow_id):
     """Set nfn-only argument defaults."""
     if args.summary:
@@ -75,8 +76,8 @@ def get_workflow_id(df, args):
     workflow_ids = df.workflow_id.unique()
 
     if len(workflow_ids) > 1:
-        sys.exit('There are multiple workflows in this file. '
-                 'You must provide a workflow ID as an argument.')
+        util.error_exit('There are multiple workflows in this file. '
+                        'You must provide a workflow ID as an argument.')
 
     return workflow_ids[0]
 
@@ -87,7 +88,7 @@ def get_workflow_name(df):
         workflow_name = df.workflow_name.iloc[0]
         workflow_name = re.sub(r'^[^_]*_', '', workflow_name)
     except KeyError:
-        sys.exit('Workflow name not found in classifications file.')
+        util.error_exit('Workflow name not found in classifications file.')
     return workflow_name
 
 

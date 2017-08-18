@@ -7,7 +7,7 @@ import inflect
 P = inflect.engine().plural
 
 
-def reconcile(group, args=None):  # pylint: disable=unused-argument
+def reconcile(group, args=None):
     """Reconcile the data."""
     values = [g for g in group]
 

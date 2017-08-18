@@ -6,8 +6,6 @@ from urllib.parse import urlparse
 from jinja2 import Environment, PackageLoader
 import lib.util as util
 
-# pylint: disable=invalid-name
-
 # These depend on the patterns put into explanations
 NO_MATCH_PATTERN = r'^No (?:select|text) match on'
 EXACT_MATCH_PATTERN = r'^(?:Exact|Normalized exact) match'
@@ -23,7 +21,6 @@ PROBLEM_PATTERN = '|'.join([NO_MATCH_PATTERN, ONESIES_PATTERN])
 
 def report(args, unreconciled, reconciled, explanations, column_types):
     """The main function."""
-
     # Everything as strings
     reconciled = reconciled.applymap(str)
     unreconciled = unreconciled.applymap(str)
@@ -63,7 +60,6 @@ def report(args, unreconciled, reconciled, explanations, column_types):
 
 def get_groups(args, unreconciled, reconciled, explanations):
     """Convert the dataframes into dictionaries."""
-
     groups = {}
 
     # Put reconciled data into the dictionary
@@ -86,7 +82,6 @@ def get_groups(args, unreconciled, reconciled, explanations):
 
 def get_filters(args, groups, column_types):
     """Create list of group IDs that will be used to filter group rows."""
-
     filters = {
         '__select__': ['Show All', 'Show All Problems'],
         'Show All': groups.keys(),
@@ -122,7 +117,6 @@ def get_filters(args, groups, column_types):
 
 def create_link(value):
     """Convert a link into an anchor element."""
-
     try:
         url = urlparse(value)
         if url.scheme and url.netloc and url.path:

@@ -1,15 +1,13 @@
 """Common utilities."""
 
+import sys
 from importlib.machinery import SourceFileLoader
 from glob import glob
 from os.path import join, dirname, splitext, basename
 
-# pylint: disable=invalid-name
-
 
 def get_plugins(subdir):
     """Get the plug-ins from the reconcilers directory."""
-
     pattern = join(dirname(__file__), subdir, '*.py')
 
     plugins = {}
@@ -26,9 +24,10 @@ def get_plugins(subdir):
 
 
 def unreconciled_setup(args, unreconciled):
-    """Simple processing of the unreconciled data frame. This is not used
-    when there is a large amount of processing of the input."""
+    """Simple processing of the unreconciled data frame.
 
+    Not used when there is a large amount of processing of the input.
+    """
     unreconciled = unreconciled.fillna('')
     unreconciled.sort_values([args.group_by, args.key_column], inplace=True)
     return unreconciled
@@ -36,7 +35,6 @@ def unreconciled_setup(args, unreconciled):
 
 def sort_columns(args, all_columns, column_types):
     """Put columns into an order useful for displaying."""
-
     columns = [args.group_by, args.key_column]
     columns += [c['name'] for c
                 in sorted(column_types.values(), key=lambda x: x['order'])]
@@ -46,5 +44,13 @@ def sort_columns(args, all_columns, column_types):
 
 def last_column_type(column_types):
     """Return the max order in the order types."""
-
     return max([v['order'] for v in column_types.values()], default=0)
+
+
+def error_exit(msg):
+    """Handle error exits."""
+    if not isinstance(msg, list):
+        msg = [msg]
+    for m in msg:
+        print(msg)
+    sys.exit(1)

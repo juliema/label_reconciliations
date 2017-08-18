@@ -16,7 +16,6 @@ VERSION = '0.4.0'
 
 def parse_command_line():
     """Get user input."""
-
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawDescriptionHelpFormatter,
         fromfile_prefix_chars='@',
@@ -26,7 +25,7 @@ def parse_command_line():
             That is, it reduces n classifications per subject to the "best"
             values. The summary file will provide explanations of how the
             reconciliations were done. NOTE: You may use a file to hold the
-            command-line arguments like: @foo.txt."""),
+            command-line arguments like: @/path/to/args.txt."""),
         epilog=textwrap.dedent("""
             Current reconciliation types
             ----------------------------
@@ -137,7 +136,6 @@ def parse_command_line():
 
 def zip_files(args):
     """Put results into a zip file."""
-
     zip_file = args.zip if args.zip else args.zip_keep
 
     with zipfile.ZipFile(zip_file, mode='w') as zippy:
@@ -170,7 +168,6 @@ def zip_files(args):
 
 def get_column_types(args, column_types):
     """Append the argument column types to the inferred column types."""
-
     last = util.last_column_type(column_types)
     if args.column_types:
         for arg in args.column_types:
@@ -190,9 +187,10 @@ def get_column_types(args, column_types):
 
 
 def validate_columns(args, column_types, unreconciled, plugins=None):
-    """Validate that the columns are in the unreconciled data frame and that
-    the column types are an existing plug-in."""
+    """Validate that the columns are in the unreconciled data frame.
 
+    Also verify that the column types are an existing plug-in.
+    """
     has_errors = False
     types = list(plugins.keys())
     for column, column_type in column_types.items():

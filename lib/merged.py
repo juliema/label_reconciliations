@@ -1,5 +1,4 @@
-"""Merge the three dataframes: reconciled, explanations, unreconciled into one
-dataframe."""
+"""Merge reconciled, explanations, unreconciled dataframes into one."""
 
 import pandas as pd
 import lib.util as util
@@ -12,10 +11,11 @@ ROW_TYPES = {  # Row types and their sort order
 
 def merge(
         args, unreconciled, reconciled, explanations, column_types):
-    """Combine the dataframes so that we can print them out in order for
-    the detail report.
-    """
+    """Combine dataframes.
 
+    Make sure they are grouped by subject ID. Also sort them within each
+    subject ID group.
+    """
     # Make the index a column
     rec = reconciled.reset_index()
     exp = explanations.reset_index()
