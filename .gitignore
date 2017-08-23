@@ -4,6 +4,7 @@ temp.*
 .~lock*
 temp/
 old/
+nfn1/
 __pycache__/
 venv/
 background/
