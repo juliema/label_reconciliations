@@ -7,6 +7,9 @@ import pandas as pd
 import lib.util as util
 
 SUBJECT_PREFIX = 'Subject '
+STARTED_AT = 'Classification started at'
+USER_NAME = 'user_name'
+KEEP_COUNT = 3
 
 
 def read(args):
@@ -46,7 +49,9 @@ def read(args):
     adjust_column_names(df, column_types)
     columns = util.sort_columns(args, df.columns, column_types)
     df = df.reindex_axis(columns, axis=1).fillna('')
-    df.sort_values([args.group_by, args.key_column], inplace=True)
+    df.sort_values([args.group_by, STARTED_AT], inplace=True)
+    df.drop_duplicates([args.group_by, USER_NAME], keep='first', inplace=True)
+    df = df.groupby(args.group_by).head(KEEP_COUNT)
 
     return df, column_types
 
