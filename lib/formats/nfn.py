@@ -40,8 +40,7 @@ def read(args):
                             'user_ip',
                             'subject_ids',
                             'subject_data',
-                            (SUBJECT_PREFIX + 'retired').lower(),
-                            (SUBJECT_PREFIX + 'subjectId').lower()]]
+                            (SUBJECT_PREFIX + 'retired').lower()]]
     df.drop(unwanted_columns, axis=1, inplace=True)
     column_types = {k: v for k, v in column_types.items()
                     if k not in unwanted_columns}
