@@ -19,7 +19,7 @@ def read(args):
     # Workflows must be processed individually
     workflow_id = get_workflow_id(df, args)
 
-    df = remove_rows_not_in_workflow(df, workflow_id)
+    df = remove_rows_not_in_workflow(df, str(workflow_id))
 
     get_nfn_only_defaults(df, args, workflow_id)
 
