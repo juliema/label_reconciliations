@@ -6,7 +6,7 @@ from dateutil.parser import parse
 import pandas as pd
 import lib.util as util
 
-SUBJECT_PREFIX = 'Subject '
+SUBJECT_PREFIX = 'subject_'
 STARTED_AT = 'Classification started at'
 USER_NAME = 'user_name'
 KEEP_COUNT = 3
