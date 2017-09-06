@@ -153,8 +153,7 @@ def extract_annotations(df, column_types):
                 extract_tasks(
                     df, key, task, column_types, tasks_seen)
             except ValueError:
-                print('Bad transcription for classification {}'.format(
-                    key))
+                print('Bad transcription for classification {}'.format(key))
                 break
 
     df.drop(['annotations', 'json'], axis=1, inplace=True)

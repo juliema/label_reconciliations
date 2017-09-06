@@ -11,7 +11,7 @@ import lib.reconciler as reconciler
 import lib.summary as summary
 import lib.merged as merged
 
-VERSION = '0.4.0'
+VERSION = '0.4.1'
 
 
 def parse_command_line():
