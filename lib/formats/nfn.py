@@ -169,7 +169,9 @@ def extract_tasks(df, key, task, column_types, tasks_seen):
     elif task.get('select_label'):
         header = create_header(
             task['select_label'], column_types, tasks_seen, 'select')
-        df.loc[key, header] = task.get('label', '')
+        option = task.get('option', False)
+        value = task.get('label', '') if option else task.get('value', '')
+        df.loc[key, header] = value
     elif task.get('task_label'):
         header = create_header(
             task['task_label'], column_types, tasks_seen, 'text')
