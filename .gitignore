@@ -1,7 +1,7 @@
 .ipynb_checkpoints/
 junk*
 .~lock*
-temp*
+temp/
 old/
 nfn1/
 __pycache__/

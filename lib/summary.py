@@ -7,12 +7,12 @@ from jinja2 import Environment, PackageLoader
 import lib.util as util
 
 # These depend on the patterns put into explanations
-NO_MATCH_PATTERN = r'^No (?:select|text) match on'
+NO_MATCH_PATTERN = r'No (?:select|text) match on'
 EXACT_MATCH_PATTERN = r'^(?:Exact|Normalized exact) match'
 FUZZ_MATCH_PATTERN = r'^(?:Partial|Token set) ratio match'
 ALL_BLANK_PATTERN = (r'^(?:(?:All|The) \d+ record'
                      r'|^There (?:was|were) no numbers? in)')
-ONESIES_PATTERN = r'^Only 1 transcript in'
+ONESIES_PATTERN = r'Only 1 transcript in|There was 1 number in'
 MMM_PATTERN = r'^There (?:was|were) (?:\d+) numbers? in'
 
 # Combine for the problem pattern
@@ -172,10 +172,14 @@ def reconciled_summary(explanations, column_types):
         num_no_match = explanations[
             explanations[col].str.contains(NO_MATCH_PATTERN)].shape[0]
 
+        num_onesies = explanations[
+            explanations[col].str.contains(ONESIES_PATTERN)].shape[0]
+
         num_mmm = ''
         if col_type == 'mmm':
             num_mmm = '{:,}'.format(explanations[
-                explanations[col].str.contains(MMM_PATTERN)].shape[0])
+                explanations[col].str.contains(MMM_PATTERN)].shape[0] -
+                                    num_onesies)
 
         how_reconciled.append({
             'name': col,
@@ -187,8 +191,7 @@ def reconciled_summary(explanations, column_types):
                 explanations[col].str.contains(EXACT_MATCH_PATTERN)].shape[0],
             'num_all_blank': explanations[
                 explanations[col].str.contains(ALL_BLANK_PATTERN)].shape[0],
-            'num_onesies': explanations[
-                explanations[col].str.contains(ONESIES_PATTERN)].shape[0],
+            'num_onesies': num_onesies,
             'num_mmm': num_mmm})
     return how_reconciled
 
