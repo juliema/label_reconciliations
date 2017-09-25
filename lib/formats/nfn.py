@@ -1,5 +1,7 @@
 """Convert Adler's Notes from Nature expedition CSV format."""
 
+# pylint: disable=invalid-name
+
 import re
 import json
 from dateutil.parser import parse
@@ -123,7 +125,9 @@ def extract_subject_data(df, column_types):
         for subject_dict in iter(row['json'].values()):
             for column, value in subject_dict.items():
                 column = re.sub(r'\W+', '_', column)
-                column = re.sub(r'^_+|__$', '', column)
+                column = re.sub(r'^_+|_$', '', column)
+                if column == 'id':
+                    column = 'external_id'
                 if isinstance(value, dict):
                     value = json.dumps(value)
                 df.loc[key, SUBJECT_PREFIX + column] = value
