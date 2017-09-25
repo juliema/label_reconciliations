@@ -52,7 +52,7 @@ def parse_command_line():
     parser.add_argument('-c', '--column-types', action='append',
                         help="""A string with information on how to reconcile
                              each column in the input file. The format is
-                             --column-types "foo x:select,bar:text,baz:text".
+                             --column-types "foo foo:select,bar:text,baz:text".
                              The list is comma separated with the column
                              label going before the colon and the
                              reconciliation type after the colon. Note: This

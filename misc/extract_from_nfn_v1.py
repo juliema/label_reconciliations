@@ -1,5 +1,8 @@
 """Split the CSV file based upon the given column and regular expression."""
 
+# pylint: disable=invalid-name
+
+
 import os
 import argparse
 import textwrap

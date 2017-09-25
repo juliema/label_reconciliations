@@ -9,7 +9,7 @@ import pandas as pd
 import lib.util as util
 
 SUBJECT_PREFIX = 'subject_'
-STARTED_AT = 'Classification started at'
+STARTED_AT = 'classification_started_at'
 USER_NAME = 'user_name'
 KEEP_COUNT = 3
 
@@ -102,10 +102,9 @@ def extract_metadata(df):
     """Extract a few fields from the metadata JSON object."""
     df['json'] = df['metadata'].map(json.loads)
 
-    name = 'Classification started at'
-    df[name] = df['json'].apply(extract_date, column='started_at')
+    df[STARTED_AT] = df['json'].apply(extract_date, column='started_at')
 
-    name = 'Classification finished at'
+    name = 'classification_finished_at'
     df[name] = df['json'].apply(extract_date, column='finished_at')
 
     df.drop(['metadata', 'json'], axis=1, inplace=True)
