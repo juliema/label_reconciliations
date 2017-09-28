@@ -1,5 +1,7 @@
 """Render a summary of the reconciliation process."""
 
+# pylint: disable=invalid-name
+
 import re
 from datetime import datetime
 from urllib.parse import urlparse
@@ -13,7 +15,7 @@ FUZZ_MATCH_PATTERN = r'^(?:Partial|Token set) ratio match'
 ALL_BLANK_PATTERN = (r'^(?:(?:All|The) \d+ record'
                      r'|^There (?:was|were) no numbers? in)')
 ONESIES_PATTERN = r'Only 1 transcript in|There was 1 number in'
-MMM_PATTERN = r'^There (?:was|were) (?:\d+) numbers? in'
+MMR_PATTERN = r'^There (?:was|were) (?:\d+) numbers? in'
 
 # Combine for the problem pattern
 PROBLEM_PATTERN = '|'.join([NO_MATCH_PATTERN, ONESIES_PATTERN])
@@ -175,10 +177,10 @@ def reconciled_summary(explanations, column_types):
         num_onesies = explanations[
             explanations[col].str.contains(ONESIES_PATTERN)].shape[0]
 
-        num_mmm = ''
-        if col_type == 'mmm':
-            num_mmm = '{:,}'.format(explanations[
-                explanations[col].str.contains(MMM_PATTERN)].shape[0] -
+        num_mmr = ''
+        if col_type == 'mmr':
+            num_mmr = '{:,}'.format(explanations[
+                explanations[col].str.contains(MMR_PATTERN)].shape[0] -
                                     num_onesies)
 
         how_reconciled.append({
@@ -192,7 +194,7 @@ def reconciled_summary(explanations, column_types):
             'num_all_blank': explanations[
                 explanations[col].str.contains(ALL_BLANK_PATTERN)].shape[0],
             'num_onesies': num_onesies,
-            'num_mmm': num_mmm})
+            'num_mmr': num_mmr})
     return how_reconciled
 
 
