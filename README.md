@@ -63,13 +63,11 @@ subject_id | Country | Species Name | Location | Collector
 - One issue with these categories is that in some cases it is unclear which category the label data should be added to. For example, often it is unclear if data should go in the locality or the habitat field, if a label says ‘middle of a field’, is that locality or habitat information?  Since we don’t legislate how expeditions are setup to capture information, we cannot solve this issue for our providers  Our approach does not move information between categories. Ultimately it will be up to the next level of reconciliation interpretations done by providers to determine if the data are misplaced. 
 
 ### Summary of Free - Text Reconciliation process:
-    exact match = perfect match between the transcripts
-    normalized exact match = removed white spaces, punctiationa and capital letters and checks for a match 
-    partial ratio match = parts of words in one transcript are found in anohter (e.g., 'rd' and 'road) always reports the score of the two transcripts with the highest matching score and one of those is selected. 
-    token set ratio match = the words of one transcript are a subset of another and removes punctuation again compares all the transcripts to each other and reports the highest matching score between two.
-    no match = nothing matched between the transcripts. This could be because they were completely different or because two were blank whereas only one had a response.    
-
-
+- exact match = perfect match between the transcripts
+- normalized exact match = removed white spaces, punctiationa and capital letters and checks for a match 
+- partial ratio match = parts of words in one transcript are found in anohter (e.g., 'rd' and 'road) always reports the score of the two transcripts with the highest matching score and one of those is selected. 
+- token set ratio match = the words of one transcript are a subset of another and removes punctuation again compares all the transcripts to each other and reports the highest matching score between two.
+- no match = nothing matched between the transcripts. This could be because they were completely different or because two were blank whereas only one had a response.    
 
 ## What if you need more help?
  - We want to make sure you can use these outputs as efficiently as possible!  We are happy to field questions, explain more to you about all the details, or otherwise make sure you get what you want.  However, we can’t necessarily customize this code in cases where you have a special need.  If you need further customizations, contact us and we can discuss options with you for this effort and how to potentially set up means to cover those costs for our developers.  Alternatively feel free to fork the code and make it your own or improve upon ours!
