@@ -24,7 +24,7 @@ def parse_command_line():
     parser.add_argument('-o', '--output-prefix', required=True,
                         help="""The output files' prefix.""")
 
-    parser.add_argument('-p', '--pattern', required=True,
+    parser.add_argument('-p', '--pattern',
                         help="""What are we looking for inclusion in the column
                             to include in the new CSV file.""")
 
@@ -48,7 +48,9 @@ def process_csv(args):
     """Get the data from the input CSV."""
     df = pd.read_csv(args.input_file, low_memory=False, dtype=str).fillna('')
 
-    df = df.loc[df[args.column].str.contains(args.pattern, regex=True), :]
+    if args.pattern:
+        df = df.loc[df[args.column].str.contains(args.pattern, regex=True), :]
+
     empty_columns = []
     for column in df.columns:
         values = df[column].unique()
