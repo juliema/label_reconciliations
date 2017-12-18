@@ -9,3 +9,4 @@ venv/
 background/
 .cache/
 *.pyc
+.ropeproject/

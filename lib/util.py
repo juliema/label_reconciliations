@@ -24,7 +24,8 @@ def get_plugins(subdir):
 
 
 def unreconciled_setup(args, unreconciled):
-    """Simple processing of the unreconciled data frame.
+    """
+    Process the unreconciled data frame.
 
     Not used when there is a large amount of processing of the input.
     """

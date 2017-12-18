@@ -218,7 +218,7 @@ def validate_columns(args, column_types, unreconciled, plugins=None):
 
 
 def main():
-    """The main function."""
+    """Reconcile the data."""
     args = parse_command_line()
 
     formats = util.get_plugins('formats')

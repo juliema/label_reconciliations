@@ -15,7 +15,7 @@ KEEP_COUNT = 3
 
 
 def read(args):
-    """The main function that does the conversion."""
+    """Read and convert the input CSV data."""
     df = pd.read_csv(args.input_file, dtype=str)
 
     # Workflows must be processed individually

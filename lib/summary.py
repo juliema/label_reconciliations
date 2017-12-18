@@ -22,7 +22,7 @@ PROBLEM_PATTERN = '|'.join([NO_MATCH_PATTERN, ONESIES_PATTERN])
 
 
 def report(args, unreconciled, reconciled, explanations, column_types):
-    """The main function."""
+    """Generate the report."""
     # Everything as strings
     reconciled = reconciled.applymap(str)
     unreconciled = unreconciled.applymap(str)
@@ -145,7 +145,7 @@ def user_summary(args, unreconciled):
 
 
 def header_data(args, unreconciled, reconciled, transcribers):
-    """Data that goes into the report header."""
+    """Get data that goes into the report header."""
     # TODO: Delete this
 
     return {
@@ -181,7 +181,7 @@ def reconciled_summary(explanations, column_types):
         if col_type == 'mmr':
             num_mmr = '{:,}'.format(explanations[
                 explanations[col].str.contains(MMR_PATTERN)].shape[0] -
-                                    num_onesies)
+                num_onesies)
 
         how_reconciled.append({
             'name': col,
