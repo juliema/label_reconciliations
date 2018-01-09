@@ -37,6 +37,8 @@ def unreconciled_setup(args, unreconciled):
 def sort_columns(args, all_columns, column_types):
     """Put columns into an order useful for displaying."""
     columns = [args.group_by, args.key_column]
+    if args.user_column:
+        columns += [args.user_column]
     columns += [c['name'] for c
                 in sorted(column_types.values(), key=lambda x: x['order'])]
     columns += [c for c in all_columns if c not in columns]
