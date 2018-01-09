@@ -70,7 +70,7 @@ def get_nfn_only_defaults(df, args, workflow_id):
     if not args.title and args.summary:
         args.title = 'Summary of "{}" ({})'.format(workflow_name, workflow_id)
 
-    if not args.user_column and args.summary:
+    if not args.user_column:
         args.user_column = 'user_name'
 
 
