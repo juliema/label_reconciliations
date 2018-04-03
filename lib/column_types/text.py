@@ -1,7 +1,7 @@
 """Reconcile free text fields."""
 
 import re
-from collections import namedtuple
+from collections import namedtuple, Counter
 from itertools import combinations
 from fuzzywuzzy import fuzz
 import inflect
@@ -19,6 +19,16 @@ def reconcile(group, args=None):
     """Reconcile the data."""
     values = ['\n'.join([' '.join(ln.split()) for ln in str(g).splitlines()])
               for g in group]
+
+    filled = Counter([v for v in values if v.strip()]).most_common()
+    count = len(values)
+    blanks = count - sum([f[1] for f in filled])
+
+    if filled[0][1] > 1:
+        reason = 'Exact match, {} of {} {} with {} {}'.format(
+            filled[0][1], count, P('record', count),
+            blanks, P('blank', blanks))
+        return reason, filled[0][0]
 
     filled = only_filled_values(values)
 

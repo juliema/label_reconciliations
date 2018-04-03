@@ -66,6 +66,7 @@
           <th class="left">Field</th>
           <th class="left">Type</th>
           <th class="right">Exact Matches</th>
+          <th class="right">Normalized Matches</th>
           <th class="right">Mean Mode Range</th>
           <th class="right">Fuzzy Matches</th>
           <th class="right">All Blank</th>
@@ -80,6 +81,7 @@
           <td class="left">{{row.name}}</td>
           <td class="left">{{row.col_type}}</td>
           <td class="right">{{ '{:,}'.format(row.num_exact_match) }}</td>
+          <td class="right">{{ '{:,}'.format(row.num_norm_match) }}</td>
           <td class="right">{{ row.num_mmr }}</td>
           <td class="right">{{ row.num_fuzzy_match }}</td>
           <td class="right">{{ '{:,}'.format(row.num_all_blank) }}</td>

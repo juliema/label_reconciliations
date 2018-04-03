@@ -10,3 +10,4 @@ background/
 .cache/
 *.pyc
 .ropeproject/
+.pytest_cache/
