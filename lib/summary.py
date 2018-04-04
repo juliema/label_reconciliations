@@ -10,8 +10,8 @@ import lib.util as util
 
 # These depend on the patterns put into explanations
 NO_MATCH_PATTERN = r'No (?:select|text) match on'
-EXACT_MATCH_PATTERN = r'^Exact match'
-NORM_MATCH_PATTERN = r'^Normalized exact match'
+MAJORITY_MATCH_PATTERN = r'^(?:Majority|Normalized majority) match'
+UNANIMOUS_MATCH_PATTERN = r'^(?:Unanimous|Normalized unanimous) match'
 FUZZ_MATCH_PATTERN = r'^(?:Partial|Token set) ratio match'
 ALL_BLANK_PATTERN = (r'^(?:(?:All|The) \d+ record'
                      r'|^There (?:was|were) no numbers? in)')
@@ -190,10 +190,12 @@ def reconciled_summary(explanations, column_types):
             'num_no_match': num_no_match,
             'num_fuzzy_match': num_fuzzy_match,
             'num_reconciled': explanations.shape[0] - num_no_match,
-            'num_exact_match': explanations[
-                explanations[col].str.contains(EXACT_MATCH_PATTERN)].shape[0],
-            'num_norm_match': explanations[
-                explanations[col].str.contains(NORM_MATCH_PATTERN)].shape[0],
+            'num_majority_match': explanations[
+                explanations[col].str.contains(
+                    MAJORITY_MATCH_PATTERN)].shape[0],
+            'num_unanimous_match': explanations[
+                explanations[col].str.contains(
+                    UNANIMOUS_MATCH_PATTERN)].shape[0],
             'num_all_blank': explanations[
                 explanations[col].str.contains(ALL_BLANK_PATTERN)].shape[0],
             'num_onesies': num_onesies,

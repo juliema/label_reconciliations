@@ -27,8 +27,13 @@ def reconcile(group, args=None):  # pylint: disable=unused-argument
             P('The', count), count, P('record', count), P('is', count))
         return reason, ''
 
+    if filled[0][1] > 1 and filled[0][1] == count:
+        reason = 'Unanimous match, {} of {} {}'.format(
+            filled[0][1], count, P('record', count))
+        return reason, filled[0][0]
+
     if filled[0][1] > 1:
-        reason = 'Exact match, {} of {} {} with {} {}'.format(
+        reason = 'Majority match, {} of {} {} with {} {}'.format(
             filled[0][1], count, P('record', count),
             blanks, P('blank', blanks))
         return reason, filled[0][0]
