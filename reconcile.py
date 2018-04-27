@@ -253,8 +253,9 @@ def main():
                 args, unreconciled, reconciled, explanations, column_types)
 
         if args.merged:
-            merged.merge(
+            smerged = merged.merge(
                 args, unreconciled, reconciled, explanations, column_types)
+            smerged.to_csv(args.merged, sep=',', encoding='utf-8', index=False)
 
     if args.zip:
         zip_files(args)
