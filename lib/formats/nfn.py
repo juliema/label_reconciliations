@@ -1,7 +1,5 @@
 """Convert Adler's Notes from Nature expedition CSV format."""
 
-# pylint: disable=invalid-name
-
 import re
 import json
 from dateutil.parser import parse
@@ -27,9 +25,9 @@ def read(args):
 
     # Extract the various json blobs
     column_types = {}
-    df = extract_annotations(df, column_types)
-    df = extract_subject_data(df, column_types)
-    df = extract_metadata(df)
+    df = (extract_annotations(df, column_types)
+            .pipe(extract_subject_data, column_types)
+            .pipe(extract_metadata))
 
     # Get the subject_id from the subject_ids list, use the first one
     df[args.group_by] = df.subject_ids.map(
@@ -112,28 +110,33 @@ def extract_metadata(df):
 
 
 def extract_subject_data(df, column_types):
-    """Extract subject data from the json object in the subject_data column.
+    """
+    Extract subject data from the json object in the subject_data column.
 
     We prefix the new column names with "subject_" to keep them separate from
     the other df columns. The subject data json looks like:
         {subject_id: {"key_1": "value_1", "key_2": "value_2", ...}}
     """
-    df['json'] = df.subject_data.map(json.loads)
+    data = (df.subject_data.map(json.loads)
+              .apply(lambda x: list(x.values())[0])
+              .tolist())
+    data = pd.DataFrame(data)
+    df = df.drop(['subject_data'], axis=1)
 
-    # Put the subject data into the data frame
-    for key, row in df.iterrows():
-        for subject_dict in iter(row['json'].values()):
-            for column, value in subject_dict.items():
-                column = re.sub(r'\W+', '_', column)
-                column = re.sub(r'^_+|_$', '', column)
-                if column == 'id':
-                    column = 'external_id'
-                if isinstance(value, dict):
-                    value = json.dumps(value)
-                df.loc[key, SUBJECT_PREFIX + column] = value
+    if 'retired' in data.columns:
+        data = data.drop(['retired'], axis=1)
 
-    # Get rid of unwanted data
-    df = df.drop(['subject_data', 'json'], axis=1)
+    if 'id' in data.columns:
+        data = data.rename(columns={'id': 'external_id'})
+
+    columns = [re.sub(r'\W+', '_', c) for c in data.columns]
+    columns = [re.sub(r'^_+|_$', '', c) for c in columns]
+    columns = [SUBJECT_PREFIX + c for c in columns]
+
+    columns = {old: new for old, new in zip(data.columns, columns)}
+    data = data.rename(columns=columns)
+
+    df = pd.concat([df, data], axis=1)
 
     # Put the subject columns into the column_types: They're all 'same'
     last = util.last_column_type(column_types)
@@ -146,7 +149,8 @@ def extract_subject_data(df, column_types):
 
 
 def extract_annotations(df, column_types):
-    """Extract annotations from the json object in the annotations column.
+    """
+    Extract annotations from the json object in the annotations column.
 
     Annotations are nested json blobs with a peculiar data format.
     """

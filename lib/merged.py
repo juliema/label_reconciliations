@@ -9,9 +9,9 @@ ROW_TYPES = {  # Row types and their sort order
     'unreconciled': '3-unreconciled'}
 
 
-def merge(
-        args, unreconciled, reconciled, explanations, column_types):
-    """Combine dataframes.
+def merge(args, unreconciled, reconciled, explanations, column_types):
+    """
+    Combine dataframes.
 
     Make sure they are grouped by subject ID. Also sort them within each
     subject ID group.
@@ -31,6 +31,6 @@ def merge(
     columns = util.sort_columns(args, merged.columns, column_types)
     return (merged.reindex_axis(columns, axis=1)
                   .fillna('')
-                  .sort_values([args.group_by, 'row_type', args.key_column])
+                  .sort_values([args.group_by, 'row_type', args.key_column]))
 
     return merged
