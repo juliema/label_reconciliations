@@ -139,7 +139,7 @@ def user_summary(args, unreconciled):
 
     series = unreconciled.groupby(args.user_column)
     series = series[args.user_column].count()
-    series.sort_values(ascending=False, inplace=True)
+    series = series.sort_values(ascending=False)
     transcribers = [{'name': name, 'count': count}
                     for name, count in series.iteritems()]
     return transcribers

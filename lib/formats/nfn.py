@@ -27,9 +27,9 @@ def read(args):
 
     # Extract the various json blobs
     column_types = {}
-    extract_annotations(df, column_types)
-    extract_subject_data(df, column_types)
-    extract_metadata(df)
+    df = extract_annotations(df, column_types)
+    df = extract_subject_data(df, column_types)
+    df = extract_metadata(df)
 
     # Get the subject_id from the subject_ids list, use the first one
     df[args.group_by] = df.subject_ids.map(
@@ -43,16 +43,17 @@ def read(args):
                             'subject_ids',
                             'subject_data',
                             (SUBJECT_PREFIX + 'retired').lower()]]
-    df.drop(unwanted_columns, axis=1, inplace=True)
+    df = df.drop(unwanted_columns, axis=1)
     column_types = {k: v for k, v in column_types.items()
                     if k not in unwanted_columns}
 
-    adjust_column_names(df, column_types)
+    df = adjust_column_names(df, column_types)
     columns = util.sort_columns(args, df.columns, column_types)
-    df = df.reindex_axis(columns, axis=1).fillna('')
-    df.sort_values([args.group_by, STARTED_AT], inplace=True)
-    df.drop_duplicates([args.group_by, USER_NAME], keep='first', inplace=True)
-    df = df.groupby(args.group_by).head(KEEP_COUNT)
+    df = (df.reindex_axis(columns, axis=1)
+            .fillna('')
+            .sort_values([args.group_by, STARTED_AT])
+            .drop_duplicates([args.group_by, USER_NAME], keep='first')
+            .groupby(args.group_by).head(KEEP_COUNT))
 
     return df, column_types
 
@@ -107,7 +108,7 @@ def extract_metadata(df):
     name = 'classification_finished_at'
     df[name] = df['json'].apply(extract_date, column='finished_at')
 
-    df.drop(['metadata', 'json'], axis=1, inplace=True)
+    return df.drop(['metadata', 'json'], axis=1)
 
 
 def extract_subject_data(df, column_types):
@@ -132,7 +133,7 @@ def extract_subject_data(df, column_types):
                 df.loc[key, SUBJECT_PREFIX + column] = value
 
     # Get rid of unwanted data
-    df.drop(['subject_data', 'json'], axis=1, inplace=True)
+    df = df.drop(['subject_data', 'json'], axis=1)
 
     # Put the subject columns into the column_types: They're all 'same'
     last = util.last_column_type(column_types)
@@ -140,6 +141,8 @@ def extract_subject_data(df, column_types):
         if name.startswith(SUBJECT_PREFIX):
             last += 1
             column_types[name] = {'type': 'same', 'order': last, 'name': name}
+
+    return df
 
 
 def extract_annotations(df, column_types):
@@ -159,7 +162,7 @@ def extract_annotations(df, column_types):
                 print('Bad transcription for classification {}'.format(key))
                 break
 
-    df.drop(['annotations', 'json'], axis=1, inplace=True)
+    return df.drop(['annotations', 'json'], axis=1)
 
 
 def extract_tasks(df, key, task, column_types, tasks_seen):
@@ -227,4 +230,4 @@ def adjust_column_names(df, column_types):
         column_types[new_name] = new_task
         del column_types[old_name]
 
-    df.rename(columns=rename, inplace=True)
+    return df.rename(columns=rename)

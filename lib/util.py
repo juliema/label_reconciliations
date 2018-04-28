@@ -30,7 +30,7 @@ def unreconciled_setup(args, unreconciled):
     Not used when there is a large amount of processing of the input.
     """
     unreconciled = unreconciled.fillna('')
-    unreconciled.sort_values([args.group_by, args.key_column], inplace=True)
+    unreconciled = unreconciled.sort_values([args.group_by, args.key_column])
     return unreconciled
 
 

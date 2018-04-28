@@ -29,8 +29,8 @@ def merge(
     # Merge and format the dataframes
     merged = pd.concat([rec, exp, unr])
     columns = util.sort_columns(args, merged.columns, column_types)
-    merged = merged.reindex_axis(columns, axis=1).fillna('')
-    merged.sort_values(
-        [args.group_by, 'row_type', args.key_column], inplace=True)
+    return (merged.reindex_axis(columns, axis=1)
+                  .fillna('')
+                  .sort_values([args.group_by, 'row_type', args.key_column])
 
     return merged
