@@ -118,7 +118,7 @@ def extract_subject_data(df, column_types):
     the other df columns. The subject data json looks like:
         {subject_id: {"key_1": "value_1", "key_2": "value_2", ...}}
     """
-    df['json'] = df['subject_data'].map(json.loads)
+    df['json'] = df.subject_data.map(json.loads)
 
     # Put the subject data into the data frame
     for key, row in df.iterrows():
@@ -150,7 +150,7 @@ def extract_annotations(df, column_types):
 
     Annotations are nested json blobs with a peculiar data format.
     """
-    df['json'] = df['annotations'].map(json.loads)
+    df['json'] = df.annotations.map(json.loads)
 
     for key, row in df.iterrows():
         tasks_seen = {}
