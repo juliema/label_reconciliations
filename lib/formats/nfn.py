@@ -4,7 +4,6 @@ import re
 import json
 from dateutil.parser import parse
 import pandas as pd
-from pandas.io.json import json_normalize
 import lib.util as util
 
 SUBJECT_PREFIX = 'subject_'
@@ -46,7 +45,6 @@ def read(args):
     column_types = {k: v for k, v in column_types.items()
                     if k not in unwanted_columns}
 
-    df = adjust_column_names(df, column_types)
     columns = util.sort_columns(args, df.columns, column_types)
     df = (df.reindex_axis(columns, axis=1)
             .fillna('')
@@ -141,10 +139,9 @@ def extract_subject_data(df, column_types):
 
     # Put the subject columns into the column_types: They're all 'same'
     last = util.last_column_type(column_types)
-    for name in df.columns:
-        if name.startswith(SUBJECT_PREFIX):
-            last += 1
-            column_types[name] = {'type': 'same', 'order': last, 'name': name}
+    for name in data.columns:
+        last += 1
+        column_types[name] = {'type': 'same', 'order': last, 'name': name}
 
     return df
 
@@ -155,28 +152,16 @@ def extract_annotations(df, column_types):
 
     Annotations are nested json blobs with a peculiar data format.
     """
-    # data = df.annotations.map(json.loads)
-    # data = [flatten_annotations(d) for d in data]
-    # data = pd.DataFrame(data)
-    # print(data.head())
-    # import sys
-    # sys.exit()
-    df['json'] = df.annotations.map(json.loads)
+    data = df.annotations.map(json.loads)
+    data = [flatten_annotations(a, column_types) for a in data]
+    data = pd.DataFrame(data, index=df.index)
 
-    for key, row in df.iterrows():
-        tasks_seen = {}
-        for task in row['json']:
-            try:
-                extract_tasks(
-                    df, key, task, column_types, tasks_seen)
-            except ValueError:
-                print('Bad transcription for classification {}'.format(key))
-                break
+    df = pd.concat([df, data], axis=1)
 
-    return df.drop(['annotations', 'json'], axis=1)
+    return adjust_column_names(df, column_types).drop(['annotations'], axis=1)
 
 
-def flatten_annotations(annotations):
+def flatten_annotations(annotations, column_types):
     """
     Flatten annotations.
 
@@ -185,6 +170,8 @@ def flatten_annotations(annotations):
 
     We also need to consider that some tasks have the same label. In that case
     we add a tie breaker, which is handled in the _key() function.
+
+    TODO: Refactor this into its own object.
     """
     tasks = {}
 
@@ -197,18 +184,25 @@ def flatten_annotations(annotations):
             label = '{} #{}'.format(base, i)
         return label
 
+    def _append_column_type(key, type):
+        if key not in column_types:
+            last = util.last_column_type(column_types)
+            column_types[key] = {'type': type, 'order': last + 1, 'name': key}
+
     def _flatten(task):
         if isinstance(task.get('value'), list):
             for subtask in task['value']:
                 _flatten(subtask)
-        elif task.get('select_label'):
+        elif 'select_label' in task:
             key = _key(task['select_label'])
             option = task.get('option')
             value = task.get('label', '') if option else task.get('value', '')
             tasks[key] = value
-        elif task.get('task_label'):
+            _append_column_type(key, 'select')
+        elif 'task_label' in task:
             key = _key(task['task_label'])
             tasks[key] = task.get('value', '')
+            _append_column_type(key, 'text')
         else:
             raise ValueError()
 
@@ -216,52 +210,6 @@ def flatten_annotations(annotations):
         _flatten(annotation)
 
     return tasks
-
-
-def extract_tasks(df, key, task, column_types, tasks_seen):
-    """Hoist a task annotation field into the data frame."""
-    if isinstance(task.get('value'), list):
-        for subtask in task['value']:
-            extract_tasks(
-                df, key, subtask, column_types, tasks_seen)
-    elif task.get('select_label'):
-        header = create_header(
-            task['select_label'], column_types, tasks_seen, 'select')
-        option = task.get('option', False)
-        value = task.get('label', '') if option else task.get('value', '')
-        df.loc[key, header] = value
-    elif task.get('task_label'):
-        header = create_header(
-            task['task_label'], column_types, tasks_seen, 'text')
-        df.loc[key, header] = task.get('value', '')
-    else:
-        raise ValueError()
-
-
-def create_header(label, column_types, tasks_seen, reconciler):
-    """Create a header from the given label.
-
-    We need to handle name collisions.
-        tasks_seen = all of the columns so far in the row
-        column_types = all of the columns so far in the entire data frame
-    """
-    # Strip out problematic characters from the label
-    label = re.sub(r'^\s+|\s+$', '', label)
-
-    tie_breaker = 1  # Tie breaker for duplicate column names
-    header = label   # Start with the label
-    while header in tasks_seen:
-        tie_breaker += 1
-        header = '{} #{}'.format(label, tie_breaker)
-    tasks_seen[header] = 1
-
-    if not column_types.get(header):
-        last = util.last_column_type(column_types)
-        column_types[header] = {'type': reconciler,
-                                'order': last + 1,
-                                'name': header}
-
-    return header
 
 
 def extract_date(metadata, column=''):
