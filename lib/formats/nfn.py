@@ -4,6 +4,7 @@ import re
 import json
 from dateutil.parser import parse
 import pandas as pd
+from pandas.io.json import json_normalize
 import lib.util as util
 
 SUBJECT_PREFIX = 'subject_'
@@ -115,12 +116,12 @@ def extract_subject_data(df, column_types):
 
     We prefix the new column names with "subject_" to keep them separate from
     the other df columns. The subject data json looks like:
-        {subject_id: {"key_1": "value_1", "key_2": "value_2", ...}}
+        {<subject_id>: {"key_1": "value_1", "key_2": "value_2", ...}}
     """
     data = (df.subject_data.map(json.loads)
               .apply(lambda x: list(x.values())[0])
               .tolist())
-    data = pd.DataFrame(data)
+    data = pd.DataFrame(data, index=df.index)
     df = df.drop(['subject_data'], axis=1)
 
     if 'retired' in data.columns:
@@ -154,6 +155,12 @@ def extract_annotations(df, column_types):
 
     Annotations are nested json blobs with a peculiar data format.
     """
+    # data = df.annotations.map(json.loads)
+    # data = [flatten_annotations(d) for d in data]
+    # data = pd.DataFrame(data)
+    # print(data.head())
+    # import sys
+    # sys.exit()
     df['json'] = df.annotations.map(json.loads)
 
     for key, row in df.iterrows():
@@ -167,6 +174,48 @@ def extract_annotations(df, column_types):
                 break
 
     return df.drop(['annotations', 'json'], axis=1)
+
+
+def flatten_annotations(annotations):
+    """
+    Flatten annotations.
+
+    Annotations are nested json blobs with a peculiar data format. So we
+    flatten to make it easier to work with.
+
+    We also need to consider that some tasks have the same label. In that case
+    we add a tie breaker, which is handled in the _key() function.
+    """
+    tasks = {}
+
+    def _key(label):
+        label = re.sub(r'^\s+|\s+$', '', label)
+        i = 1
+        base = label
+        while label in tasks:
+            i += 1
+            label = '{} #{}'.format(base, i)
+        return label
+
+    def _flatten(task):
+        if isinstance(task.get('value'), list):
+            for subtask in task['value']:
+                _flatten(subtask)
+        elif task.get('select_label'):
+            key = _key(task['select_label'])
+            option = task.get('option')
+            value = task.get('label', '') if option else task.get('value', '')
+            tasks[key] = value
+        elif task.get('task_label'):
+            key = _key(task['task_label'])
+            tasks[key] = task.get('value', '')
+        else:
+            raise ValueError()
+
+    for annotation in annotations:
+        _flatten(annotation)
+
+    return tasks
 
 
 def extract_tasks(df, key, task, column_types, tasks_seen):
