@@ -171,7 +171,7 @@ def flatten_annotations(annotations, column_types):
     We also need to consider that some tasks have the same label. In that case
     we add a tie breaker, which is handled in the _key() function.
 
-    TODO: Refactor this into its own object.
+    TODO: Refactor this.
     """
     tasks = {}
 

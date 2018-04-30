@@ -61,7 +61,7 @@ def process_csv(args):
             .sort_values([args.group_by, args.key_column])
 
     csv_name = args.output_prefix + '.csv'
-    df.to_csv(csv_name, sep=',', encoding='utf-8', index=False)
+    df.to_csv(csv_name, index=False)
 
     return df
 
