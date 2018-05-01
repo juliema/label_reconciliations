@@ -3,12 +3,6 @@
 import pandas as pd
 import lib.util as util
 
-ROW_TYPES = {  # Row types and their sort order
-    'reconciled': '1-reconciled',
-    'explanations': '2-explanations',
-    'unreconciled': '3-unreconciled'}
-
-
 def merge(args, unreconciled, reconciled, explanations, column_types):
     """
     Combine dataframes.
@@ -22,9 +16,9 @@ def merge(args, unreconciled, reconciled, explanations, column_types):
     unr = unreconciled.astype(object).copy()
 
     # Sort by group-by then by row_type and then key-column
-    rec['row_type'] = ROW_TYPES['reconciled']
-    exp['row_type'] = ROW_TYPES['explanations']
-    unr['row_type'] = ROW_TYPES['unreconciled']
+    rec['row_type'] = '1-reconciled'
+    exp['row_type'] = '2-explanations'
+    unr['row_type'] = '3-unreconciled'
 
     # Merge and format the dataframes
     merged = pd.concat([rec, exp, unr])

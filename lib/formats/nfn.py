@@ -98,14 +98,18 @@ def get_workflow_name(df):
 
 def extract_metadata(df):
     """Extract a few fields from the metadata JSON object."""
-    df['json'] = df['metadata'].map(json.loads)
+    def _extract_date(value):
+        return parse(value).strftime('%d-%b-%Y %H:%M:%S')
 
-    df[STARTED_AT] = df['json'].apply(extract_date, column='started_at')
+    data = df.metadata.map(json.loads).tolist()
+    data = pd.DataFrame(data, index=df.index)
+
+    df[STARTED_AT] = data.started_at.map(_extract_date)
 
     name = 'classification_finished_at'
-    df[name] = df['json'].apply(extract_date, column='finished_at')
+    df[name] = data.finished_at.map(_extract_date)
 
-    return df.drop(['metadata', 'json'], axis=1)
+    return df.drop(['metadata'], axis=1)
 
 
 def extract_subject_data(df, column_types):
@@ -166,15 +170,11 @@ def flatten_annotations(annotations, column_types):
     Flatten annotations.
 
     Annotations are nested json blobs with a peculiar data format. So we
-    flatten to make it easier to work with.
+    flatten it to make it easier to work with.
 
     We also need to consider that some tasks have the same label. In that case
     we add a tie breaker, which is handled in the _key() function.
-
-    TODO: Refactor this into its own object.
     """
-    tasks = {}
-
     def _key(label):
         label = re.sub(r'^\s+|\s+$', '', label)
         i = 1
@@ -206,15 +206,12 @@ def flatten_annotations(annotations, column_types):
         else:
             raise ValueError()
 
+    tasks = {}
+
     for annotation in annotations:
         _flatten(annotation)
 
     return tasks
-
-
-def extract_date(metadata, column=''):
-    """Extract dates from a json object."""
-    return parse(metadata[column]).strftime('%d-%b-%Y %H:%M:%S')
 
 
 def adjust_column_names(df, column_types):
