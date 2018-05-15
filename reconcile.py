@@ -63,15 +63,17 @@ def parse_command_line():
                         help="""A string with user IDs and corresponding
                              weights. Used to favor contributions from specific
                              users when using the "text" column type. The format
-                             is --user-weights "foo0:bar0,foo1:bar1".
+                             is --user-weights "foo:-10,bar:25".
                              The list is comma separated with the user ID
                              going before the colon and the weight after the
                              colon. Note: This weight is added to the fuzzywuzzy
                              score, which is a percentage.
-                             --user-weights "aSmith:100" would always
+                             --user-weights "aSmith:70" would very often
                              select aSmith's transcriptions.
                              --user-weights "aSmith:10" would add 10 to all of
-                             aSmith's scores.""")
+                             aSmith's scores.
+                             --user-weights "aSmith:-50" would distrust aSmith's
+                             transcriptions.""")
 
     parser.add_argument('-u', '--unreconciled',
                         help="""Write the unreconciled workflow
