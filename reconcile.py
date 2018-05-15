@@ -61,14 +61,15 @@ def parse_command_line():
 
     parser.add_argument('--user-weights',  default='',
                         help="""A string with user IDs and corresponding
-                            weights. Used to favor contributions from specific
-                            users The format is --user-weights "foo0:bar0,foo1:bar1".
+                             weights. Used to favor contributions from specific
+                             users when using the "text" column type. The format
+                             is --user-weights "foo0:bar0,foo1:bar1".
                              The list is comma separated with the user ID
-                             going before the colon and the score modifer after the
-                             colon. Note: This value is added to the fuzzywuzzy
-                             scoreing which is a percentage.
+                             going before the colon and the weight after the
+                             colon. Note: This weight is added to the fuzzywuzzy
+                             score, which is a percentage.
                              --user-weights "aSmith:100" would always
-                             select aSmith transcriptions. While
+                             select aSmith's transcriptions.
                              --user-weights "aSmith:10" would add 10 to all of
                              aSmith's scores.""")
 
@@ -256,7 +257,7 @@ def main():
             del columns[0]
             del columns[0]
             del columns[0]
-            reconciled = reconciled.reindex_axis(columns, axis=1).fillna('')
+            reconciled = reconciled.reindex(columns, axis=1).fillna('')
             reconciled.to_csv(args.reconciled)
 
         if args.summary:
