@@ -1,5 +1,3 @@
-## An attempt to add weight to the contributions from known users when reconciling partial matches.
-
 # Reconcile Notes from Nature Transcripts
 
 ## Installation
