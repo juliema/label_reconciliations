@@ -11,7 +11,7 @@ import lib.reconciler as reconciler
 import lib.summary as summary
 import lib.merged as merged
 
-VERSION = '0.4.3'
+VERSION = '0.4.4'
 
 
 def parse_command_line():
@@ -232,8 +232,7 @@ def main():
     validate_columns(args, column_types, unreconciled, plugins=plugins)
 
     if args.unreconciled:
-        unreconciled.to_csv(
-            args.unreconciled, sep=',', encoding='utf-8', index=False)
+        unreconciled.to_csv(args.unreconciled, index=False)
 
     if args.reconciled or args.summary or args.merged:
         reconciled, explanations = reconciler.build(
@@ -245,16 +244,16 @@ def main():
             del columns[0]
             del columns[0]
             reconciled = reconciled.reindex_axis(columns, axis=1).fillna('')
-            reconciled.to_csv(
-                args.reconciled, sep=',', encoding='utf-8', index=True)
+            reconciled.to_csv(args.reconciled)
 
         if args.summary:
             summary.report(
                 args, unreconciled, reconciled, explanations, column_types)
 
         if args.merged:
-            merged.merge(
+            smerged = merged.merge(
                 args, unreconciled, reconciled, explanations, column_types)
+            smerged.to_csv(args.merged, index=False)
 
     if args.zip:
         zip_files(args)

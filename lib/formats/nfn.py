@@ -1,7 +1,5 @@
 """Convert Adler's Notes from Nature expedition CSV format."""
 
-# pylint: disable=invalid-name
-
 import re
 import json
 from dateutil.parser import parse
@@ -27,9 +25,9 @@ def read(args):
 
     # Extract the various json blobs
     column_types = {}
-    extract_annotations(df, column_types)
-    extract_subject_data(df, column_types)
-    extract_metadata(df)
+    df = (extract_annotations(df, column_types)
+            .pipe(extract_subject_data, column_types)
+            .pipe(extract_metadata))
 
     # Get the subject_id from the subject_ids list, use the first one
     df[args.group_by] = df.subject_ids.map(
@@ -43,16 +41,16 @@ def read(args):
                             'subject_ids',
                             'subject_data',
                             (SUBJECT_PREFIX + 'retired').lower()]]
-    df.drop(unwanted_columns, axis=1, inplace=True)
+    df = df.drop(unwanted_columns, axis=1)
     column_types = {k: v for k, v in column_types.items()
                     if k not in unwanted_columns}
 
-    adjust_column_names(df, column_types)
     columns = util.sort_columns(args, df.columns, column_types)
-    df = df.reindex_axis(columns, axis=1).fillna('')
-    df.sort_values([args.group_by, STARTED_AT], inplace=True)
-    df.drop_duplicates([args.group_by, USER_NAME], keep='first', inplace=True)
-    df = df.groupby(args.group_by).head(KEEP_COUNT)
+    df = (df.reindex_axis(columns, axis=1)
+            .fillna('')
+            .sort_values([args.group_by, STARTED_AT])
+            .drop_duplicates([args.group_by, USER_NAME], keep='first')
+            .groupby(args.group_by).head(KEEP_COUNT))
 
     return df, column_types
 
@@ -100,117 +98,120 @@ def get_workflow_name(df):
 
 def extract_metadata(df):
     """Extract a few fields from the metadata JSON object."""
-    df['json'] = df['metadata'].map(json.loads)
+    def _extract_date(value):
+        return parse(value).strftime('%d-%b-%Y %H:%M:%S')
 
-    df[STARTED_AT] = df['json'].apply(extract_date, column='started_at')
+    data = df.metadata.map(json.loads).tolist()
+    data = pd.DataFrame(data, index=df.index)
+
+    df[STARTED_AT] = data.started_at.map(_extract_date)
 
     name = 'classification_finished_at'
-    df[name] = df['json'].apply(extract_date, column='finished_at')
+    df[name] = data.finished_at.map(_extract_date)
 
-    df.drop(['metadata', 'json'], axis=1, inplace=True)
+    return df.drop(['metadata'], axis=1)
 
 
 def extract_subject_data(df, column_types):
-    """Extract subject data from the json object in the subject_data column.
+    """
+    Extract subject data from the json object in the subject_data column.
 
     We prefix the new column names with "subject_" to keep them separate from
     the other df columns. The subject data json looks like:
-        {subject_id: {"key_1": "value_1", "key_2": "value_2", ...}}
+        {<subject_id>: {"key_1": "value_1", "key_2": "value_2", ...}}
     """
-    df['json'] = df['subject_data'].map(json.loads)
+    data = (df.subject_data.map(json.loads)
+              .apply(lambda x: list(x.values())[0])
+              .tolist())
+    data = pd.DataFrame(data, index=df.index)
+    df = df.drop(['subject_data'], axis=1)
 
-    # Put the subject data into the data frame
-    for key, row in df.iterrows():
-        for subject_dict in iter(row['json'].values()):
-            for column, value in subject_dict.items():
-                column = re.sub(r'\W+', '_', column)
-                column = re.sub(r'^_+|_$', '', column)
-                if column == 'id':
-                    column = 'external_id'
-                if isinstance(value, dict):
-                    value = json.dumps(value)
-                df.loc[key, SUBJECT_PREFIX + column] = value
+    if 'retired' in data.columns:
+        data = data.drop(['retired'], axis=1)
 
-    # Get rid of unwanted data
-    df.drop(['subject_data', 'json'], axis=1, inplace=True)
+    if 'id' in data.columns:
+        data = data.rename(columns={'id': 'external_id'})
+
+    columns = [re.sub(r'\W+', '_', c) for c in data.columns]
+    columns = [re.sub(r'^_+|_$', '', c) for c in columns]
+    columns = [SUBJECT_PREFIX + c for c in columns]
+
+    columns = {old: new for old, new in zip(data.columns, columns)}
+    data = data.rename(columns=columns)
+
+    df = pd.concat([df, data], axis=1)
 
     # Put the subject columns into the column_types: They're all 'same'
     last = util.last_column_type(column_types)
-    for name in df.columns:
-        if name.startswith(SUBJECT_PREFIX):
-            last += 1
-            column_types[name] = {'type': 'same', 'order': last, 'name': name}
+    for name in data.columns:
+        last += 1
+        column_types[name] = {'type': 'same', 'order': last, 'name': name}
+
+    return df
 
 
 def extract_annotations(df, column_types):
-    """Extract annotations from the json object in the annotations column.
+    """
+    Extract annotations from the json object in the annotations column.
 
     Annotations are nested json blobs with a peculiar data format.
     """
-    df['json'] = df['annotations'].map(json.loads)
+    data = df.annotations.map(json.loads)
+    data = [flatten_annotations(a, column_types) for a in data]
+    data = pd.DataFrame(data, index=df.index)
 
-    for key, row in df.iterrows():
-        tasks_seen = {}
-        for task in row['json']:
-            try:
-                extract_tasks(
-                    df, key, task, column_types, tasks_seen)
-            except ValueError:
-                print('Bad transcription for classification {}'.format(key))
-                break
+    df = pd.concat([df, data], axis=1)
 
-    df.drop(['annotations', 'json'], axis=1, inplace=True)
+    return adjust_column_names(df, column_types).drop(['annotations'], axis=1)
 
 
-def extract_tasks(df, key, task, column_types, tasks_seen):
-    """Hoist a task annotation field into the data frame."""
-    if isinstance(task.get('value'), list):
-        for subtask in task['value']:
-            extract_tasks(
-                df, key, subtask, column_types, tasks_seen)
-    elif task.get('select_label'):
-        header = create_header(
-            task['select_label'], column_types, tasks_seen, 'select')
-        option = task.get('option', False)
-        value = task.get('label', '') if option else task.get('value', '')
-        df.loc[key, header] = value
-    elif task.get('task_label'):
-        header = create_header(
-            task['task_label'], column_types, tasks_seen, 'text')
-        df.loc[key, header] = task.get('value', '')
-    else:
-        raise ValueError()
-
-
-def create_header(label, column_types, tasks_seen, reconciler):
-    """Create a header from the given label.
-
-    We need to handle name collisions.
-        tasks_seen = all of the columns so far in the row
-        column_types = all of the columns so far in the entire data frame
+def flatten_annotations(annotations, column_types):
     """
-    # Strip out problematic characters from the label
-    label = re.sub(r'^\s+|\s+$', '', label)
+    Flatten annotations.
 
-    tie_breaker = 1  # Tie breaker for duplicate column names
-    header = label   # Start with the label
-    while header in tasks_seen:
-        tie_breaker += 1
-        header = '{} #{}'.format(label, tie_breaker)
-    tasks_seen[header] = 1
+    Annotations are nested json blobs with a peculiar data format. So we
+    flatten it to make it easier to work with.
 
-    if not column_types.get(header):
-        last = util.last_column_type(column_types)
-        column_types[header] = {'type': reconciler,
-                                'order': last + 1,
-                                'name': header}
+    We also need to consider that some tasks have the same label. In that case
+    we add a tie breaker, which is handled in the _key() function.
+    """
+    def _key(label):
+        label = re.sub(r'^\s+|\s+$', '', label)
+        i = 1
+        base = label
+        while label in tasks:
+            i += 1
+            label = '{} #{}'.format(base, i)
+        return label
 
-    return header
+    def _append_column_type(key, type):
+        if key not in column_types:
+            last = util.last_column_type(column_types)
+            column_types[key] = {'type': type, 'order': last + 1, 'name': key}
 
+    def _flatten(task):
+        if isinstance(task.get('value'), list):
+            for subtask in task['value']:
+                _flatten(subtask)
+        elif 'select_label' in task:
+            key = _key(task['select_label'])
+            option = task.get('option')
+            value = task.get('label', '') if option else task.get('value', '')
+            tasks[key] = value
+            _append_column_type(key, 'select')
+        elif 'task_label' in task:
+            key = _key(task['task_label'])
+            tasks[key] = task.get('value', '')
+            _append_column_type(key, 'text')
+        else:
+            raise ValueError()
 
-def extract_date(metadata, column=''):
-    """Extract dates from a json object."""
-    return parse(metadata[column]).strftime('%d-%b-%Y %H:%M:%S')
+    tasks = {}
+
+    for annotation in annotations:
+        _flatten(annotation)
+
+    return tasks
 
 
 def adjust_column_names(df, column_types):
@@ -227,4 +228,4 @@ def adjust_column_names(df, column_types):
         column_types[new_name] = new_task
         del column_types[old_name]
 
-    df.rename(columns=rename, inplace=True)
+    return df.rename(columns=rename)

@@ -56,11 +56,12 @@ def process_csv(args):
         values = df[column].unique()
         if len(values) == 1 and not values[0]:
             empty_columns.append(column)
-    df.drop(empty_columns, axis=1, inplace=True)
-    df.sort_values([args.group_by, args.key_column], inplace=True)
+
+    df = (df.drop(empty_columns, axis=1)
+            .sort_values([args.group_by, args.key_column])
 
     csv_name = args.output_prefix + '.csv'
-    df.to_csv(csv_name, sep=',', encoding='utf-8', index=False)
+    df.to_csv(csv_name, index=False)
 
     return df
 
