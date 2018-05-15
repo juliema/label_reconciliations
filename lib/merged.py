@@ -23,7 +23,7 @@ def merge(args, unreconciled, reconciled, explanations, column_types):
     # Merge and format the dataframes
     merged = pd.concat([rec, exp, unr])
     columns = util.sort_columns(args, merged.columns, column_types)
-    return (merged.reindex_axis(columns, axis=1)
+    return (merged.reindex(columns, axis=1)
                   .fillna('')
                   .sort_values([args.group_by, 'row_type', args.key_column]))
 
