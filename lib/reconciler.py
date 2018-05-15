@@ -15,7 +15,9 @@ def build(args, unreconciled, column_types, plugins=None):
     aggregators = {r: partial(reconcilers[r].reconcile, args=args)
                    for r in reconcilers
                    if r in unreconciled.columns}
-    reconciled = unreconciled.groupby(args.group_by).aggregate(aggregators)
+        # need to keep the userID associated with the data handed to the reconciler.
+    unreconciled.set_index(args.user_column, append=True, inplace=True)
+    reconciled = unreconciled.groupby(args.group_by).agg(aggregators, args)
 
     # Split combined value and explanation tuples into their own data frames
     explanations = pd.DataFrame()
