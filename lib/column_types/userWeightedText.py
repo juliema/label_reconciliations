@@ -11,16 +11,16 @@ E = inflect.engine()
 E.defnoun('The', 'All')
 P = E.plural
 
-trustedUserWeights = {'PVerbeeck':30,'vnoyes':10,'am.zooni':20}
-
 FuzzyRatioScore = namedtuple('FuzzyRatioScore', 'score value')
 FuzzySetScore = namedtuple('FuzzySetScore', 'score value tokens')
 ExactScore = namedtuple('ExactScore', 'value count')
 
-
 def reconcile(group, args=None):
     """Reconcile the data."""
-    #print(group.index.get_level_values(1))
+    if args.user_weights:
+        trustedUserWeights = {key: int(value) for key, value in [(i.split(':')) for i in args.user_weights.split(',')]}
+    else:
+        trustedUserWeights = {}
     values = ['\n'.join([' '.join(ln.split()) for ln in str(g).splitlines()])
               for g in group]
                    
@@ -50,7 +50,7 @@ def reconcile(group, args=None):
         return reason, filled[0].value
 
     # Check for simple in-place fuzzy matches
-    top = top_partial_ratio(group) # passing in group instead of values
+    top = top_partial_ratio(group, trustedUserWeights) # passing in group instead of values
     if top.score >= args.fuzzy_ratio_threshold:
         reason = 'Partial ratio match on {} {} with {} {}, score={}'.format(
             count, P('record', count), blanks, P('blank', blanks), top.score)
@@ -94,7 +94,7 @@ def only_filled_values(values):
     return sorted(only_filled, key=lambda s: s.count, reverse=True)
 
 
-def top_partial_ratio(group): #expecting group
+def top_partial_ratio(group,trustedUserWeights): #expecting group
     """Return the best partial ratio match from fuzzywuzzy module."""
     def convLine(line):
         line = '\n'.join([' '.join(ln.split()) for ln in str(line).splitlines()])
@@ -112,7 +112,7 @@ def top_partial_ratio(group): #expecting group
         userName = userAttribution.get(value) # lookup the user who wrote the value
         scoreWeight = trustedUserWeights.get(userName, 0) # lookup that user's weight
         score = score + scoreWeight # add bonus points
-        if score > 100:
+        if score > 100: # enforce a ceiling
             score = 100
         
         scores.append(FuzzyRatioScore(score, value))

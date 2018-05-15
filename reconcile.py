@@ -59,6 +59,19 @@ def parse_command_line():
                              overrides any column type guesses. You may use
                              this multiple times.""")
 
+    parser.add_argument('--user-weights',  default='',
+                        help="""A string with user IDs and corresponding
+                            weights. Used to favor contributions from specific
+                            users The format is --user-weights "foo0:bar0,foo1:bar1".
+                             The list is comma separated with the user ID
+                             going before the colon and the score modifer after the
+                             colon. Note: This value is added to the fuzzywuzzy
+                             scoreing which is a percentage.
+                             --user-weights "aSmith:100" would always
+                             select aSmith transcriptions. While
+                             --user-weights "aSmith:10" would add 10 to all of
+                             aSmith's scores.""")
+
     parser.add_argument('-u', '--unreconciled',
                         help="""Write the unreconciled workflow
                             classifications to this CSV file.""")
