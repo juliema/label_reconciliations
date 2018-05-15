@@ -17,9 +17,12 @@ ExactScore = namedtuple('ExactScore', 'value count')
 
 def reconcile(group, args=None):
     """Reconcile the data."""
+    if args.user_weights:
+        trustedUserWeights = {key: int(value) for key, value in [(i.split(':')) for i in args.user_weights.split(',')]}
+    else:
+        trustedUserWeights = {}
     values = ['\n'.join([' '.join(ln.split()) for ln in str(g).splitlines()])
               for g in group]
-
     filled = only_filled_values(values)
 
     count = len(values)
@@ -46,7 +49,7 @@ def reconcile(group, args=None):
         return reason, filled[0].value
 
     # Check for simple in-place fuzzy matches
-    top = top_partial_ratio(values)
+    top = top_partial_ratio(group,trustedUserWeights)# passing in group instead of values
     if top.score >= args.fuzzy_ratio_threshold:
         reason = 'Partial ratio match on {} {} with {} {}, score={}'.format(
             count, P('record', count), blanks, P('blank', blanks), top.score)
@@ -90,17 +93,34 @@ def only_filled_values(values):
     return sorted(only_filled, key=lambda s: s.count, reverse=True)
 
 
-def top_partial_ratio(values):
+def top_partial_ratio(group, trustedUserWeights):
     """Return the best partial ratio match from fuzzywuzzy module."""
+    def convLine(line):
+        line = '\n'.join([' '.join(ln.split()) for ln in str(line).splitlines()])
+        return line
+    
+    values = group.apply(convLine)
+    # generate user lookup dict
+    userAttribution = values.reset_index(level=0, drop=True, inplace = False).to_dict()
+    # invert it to {text that was ntered:user who entered it}
+    userAttribution = {i[1]:i[0] for i in userAttribution.items()}
     scores = []
+    
     for combo in combinations(values, 2):
         score = fuzz.partial_ratio(combo[0], combo[1])
         value = combo[0] if len(combo[0]) >= len(combo[1]) else combo[1]
+        userName = userAttribution.get(value) # lookup the user who wrote the value
+        scoreWeight = trustedUserWeights.get(userName, 0) # lookup that user's weight
+        score = score + scoreWeight # add bonus points
+        if score > 100: # enforce a ceiling
+            score = 100
+        
         scores.append(FuzzyRatioScore(score, value))
     scores = sorted(scores,
                     reverse=True,
                     key=lambda s: (s.score, len(s.value)))
     return scores[0]
+
 
 
 def top_token_set_ratio(values):
