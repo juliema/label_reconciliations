@@ -107,7 +107,7 @@ def top_partial_ratio(group, user_weights):
         elif score < 0:
             score = 0  # enforce a floor
         scores.append(FuzzyRatioScore(score, value))
-        
+
     scores = sorted(scores,
                     reverse=True,
                     key=lambda s: (s.score, len(s.value)))
