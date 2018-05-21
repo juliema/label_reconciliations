@@ -26,8 +26,8 @@ def read(args):
     # Extract the various json blobs
     column_types = {}
     df = (extract_annotations(df, column_types)
-            .pipe(extract_subject_data, column_types)
-            .pipe(extract_metadata))
+          .pipe(extract_subject_data, column_types)
+          .pipe(extract_metadata))
 
     # Get the subject_id from the subject_ids list, use the first one
     df[args.group_by] = df.subject_ids.map(
@@ -46,7 +46,7 @@ def read(args):
                     if k not in unwanted_columns}
 
     columns = util.sort_columns(args, df.columns, column_types)
-    df = (df.reindex_axis(columns, axis=1)
+    df = (df.reindex(columns, axis=1)
             .fillna('')
             .sort_values([args.group_by, STARTED_AT])
             .drop_duplicates([args.group_by, USER_NAME], keep='first')

@@ -3,6 +3,7 @@
 import pandas as pd
 import lib.util as util
 
+
 def merge(args, unreconciled, reconciled, explanations, column_types):
     """
     Combine dataframes.

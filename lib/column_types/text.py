@@ -91,7 +91,6 @@ def only_filled_values(values):
 
 def top_partial_ratio(group, user_weights):
     """Return the best partial ratio match from fuzzywuzzy module."""
-
     scores = []
     group = group.reset_index(level=0, drop=True)
     for combo in combinations(zip(group, group.index), 2):  # zip in username
