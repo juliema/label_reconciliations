@@ -57,7 +57,7 @@ def report(args, unreconciled, reconciled, explanations, column_types):
         problem_pattern=PROBLEM_PATTERN)
 
     # Output the report
-    with open(args.summary, 'w') as out_file:
+    with open(args.summary, 'w', encoding='utf-8') as out_file:
         out_file.write(summary)
 
 

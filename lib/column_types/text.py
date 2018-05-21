@@ -19,7 +19,6 @@ def reconcile(group, args=None):
     """Reconcile the data."""
     values = ['\n'.join([' '.join(ln.split()) for ln in str(g).splitlines()])
               for g in group]
-
     filled = only_filled_values(values)
 
     count = len(values)
@@ -46,7 +45,7 @@ def reconcile(group, args=None):
         return reason, filled[0].value
 
     # Check for simple in-place fuzzy matches
-    top = top_partial_ratio(values)
+    top = top_partial_ratio(group, args.user_weights)
     if top.score >= args.fuzzy_ratio_threshold:
         reason = 'Partial ratio match on {} {} with {} {}, score={}'.format(
             count, P('record', count), blanks, P('blank', blanks), top.score)
@@ -90,13 +89,25 @@ def only_filled_values(values):
     return sorted(only_filled, key=lambda s: s.count, reverse=True)
 
 
-def top_partial_ratio(values):
+def top_partial_ratio(group, user_weights):
     """Return the best partial ratio match from fuzzywuzzy module."""
+
     scores = []
-    for combo in combinations(values, 2):
-        score = fuzz.partial_ratio(combo[0], combo[1])
-        value = combo[0] if len(combo[0]) >= len(combo[1]) else combo[1]
+    group = group.reset_index(level=0, drop=True)
+    for combo in combinations(zip(group, group.index), 2):  # zip in username
+        # combo format is ((value1, username1),(value2, username2))
+        score = fuzz.partial_ratio(combo[0][0], combo[1][0])
+        if len(combo[0][0]) >= len(combo[1][0]):
+            value, user_name = combo[0][0], combo[0][1]
+        else:
+            value, user_name = combo[1][0], combo[1][1]
+        score = score + user_weights.get(user_name.lower(), 0)  # add weight
+        if score > 100:  # enforce a ceiling
+            score = 100
+        elif score < 0:
+            score = 0  # enforce a floor
         scores.append(FuzzyRatioScore(score, value))
+
     scores = sorted(scores,
                     reverse=True,
                     key=lambda s: (s.score, len(s.value)))

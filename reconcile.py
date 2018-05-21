@@ -59,6 +59,22 @@ def parse_command_line():
                              overrides any column type guesses. You may use
                              this multiple times.""")
 
+    parser.add_argument('--user-weights',  default='',
+                        help="""A string with user IDs and corresponding
+                             weights. Used to favor contributions from specific
+                             users when using the "text" column type. The
+                             format is --user-weights "foo:-10,bar:25". The
+                             list is comma separated with the user ID going
+                             before the colon and the weight after the colon.
+                             Note: This weight is added to the fuzzywuzzy
+                             score, which is a percentage.
+                             --user-weights "aSmith:70" would very often
+                             select aSmith's transcriptions.
+                             --user-weights "aSmith:10" would add 10 to all of
+                             aSmith's scores.
+                             --user-weights "aSmith:-50" would distrust
+                             aSmith's transcriptions.""")
+
     parser.add_argument('-u', '--unreconciled',
                         help="""Write the unreconciled workflow
                             classifications to this CSV file.""")
@@ -122,6 +138,14 @@ def parse_command_line():
                         version='%(prog)s {}'.format(VERSION))
 
     args = parser.parse_args()
+
+    if args.user_weights:
+        args.user_weights = {key.lower(): int(value) for key, value in
+                             [(i.split(':')) for i in
+                              args.user_weights.split(',')]}
+    # user_weights is made case insensitive
+    else:
+        args.user_weights = {}
 
     if args.fuzzy_ratio_threshold < 0 or args.fuzzy_ratio_threshold > 100:
         print('--fuzzy-ratio-threshold must be between 0 and 100.')
@@ -243,7 +267,7 @@ def main():
             del columns[0]
             del columns[0]
             del columns[0]
-            reconciled = reconciled.reindex_axis(columns, axis=1).fillna('')
+            reconciled = reconciled.reindex(columns, axis=1).fillna('')
             reconciled.to_csv(args.reconciled)
 
         if args.summary:
