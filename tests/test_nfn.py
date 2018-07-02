@@ -1,10 +1,8 @@
 """Test functions in lib/formats/nfn.py."""
 
-# pylint: disable=missing-docstring,too-many-arguments,no-self-use
-
 from argparse import Namespace
 import unittest
-from unittest.mock import patch  # , call
+from unittest.mock import patch
 import pandas as pd
 import lib.formats.nfn as nfn
 

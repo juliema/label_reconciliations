@@ -22,7 +22,7 @@ def merge(args, unreconciled, reconciled, explanations, column_types):
     unr['row_type'] = '3-unreconciled'
 
     # Merge and format the dataframes
-    merged = pd.concat([rec, exp, unr])
+    merged = pd.concat([rec, exp, unr], sort=True)
     columns = util.sort_columns(args, merged.columns, column_types)
     return (merged.reindex(columns, axis=1)
                   .fillna('')

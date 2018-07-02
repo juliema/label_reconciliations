@@ -1,7 +1,5 @@
 """Render a summary of the reconciliation process."""
 
-# pylint: disable=invalid-name
-
 import re
 from datetime import datetime
 from urllib.parse import urlparse
@@ -181,8 +179,8 @@ def reconciled_summary(explanations, column_types):
         num_mmr = ''
         if col_type == 'mmr':
             num_mmr = '{:,}'.format(explanations[
-                explanations[col].str.contains(MMR_PATTERN)].shape[0] -
-                num_onesies)
+                explanations[col].str.contains(MMR_PATTERN)].shape[0]
+                - num_onesies)
 
         how_reconciled.append({
             'name': col,
