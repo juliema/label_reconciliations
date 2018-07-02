@@ -1,9 +1,15 @@
+atomicwrites==1.1.5
+attrs==18.1.0
 fuzzywuzzy==0.16.0
 inflect==0.3.1
 Jinja2==2.10
 MarkupSafe==1.0
+more-itertools==4.2.0
 numpy==1.14.5
 pandas==0.23.1
+pluggy==0.6.0
+py==1.5.4
+pytest==3.6.2
 python-dateutil==2.7.3
 python-Levenshtein==0.12.0
 pytz==2018.5
