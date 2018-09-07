@@ -1,6 +1,6 @@
 #!/bin/bash
 
-USAGE="Usage: reconcile.bash -v RECONCILER-VERSION -w WORKFLOW-ID -r RENAME-TO -c COPY-TO -e EXPORT-FILE-NAME"
+USAGE="Usage: nfn_export.bash -v RECONCILER-VERSION -w WORKFLOW-ID -r RENAME-TO -c COPY-TO -e EXPORT-FILE-NAME"
 
 while getopts "v:w:r:e:c:h" option; do
   case "${option}" in
