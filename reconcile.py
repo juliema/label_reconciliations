@@ -8,6 +8,7 @@ import argparse
 import textwrap
 import lib.util as util
 import lib.reconciler as reconciler
+import lib.reconciled as reconciled_df
 import lib.summary as summary
 import lib.merged as merged
 
@@ -82,6 +83,15 @@ def parse_command_line():
     parser.add_argument('-r', '--reconciled',
                         help="""Write the reconciled classifications to this
                             CSV file.""")
+
+    parser.add_argument('--explanations', action='store_true',
+                        help="""Output the reconciled explanations with the
+                            reconciled classifications CSV file.""")
+
+    parser.add_argument('--transcribers', action='store_true',
+                        help="""Output the transcriber name and the entered
+                            value for every classification in the reconciled
+                            classifications CSV file.""")
 
     parser.add_argument('-s', '--summary',
                         help="""Write a summary of the reconciliation to this
@@ -263,21 +273,16 @@ def main():
             args, unreconciled, column_types, plugins=plugins)
 
         if args.reconciled:
-            columns = util.sort_columns(args, reconciled.columns, column_types)
-            del columns[0]
-            del columns[0]
-            del columns[0]
-            reconciled = reconciled.reindex(columns, axis=1).fillna('')
-            reconciled.to_csv(args.reconciled)
+            reconciled_df.reconciled_output(
+                args, unreconciled, reconciled, explanations, column_types)
 
         if args.summary:
             summary.report(
                 args, unreconciled, reconciled, explanations, column_types)
 
         if args.merged:
-            smerged = merged.merge(
-                args, unreconciled, reconciled, explanations, column_types)
-            smerged.to_csv(args.merged, index=False)
+            merged.merged_output(
+                unreconciled, reconciled, explanations, column_types)
 
     if args.zip:
         zip_files(args)

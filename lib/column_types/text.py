@@ -22,7 +22,7 @@ def reconcile(group, args=None):
     filled = only_filled_values(values)
 
     count = len(values)
-    blanks = count - sum([f.count for f in filled])
+    blanks = count - sum(f.count for f in filled)
 
     if not filled:
         reason = '{} {} {} {} blank'.format(
@@ -101,10 +101,7 @@ def top_partial_ratio(group, user_weights):
         else:
             value, user_name = combo[1][0], combo[1][1]
         score = score + user_weights.get(user_name.lower(), 0)  # add weight
-        if score > 100:  # enforce a ceiling
-            score = 100
-        elif score < 0:
-            score = 0  # enforce a floor
+        score = min(max(score, 0), 100)  # enforce a ceiling and floor
         scores.append(FuzzyRatioScore(score, value))
 
     scores = sorted(scores,

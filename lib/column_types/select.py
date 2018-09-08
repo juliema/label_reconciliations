@@ -20,7 +20,7 @@ def reconcile(group, args=None):
     filled = Counter([v for v in values if v.strip()]).most_common()
 
     count = len(values)
-    blanks = count - sum([f[1] for f in filled])
+    blanks = count - sum(f[1] for f in filled)
 
     if not filled:
         reason = '{} {} {} {} blank'.format(

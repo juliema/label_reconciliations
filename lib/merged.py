@@ -4,7 +4,14 @@ import pandas as pd
 import lib.util as util
 
 
-def merge(args, unreconciled, reconciled, explanations, column_types):
+def merged_output(args, unreconciled, reconciled, explanations, column_types):
+    """Output the merved dataframe."""
+    merged_df = merge_df.merge(
+        args, unreconciled, reconciled, explanations, column_types)
+    merged_df.to_csv(args.merged, index=False)
+
+
+def merge_df(args, unreconciled, reconciled, explanations, column_types):
     """
     Combine dataframes.
 
