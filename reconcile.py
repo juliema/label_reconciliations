@@ -60,7 +60,7 @@ def parse_command_line():
                              overrides any column type guesses. You may use
                              this multiple times.""")
 
-    parser.add_argument('--user-weights',  default='',
+    parser.add_argument('--user-weights', default='',
                         help="""A string with user IDs and corresponding
                              weights. Used to favor contributions from specific
                              users when using the "text" column type. The

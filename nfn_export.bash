@@ -28,12 +28,14 @@ RAW="${DIR}/${PREFIX}.raw_transcripts.${VERSION}.csv"
 RECONCILE="${DIR}/${PREFIX}.reconcile.${VERSION}.csv"
 SUMMARY="${DIR}/${PREFIX}.summary.${VERSION}.html"
 
-echo "\nWorkflow:                  ${WORKFLOW}"
+echo ""
+echo "Workflow:                  ${WORKFLOW}"
 echo "Reconciler Version:        v${VERSION}"
-echo "Name of Reconciled Folder: ${PREFIX}\n"
+echo "Name of Reconciled Folder: ${PREFIX}"
 # echo "Reconciled file            ${RECONCILE}"
 # echo "Summary file               ${SUMMARY}"
 # echo "Raw file                   ${RAW}"
+echo ""
 
 mkdir -p $DIR
 
