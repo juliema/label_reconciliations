@@ -74,6 +74,5 @@ python reconcile.py $XARGS -w $WORKFLOW -r $RECONCILE -s $SUMMARY $RAW
 
 if [ -n "$COPYTO" ]
 then
-  echo "hello"
   cp -r $DIR $COPYTO
 fi
