@@ -9,6 +9,7 @@ import lib.util as util
 SUBJECT_PREFIX = 'subject_'
 STARTED_AT = 'classification_started_at'
 USER_NAME = 'user_name'
+TOOL_EXCLUDE = ('tool', 'frame', 'details', 'tool_label')
 KEEP_COUNT = 3
 
 
@@ -165,6 +166,53 @@ def extract_annotations(df, column_types):
     return adjust_column_names(df, column_types).drop(['annotations'], axis=1)
 
 
+# #############################################################################
+
+def annotation_key(tasks, label):
+    """Make a key for the annotation."""
+    label = re.sub(r'^\s+|\s+$', '', label)
+    i = 1
+    base = label
+    while label in tasks:
+        i += 1
+        label = '{} #{}'.format(base, i)
+    return label
+
+
+def append_column_type(column_types, key, type):
+    """Append the column type to the end of the list of columns."""
+    if key not in column_types:
+        last = util.last_column_type(column_types)
+        column_types[key] = {'type': type, 'order': last + 1, 'name': key}
+
+
+def flatten_annotation(column_types, tasks, task):
+    """Flatten one annotation recursively."""
+    if isinstance(task.get('value'), list):
+        for subtask in task['value']:
+            flatten_annotation(column_types, tasks, subtask)
+    elif 'select_label' in task:
+        key = annotation_key(tasks, task['select_label'])
+        option = task.get('option')
+        value = task.get('label', '') if option else task.get('value', '')
+        tasks[key] = value
+        append_column_type(column_types, key, 'select')
+    elif 'task_label' in task:
+        key = annotation_key(tasks, task['task_label'])
+        tasks[key] = task.get('value', '')
+        append_column_type(column_types, key, 'text')
+    elif 'tool_label' in task:
+        items = [(k, v) for k, v in task.items() if k not in TOOL_EXCLUDE]
+        for key, value in items:
+            key = '{}: {}'.format(task['tool_label'], key)
+            key = annotation_key(tasks, key)
+            tasks[key] = value
+            # TODO: 'mmr' is a guess. It will not work for all tools types.
+            append_column_type(column_types, key, 'mmr')
+    else:
+        raise ValueError('Annotation task type not found.')
+
+
 def flatten_annotations(annotations, column_types):
     """
     Flatten annotations.
@@ -173,45 +221,16 @@ def flatten_annotations(annotations, column_types):
     flatten it to make it easier to work with.
 
     We also need to consider that some tasks have the same label. In that case
-    we add a tie breaker, which is handled in the _key() function.
+    we add a tie breaker, which is handled in the annotation_key() function.
     """
-    def _key(label):
-        label = re.sub(r'^\s+|\s+$', '', label)
-        i = 1
-        base = label
-        while label in tasks:
-            i += 1
-            label = '{} #{}'.format(base, i)
-        return label
-
-    def _append_column_type(key, type):
-        if key not in column_types:
-            last = util.last_column_type(column_types)
-            column_types[key] = {'type': type, 'order': last + 1, 'name': key}
-
-    def _flatten(task):
-        if isinstance(task.get('value'), list):
-            for subtask in task['value']:
-                _flatten(subtask)
-        elif 'select_label' in task:
-            key = _key(task['select_label'])
-            option = task.get('option')
-            value = task.get('label', '') if option else task.get('value', '')
-            tasks[key] = value
-            _append_column_type(key, 'select')
-        elif 'task_label' in task:
-            key = _key(task['task_label'])
-            tasks[key] = task.get('value', '')
-            _append_column_type(key, 'text')
-        else:
-            raise ValueError()
-
     tasks = {}
 
     for annotation in annotations:
-        _flatten(annotation)
+        flatten_annotation(column_types, tasks, annotation)
 
     return tasks
+
+# #############################################################################
 
 
 def adjust_column_names(df, column_types):

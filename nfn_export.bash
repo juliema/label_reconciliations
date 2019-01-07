@@ -70,7 +70,7 @@ mkdir -p $DIR
 cp $EXPORT $RAW
 cp data/NfN_Reconciliation_HelpV1.0.pdf $DIR
 
-python reconcile.py $XARGS -w $WORKFLOW -r $RECONCILE -s $SUMMARY $RAW
+python3 reconcile.py $XARGS -w $WORKFLOW -r $RECONCILE -s $SUMMARY $RAW
 
 if [ -n "$COPYTO" ]
 then
