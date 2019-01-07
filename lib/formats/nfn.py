@@ -207,8 +207,9 @@ def flatten_annotation(column_types, tasks, task):
             key = '{}: {}'.format(task['tool_label'], key)
             key = annotation_key(tasks, key)
             tasks[key] = value
-            # TODO: 'mmr' is a guess. It will not work for all tools types.
+            # TODO: Probe for the data types, 'mmr' is a guess for now.
             append_column_type(column_types, key, 'mmr')
+        # TODO: Scan the tool details field for values.
     else:
         raise ValueError('Annotation task type not found.')
 
