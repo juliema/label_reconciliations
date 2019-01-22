@@ -10,7 +10,6 @@ SUBJECT_PREFIX = 'subject_'
 STARTED_AT = 'classification_started_at'
 USER_NAME = 'user_name'
 TOOL_EXCLUDE = ('tool', 'frame', 'details', 'tool_label')
-KEEP_COUNT = 3
 
 
 def read(args):
@@ -51,7 +50,7 @@ def read(args):
     df = df.reindex(columns, axis='columns').fillna('')
     df = df.sort_values([args.group_by, STARTED_AT])
     df = df.drop_duplicates([args.group_by, USER_NAME], keep='first')
-    df = df.groupby(args.group_by).head(KEEP_COUNT)
+    df = df.groupby(args.group_by).head(args.keep_count)
 
     return df, column_types
 
@@ -122,8 +121,8 @@ def extract_subject_data(df, column_types):
         {<subject_id>: {"key_1": "value_1", "key_2": "value_2", ...}}
     """
     data = (df.subject_data.map(json.loads)
-              .apply(lambda x: list(x.values())[0])
-              .tolist())
+            .apply(lambda x: list(x.values())[0])
+            .tolist())
     data = pd.DataFrame(data, index=df.index)
     df = df.drop(['subject_data'], axis=1)
 
@@ -179,11 +178,12 @@ def annotation_key(tasks, label):
     return label
 
 
-def append_column_type(column_types, key, type):
+def append_column_type(column_types, key, column_type):
     """Append the column type to the end of the list of columns."""
     if key not in column_types:
         last = util.last_column_type(column_types)
-        column_types[key] = {'type': type, 'order': last + 1, 'name': key}
+        column_types[key] = {
+            'type': column_type, 'order': last + 1, 'name': key}
 
 
 def flatten_annotation(column_types, tasks, task):

@@ -146,6 +146,10 @@ def parse_command_line():
                             default=50).
                             See https://github.com/seatgeek/fuzzywuzzy.""")
 
+    parser.add_argument('--keep-count', default=3, type=int,
+                        help="""How many raw rows to keep for each
+                        --group-by Default=3.""")
+
     parser.add_argument('-V', '--version', action='version',
                         version='%(prog)s {}'.format(VERSION))
 
