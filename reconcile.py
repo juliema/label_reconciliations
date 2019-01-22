@@ -38,120 +38,122 @@ def parse_command_line():
               mmr:    Show the mean, mode, and range for each group.
             * Note:   If a column is not listed it will not be reconciled."""))
 
-    parser.add_argument('input_file', metavar="INPUT-FILE",
-                        help="""The input file.""")
+    parser.add_argument(
+        'input_file', metavar="INPUT-FILE", help="""The input file.""")
 
-    parser.add_argument('-f', '--format',
-                        choices=['nfn', 'csv', 'json'], default='nfn',
-                        help="""The unreconciled data is in what type of file?
-                             nfn=A Zooniverse classification data dump.
-                             csv=A flat CSV file. json=A JSON file. The
-                             default is "nfn". When the format is "csv" or
-                             "json" we require the --column-types. If the
-                             type is "nfn" we can guess the --column-types
-                             but the --column-types option will still override
-                             our guesses.""")
+    parser.add_argument(
+        '-f', '--format', choices=['nfn', 'csv', 'json'], default='nfn',
+        help="""The unreconciled data is in what type of file? nfn=A Zooniverse
+            classification data dump. csv=A flat CSV file. json=A JSON file.
+            The default is "nfn". When the format is "csv" or "json" we require
+            the --column-types. If the type is "nfn" we can guess the
+            --column-types but the --column-types option will still override
+            our guesses.""")
 
-    parser.add_argument('-c', '--column-types', action='append',
-                        help="""A string with information on how to reconcile
-                             each column in the input file. The format is
-                             --column-types "foo foo:select,bar:text,baz:text".
-                             The list is comma separated with the column
-                             label going before the colon and the
-                             reconciliation type after the colon. Note: This
-                             overrides any column type guesses. You may use
-                             this multiple times.""")
+    parser.add_argument(
+        '-c', '--column-types', action='append',
+        help="""A string with information on how to reconcile each column in
+            the input file. The format is --column-types "foo
+            foo:select,bar:text,baz:text". The list is comma separated with the
+            column label going before the colon and the reconciliation type
+            after the colon. Note: This overrides any column type guesses. You
+            may use this multiple times.""")
 
-    parser.add_argument('--user-weights', default='',
-                        help="""A string with user IDs and corresponding
-                             weights. Used to favor contributions from specific
-                             users when using the "text" column type. The
-                             format is --user-weights "foo:-10,bar:25". The
-                             list is comma separated with the user ID going
-                             before the colon and the weight after the colon.
-                             Note: This weight is added to the fuzzywuzzy
-                             score, which is a percentage.
-                             --user-weights "aSmith:70" would very often
-                             select aSmith's transcriptions.
-                             --user-weights "aSmith:10" would add 10 to all of
-                             aSmith's scores.
-                             --user-weights "aSmith:-50" would distrust
-                             aSmith's transcriptions.""")
+    parser.add_argument(
+        '--user-weights', default='',
+        help="""A string with user IDs and corresponding weights. Used to favor
+            contributions from specific users when using the "text" column
+            type. The format is --user-weights "foo:-10,bar:25". The list is
+            comma separated with the user ID going before the colon and the
+            weight after the colon. Note: This weight is added to the
+            fuzzywuzzy score, which is a percentage. --user-weights "aSmith:70"
+            would very often select aSmith's transcriptions. --user-weights
+            "aSmith:10" would add 10 to all of aSmith's scores. --user-weights
+            "aSmith:-50" would distrust aSmith's transcriptions.""")
 
-    parser.add_argument('-u', '--unreconciled',
-                        help="""Write the unreconciled workflow
-                            classifications to this CSV file.""")
+    parser.add_argument(
+        '-u', '--unreconciled',
+        help="""Write the unreconciled workflow classifications to this CSV
+            file.""")
 
-    parser.add_argument('-r', '--reconciled',
-                        help="""Write the reconciled classifications to this
-                            CSV file.""")
+    parser.add_argument(
+        '-r', '--reconciled',
+        help="""Write the reconciled classifications to this CSV file.""")
 
-    parser.add_argument('--explanations', action='store_true',
-                        help="""Output the reconciled explanations with the
-                            reconciled classifications CSV file.""")
+    parser.add_argument(
+        '--explanations', action='store_true',
+        help="""Output the reconciled explanations with the reconciled
+            classifications CSV file.""")
 
-    parser.add_argument('--transcribers', action='store_true',
-                        help="""Output the transcriber name and the entered
-                            value for every classification in the reconciled
-                            classifications CSV file.""")
+    parser.add_argument(
+        '--transcribers', action='store_true',
+        help="""Output the transcriber name and the entered value for every
+            classification in the reconciled classifications CSV file.""")
 
-    parser.add_argument('-s', '--summary',
-                        help="""Write a summary of the reconciliation to this
-                            HTML file.""")
+    parser.add_argument(
+        '-s', '--summary',
+        help="""Write a summary of the reconciliation to this HTML file.""")
 
-    parser.add_argument('-m', '--merged',
-                        help="""Write the merged reconciled data, explanations,
-                            and unreconciled data to this CSV file.""")
+    parser.add_argument(
+        '-m', '--merged',
+        help="""Write the merged reconciled data, explanations, and
+            unreconciled data to this CSV file.""")
 
-    parser.add_argument('-z', '--zip',
-                        help="""Zip files and put them into this archive.
-                            Remove the uncompressed files afterwards.""")
+    parser.add_argument(
+        '-z', '--zip',
+        help="""Zip files and put them into this archive. Remove the
+            uncompressed files afterwards.""")
 
-    parser.add_argument('-w', '--workflow-id', type=int,
-                        help="""The workflow to extract. Required if there is
-                             more than one workflow in the classifications
-                             file. This is only used for nfn formats.""")
+    parser.add_argument(
+        '-w', '--workflow-id', type=int,
+        help="""The workflow to extract. Required if there is more than one
+            workflow in the classifications file. This is only used for nfn
+            formats.""")
 
-    parser.add_argument('--title', default='',
-                        help="""The title to put on the summary report. We will
-                            build this when the format is nfn. For other
-                            formats the default is the INPUT-FILE.""")
+    parser.add_argument(
+        '--title', default='',
+        help="""The title to put on the summary report. We will build this when
+            the format is nfn. For other formats the default is the
+            INPUT-FILE.""")
 
-    parser.add_argument('--group-by', default='subject_id',
-                        help="""Group the rows by this column
-                            (Default=subject_id).""")
+    parser.add_argument(
+        '--group-by', default='subject_id',
+        help="""Group the rows by this column (Default=subject_id).""")
 
-    parser.add_argument('--key-column', default='classification_id',
-                        help="""The column containing the primary key
-                            (Default=classification_id).""")
+    parser.add_argument(
+        '--key-column', default='classification_id',
+        help="""The column containing the primary key
+            (Default=classification_id).""")
 
-    parser.add_argument('--user-column',
-                        help="""Which column to use to get a count of user
-                            transcripts. For --format=nfn the
-                            default=user_name for other formats there is no
-                            default. This will affect which sections appear
-                            on the summary report.""")
+    parser.add_argument(
+        '--user-column',
+        help="""Which column to use to get a count of user transcripts. For
+            --format=nfn the default=user_name for other formats there is no
+            default. This will affect which sections appear on the summary
+            report.""")
 
-    parser.add_argument('--page-size', default=20, type=int,
-                        help="""Page size for the summary report's detail
-                            section (Default=20).""")
+    parser.add_argument(
+        '--page-size', default=20, type=int,
+        help="""Page size for the summary report's detail section
+            (Default=20).""")
 
-    parser.add_argument('--fuzzy-ratio-threshold', default=90, type=int,
-                        help="""Sets the cutoff for fuzzy ratio matching
-                            (0-100, default=90).
-                            See https://github.com/seatgeek/fuzzywuzzy.""")
+    parser.add_argument(
+        '--fuzzy-ratio-threshold', default=90, type=int,
+        help="""Sets the cutoff for fuzzy ratio matching (0-100, default=90).
+            See https://github.com/seatgeek/fuzzywuzzy.""")
 
-    parser.add_argument('--fuzzy-set-threshold', default=50, type=int,
-                        help="""Sets the cutoff for fuzzy set matching (0-100,
-                            default=50).
-                            See https://github.com/seatgeek/fuzzywuzzy.""")
+    parser.add_argument(
+        '--fuzzy-set-threshold', default=50, type=int,
+        help="""Sets the cutoff for fuzzy set matching (0-100, default=50).
+            See https://github.com/seatgeek/fuzzywuzzy.""")
 
-    parser.add_argument('--keep-count', default=3, type=int,
-                        help="""How many raw rows to keep for each
-                        --group-by Default=3.""")
+    parser.add_argument(
+        '--keep-count', default=3, type=int,
+        help="""How many raw rows to keep for each --group-by. Default=3.""")
 
-    parser.add_argument('-V', '--version', action='version',
-                        version='%(prog)s {}'.format(VERSION))
+    parser.add_argument(
+        '-V', '--version', action='version',
+        version='%(prog)s {}'.format(VERSION))
 
     args = parser.parse_args()
 
