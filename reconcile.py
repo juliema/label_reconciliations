@@ -156,10 +156,10 @@ def parse_command_line():
     args = parser.parse_args()
 
     if args.user_weights:
+        # Make user_weights case insensitive
         args.user_weights = {key.lower(): int(value) for key, value in
                              [(i.split(':')) for i in
                               args.user_weights.split(',')]}
-    # user_weights is made case insensitive
     else:
         args.user_weights = {}
 
@@ -178,32 +178,19 @@ def zip_files(args):
     """Put results into a zip file."""
     zip_file = args.zip if args.zip else args.zip_keep
 
-    with zipfile.ZipFile(zip_file, mode='w') as zippy:
-        if args.unreconciled:
-            zippy.write(args.unreconciled,
-                        arcname=basename(args.unreconciled),
-                        compress_type=zipfile.ZIP_DEFLATED)
-        if args.reconciled:
-            zippy.write(args.reconciled,
-                        arcname=basename(args.reconciled),
-                        compress_type=zipfile.ZIP_DEFLATED)
-        if args.summary:
-            zippy.write(args.summary,
-                        arcname=basename(args.summary),
-                        compress_type=zipfile.ZIP_DEFLATED)
-        if args.merged:
-            zippy.write(args.merged,
-                        arcname=basename(args.merged),
-                        compress_type=zipfile.ZIP_DEFLATED)
+    args_dict = vars(args)
+    arg_files = ['unreconciled', 'reconciled', 'summary', 'merged']
 
-    if args.unreconciled:
-        os.remove(args.unreconciled)
-    if args.reconciled:
-        os.remove(args.reconciled)
-    if args.summary:
-        os.remove(args.summary)
-    if args.merged:
-        os.remove(args.merged)
+    with zipfile.ZipFile(zip_file, mode='w') as zippy:
+        for arg_file in arg_files:
+            if args_dict[arg_file]:
+                zippy.write(args_dict[arg_file],
+                            arcname=basename(args_dict[arg_file]),
+                            compress_type=zipfile.ZIP_DEFLATED)
+
+    for arg_file in arg_files:
+        if args_dict[arg_file]:
+            os.remove(args_dict[arg_file])
 
 
 def get_column_types(args, column_types):
@@ -220,9 +207,10 @@ def get_column_types(args, column_types):
                 else:
                     last += 1
                     order = last
-                column_types[name] = {'type': col_type,
-                                      'order': order,
-                                      'name': name}
+                column_types[name] = {
+                    'type': col_type,
+                    'order': order,
+                    'name': name}
     return column_types
 
 
@@ -231,30 +219,66 @@ def validate_columns(args, column_types, unreconciled, plugins=None):
 
     Also verify that the column types are an existing plug-in.
     """
-    has_errors = False
-    types = list(plugins.keys())
+    plugin_types = list(plugins.keys())
+
+    error = missing_headers(unreconciled, column_types, plugin_types)
+    error |= missing_key_columns(args, unreconciled)
+
+    if error:
+        error_exit(unreconciled, plugin_types)
+
+
+def missing_headers(unreconciled, column_types, plugin_types):
+    """Look for errors with column validation."""
+    error = False
     for column, column_type in column_types.items():
         if column not in unreconciled.columns:
-            has_errors = True
+            error = True
             print('ERROR: "{}" is not a column header'.format(column))
-        if column_type['type'] not in types:
-            has_errors = True
+        if column_type['type'] not in plugin_types:
+            error = True
             print('ERROR: "{}" is not a column type'.format(
                 column_type['type']))
+    return error
 
+
+def missing_key_columns(args, unreconciled):
+    """Look for errors with column validation."""
+    error = False
     for column in [args.group_by, args.key_column]:
         if column not in unreconciled.columns:
-            has_errors = True
+            error = True
             print('ERROR: "{}" is not a column header'.format(column))
+    return error
 
-        if has_errors:
-            print('\nValid column types are: {}\n'.format(types))
-            print('Valid column headers are:')
-            for col in unreconciled.columns:
-                print('\t{}'.format(col))
-            print('* Please remember that "--format=nfn" may rename column '
-                  'headers.')
-            sys.exit(1)
+
+def error_exit(unreconciled, plugin_types):
+    """Look for errors with column validation."""
+    print('\nValid column types are: {}\n'.format(plugin_types))
+    print('Valid column headers are:')
+    for col in unreconciled.columns:
+        print('\t{}'.format(col))
+    print('* Please remember that "--format=nfn" may rename column '
+          'headers.')
+    sys.exit(1)
+
+
+def reconcile_data(args, unreconciled, column_types, plugins):
+    """Build and output reconciled data."""
+    reconciled, explanations = reconciler.build(
+        args, unreconciled, column_types, plugins=plugins)
+
+    if args.reconciled:
+        reconciled_df.reconciled_output(
+            args, unreconciled, reconciled, explanations, column_types)
+
+    if args.summary:
+        summary.report(
+            args, unreconciled, reconciled, explanations, column_types)
+
+    if args.merged:
+        merged.merged_output(
+            args, unreconciled, reconciled, explanations, column_types)
 
 
 def main():
@@ -275,20 +299,7 @@ def main():
         unreconciled.to_csv(args.unreconciled, index=False)
 
     if args.reconciled or args.summary or args.merged:
-        reconciled, explanations = reconciler.build(
-            args, unreconciled, column_types, plugins=plugins)
-
-        if args.reconciled:
-            reconciled_df.reconciled_output(
-                args, unreconciled, reconciled, explanations, column_types)
-
-        if args.summary:
-            summary.report(
-                args, unreconciled, reconciled, explanations, column_types)
-
-        if args.merged:
-            merged.merged_output(
-                unreconciled, reconciled, explanations, column_types)
+        reconcile_data(args, unreconciled, column_types, plugins)
 
     if args.zip:
         zip_files(args)

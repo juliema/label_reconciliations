@@ -1,5 +1,7 @@
 """Convert Adler's Notes from Nature expedition CSV format."""
 
+# pylint: disable=invalid-name,unused-argument
+
 import re
 import json
 from dateutil.parser import parse
@@ -9,7 +11,7 @@ import lib.util as util
 SUBJECT_PREFIX = 'subject_'
 STARTED_AT = 'classification_started_at'
 USER_NAME = 'user_name'
-TOOL_EXCLUDE = ('tool', 'frame', 'details', 'tool_label')
+TOOL_EXCLUDE = ('tool', 'df', 'details', 'tool_label')
 
 
 def read(args):
@@ -73,7 +75,7 @@ def get_nfn_only_defaults(df, args, workflow_id):
 
 
 def get_workflow_id(df, args):
-    """Pull the workflow ID from the data-frame if it was not given."""
+    """Pull the workflow ID from the data-df if it was not given."""
     if args.workflow_id:
         return args.workflow_id
 
@@ -87,7 +89,7 @@ def get_workflow_id(df, args):
 
 
 def get_workflow_name(df):
-    """Extract and format the workflow name from the data frame."""
+    """Extract and format the workflow name from the data df."""
     try:
         workflow_name = df.workflow_name.iloc[0]
         workflow_name = re.sub(r'^[^_]*_', '', workflow_name)
@@ -117,7 +119,7 @@ def extract_subject_data(df, column_types):
     Extract subject data from the json object in the subject_data column.
 
     We prefix the new column names with "subject_" to keep them separate from
-    the other df columns. The subject data json looks like:
+    the other data df columns. The subject data json looks like:
         {<subject_id>: {"key_1": "value_1", "key_2": "value_2", ...}}
     """
     data = (df.subject_data.map(json.loads)
@@ -162,7 +164,8 @@ def extract_annotations(df, column_types):
 
     df = pd.concat([df, data], axis=1)
 
-    return adjust_column_names(df, column_types).drop(['annotations'], axis=1)
+    return adjust_column_names(
+        df, column_types).drop(['annotations'], axis=1)
 
 
 # #############################################################################
@@ -189,29 +192,49 @@ def append_column_type(column_types, key, column_type):
 def flatten_annotation(column_types, tasks, task):
     """Flatten one annotation recursively."""
     if isinstance(task.get('value'), list):
-        for subtask in task['value']:
-            flatten_annotation(column_types, tasks, subtask)
+        subtask_annotation(column_types, tasks, task)
     elif 'select_label' in task:
-        key = annotation_key(tasks, task['select_label'])
-        option = task.get('option')
-        value = task.get('label', '') if option else task.get('value', '')
-        tasks[key] = value
-        append_column_type(column_types, key, 'select')
+        select_label_annotation(column_types, tasks, task)
     elif 'task_label' in task:
-        key = annotation_key(tasks, task['task_label'])
-        tasks[key] = task.get('value', '')
-        append_column_type(column_types, key, 'text')
+        task_label_annotation(column_types, tasks, task)
     elif 'tool_label' in task:
-        items = [(k, v) for k, v in task.items() if k not in TOOL_EXCLUDE]
-        for key, value in items:
-            key = '{}: {}'.format(task['tool_label'], key)
-            key = annotation_key(tasks, key)
-            tasks[key] = value
-            # TODO: Probe for the data types, 'mmr' is a guess for now.
-            append_column_type(column_types, key, 'mmr')
-        # TODO: Scan the tool details field for values.
+        tool_label_annotation(column_types, tasks, task)
     else:
         raise ValueError('Annotation task type not found.')
+
+
+def subtask_annotation(column_types, tasks, task):
+    """Handle a task annotation with subtasks."""
+    for subtask in task['value']:
+        flatten_annotation(column_types, tasks, subtask)
+
+
+def select_label_annotation(column_types, tasks, task):
+    """Handle a select label task annotation."""
+    key = annotation_key(tasks, task['select_label'])
+    option = task.get('option')
+    value = task.get('label', '') if option else task.get('value', '')
+    tasks[key] = value
+    append_column_type(column_types, key, 'select')
+
+
+def task_label_annotation(column_types, tasks, task):
+    """Handle a task label task annotation."""
+    key = annotation_key(tasks, task['task_label'])
+    tasks[key] = task.get('value', '')
+    append_column_type(column_types, key, 'text')
+
+
+def tool_label_annotation(column_types, tasks, task):
+    """Handle a tool label task annotation."""
+    items = [(k, v) for k, v in task.items() if k not in TOOL_EXCLUDE]
+    for key, value in items:
+        key = '{}: {}'.format(task['tool_label'], key)
+        key = annotation_key(tasks, key)
+        tasks[key] = value
+        # TODO: Probe for the data types, 'mmr' is a guess for now.
+        append_column_type(column_types, key, 'mmr')
+    # TODO: Scan the tool details field for values.
 
 
 def flatten_annotations(annotations, column_types):

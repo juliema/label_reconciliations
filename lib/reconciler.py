@@ -19,7 +19,7 @@ def build(args, unreconciled, column_types, plugins=None):
     # keep the userID associated with the data handed to the reconciler.
     reconciled = unreconciled.set_index(
         args.user_column, append=True).groupby(
-        args.group_by).agg(aggregators, args)
+            args.group_by).agg(aggregators, args)
     explanations = pd.DataFrame()
     for column in reconciled.columns:
         reconciler = reconcilers.get(column)

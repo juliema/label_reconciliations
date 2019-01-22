@@ -6,7 +6,7 @@ isn't then we return a blank.
 """
 
 
-def reconcile(group, args=None):
+def reconcile(group, args=None):  # pylint: disable=unused-argument
     """Reconcile the data."""
     values = [g for g in group]
     count = len(values)

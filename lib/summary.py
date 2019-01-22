@@ -121,8 +121,8 @@ def create_link(value):
     try:
         url = urlparse(value)
         if url.scheme and url.netloc and url.path:
-            return '<a href="{}" target="_blank">{}</a>'.format(
-                value, value)
+            return '<a href="{value}" target="_blank">{value}</a>'.format(
+                value=value)
     except (ValueError, AttributeError):
         pass
     return value
@@ -180,7 +180,7 @@ def reconciled_summary(explanations, column_types):
         if col_type == 'mmr':
             num_mmr = '{:,}'.format(explanations[
                 explanations[col].str.contains(MMR_PATTERN)].shape[0]
-                - num_onesies)
+                                    - num_onesies)
 
         how_reconciled.append({
             'name': col,
