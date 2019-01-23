@@ -2,6 +2,7 @@
 
 """The main program."""
 
+import re
 import os
 from os.path import basename
 import sys
@@ -152,6 +153,14 @@ def parse_command_line():
         help="""How many raw rows to keep for each --group-by. Default=3.""")
 
     parser.add_argument(
+        '--tool-label-hack', default='', metavar='HACK',
+        help="""*** This is a hack to work around the Notes from Nature tool
+            label tasks not having a human readable label. The format is
+            --tool-label-hack "a33c0ef367baa8:Label one,bf76cbd8a5a838:Label
+            two". The is is comma separated with the hex value going before
+            the colon and the label going after the colon.""")
+
+    parser.add_argument(
         '-V', '--version', action='version',
         version='%(prog)s {}'.format(VERSION))
 
@@ -160,10 +169,17 @@ def parse_command_line():
     if args.user_weights:
         # Make user_weights case insensitive
         args.user_weights = {key.lower(): int(value) for key, value in
-                             [(i.split(':')) for i in
-                              args.user_weights.split(',')]}
+                             [(re.split(r'\s*:\s*', i)) for i in
+                              re.split(r'\s*,\s*', args.user_weights)]}
     else:
         args.user_weights = {}
+
+    if args.tool_label_hack:
+        args.tool_label_hack = {key.lower(): value for key, value in
+                                [(re.split(r'\s*:\s*', i)) for i in
+                                 re.split(r'\s*,\s*', args.tool_label_hack)]}
+    else:
+        args.tool_label_hack = {}
 
     if args.fuzzy_ratio_threshold < 0 or args.fuzzy_ratio_threshold > 100:
         print('--fuzzy-ratio-threshold must be between 0 and 100.')

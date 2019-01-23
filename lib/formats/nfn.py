@@ -11,7 +11,7 @@ import lib.util as util
 SUBJECT_PREFIX = 'subject_'
 STARTED_AT = 'classification_started_at'
 USER_NAME = 'user_name'
-TOOL_EXCLUDE = ('tool', 'df', 'details', 'tool_label')
+TOOL_EXCLUDE = ('tool', 'df', 'details', 'tool_label', 'frame')
 
 
 def read(args):
@@ -27,7 +27,7 @@ def read(args):
 
     # Extract the various json blobs
     column_types = {}
-    df = (extract_annotations(df, column_types)
+    df = (extract_annotations(df, args, column_types)
           .pipe(extract_subject_data, column_types)
           .pipe(extract_metadata))
 
@@ -152,14 +152,14 @@ def extract_subject_data(df, column_types):
     return df
 
 
-def extract_annotations(df, column_types):
+def extract_annotations(df, args, column_types):
     """
     Extract annotations from the json object in the annotations column.
 
     Annotations are nested json blobs with a peculiar data format.
     """
     data = df.annotations.map(json.loads)
-    data = [flatten_annotations(a, column_types) for a in data]
+    data = [flatten_annotations(a, args, column_types) for a in data]
     data = pd.DataFrame(data, index=df.index)
 
     df = pd.concat([df, data], axis=1)
@@ -169,6 +169,77 @@ def extract_annotations(df, column_types):
 
 
 # #############################################################################
+
+def flatten_annotations(annotations, args, column_types):
+    """
+    Flatten annotations.
+
+    Annotations are nested json blobs with a peculiar data format. So we
+    flatten it to make it easier to reconcile.
+
+    We also need to consider that some tasks have the same label. In that case
+    we add a tie breaker, which is handled in the annotation_key() function.
+    """
+    tasks = {}
+
+    for annotation in annotations:
+        flatten_annotation(args, column_types, tasks, annotation)
+
+    return tasks
+
+
+def flatten_annotation(args, column_types, tasks, task):
+    """Flatten one annotation recursively."""
+    if isinstance(task.get('value'), list):
+        subtask_annotation(args, column_types, tasks, task)
+    elif 'select_label' in task:
+        select_label_annotation(column_types, tasks, task)
+    elif 'task_label' in task:
+        task_label_annotation(column_types, tasks, task)
+    elif 'tool_label' in task:
+        tool_label_annotation(args, column_types, tasks, task)
+    else:
+        raise ValueError('Annotation task type not found.')
+
+
+def subtask_annotation(args, column_types, tasks, task):
+    """Handle a task annotation with subtasks."""
+    for subtask in task['value']:
+        flatten_annotation(args, column_types, tasks, subtask)
+
+
+def select_label_annotation(column_types, tasks, task):
+    """Handle a select label task annotation."""
+    key = annotation_key(tasks, task['select_label'])
+    option = task.get('option')
+    value = task.get('label', '') if option else task.get('value', '')
+    tasks[key] = value
+    append_column_type(column_types, key, 'select')
+
+
+def task_label_annotation(column_types, tasks, task):
+    """Handle a task label task annotation."""
+    key = annotation_key(tasks, task['task_label'])
+    tasks[key] = task.get('value', '')
+    append_column_type(column_types, key, 'text')
+
+
+def tool_label_annotation(args, column_types, tasks, task):
+    """Handle a tool label task annotation."""
+    items = [(k, v) for k, v in task.items() if k not in TOOL_EXCLUDE]
+    # Get the tool label attributes
+    for key, value in items:
+        key = '{}: {}'.format(task['tool_label'], key)
+        key = annotation_key(tasks, key)
+        tasks[key] = value
+        append_column_type(column_types, key, 'mmr')
+    # Get the actual tool label value
+    key = '{}: {}'.format(task['tool_label'], 'value')
+    key = annotation_key(tasks, key)
+    value = task['details'][0]['value'][0]['value']
+    tasks[key] = args.tool_label_hack.get(value, '')
+    append_column_type(column_types, key, 'select')
+
 
 def annotation_key(tasks, label):
     """Make a key for the annotation."""
@@ -189,73 +260,7 @@ def append_column_type(column_types, key, column_type):
             'type': column_type, 'order': last + 1, 'name': key}
 
 
-def flatten_annotation(column_types, tasks, task):
-    """Flatten one annotation recursively."""
-    if isinstance(task.get('value'), list):
-        subtask_annotation(column_types, tasks, task)
-    elif 'select_label' in task:
-        select_label_annotation(column_types, tasks, task)
-    elif 'task_label' in task:
-        task_label_annotation(column_types, tasks, task)
-    elif 'tool_label' in task:
-        tool_label_annotation(column_types, tasks, task)
-    else:
-        raise ValueError('Annotation task type not found.')
-
-
-def subtask_annotation(column_types, tasks, task):
-    """Handle a task annotation with subtasks."""
-    for subtask in task['value']:
-        flatten_annotation(column_types, tasks, subtask)
-
-
-def select_label_annotation(column_types, tasks, task):
-    """Handle a select label task annotation."""
-    key = annotation_key(tasks, task['select_label'])
-    option = task.get('option')
-    value = task.get('label', '') if option else task.get('value', '')
-    tasks[key] = value
-    append_column_type(column_types, key, 'select')
-
-
-def task_label_annotation(column_types, tasks, task):
-    """Handle a task label task annotation."""
-    key = annotation_key(tasks, task['task_label'])
-    tasks[key] = task.get('value', '')
-    append_column_type(column_types, key, 'text')
-
-
-def tool_label_annotation(column_types, tasks, task):
-    """Handle a tool label task annotation."""
-    items = [(k, v) for k, v in task.items() if k not in TOOL_EXCLUDE]
-    for key, value in items:
-        key = '{}: {}'.format(task['tool_label'], key)
-        key = annotation_key(tasks, key)
-        tasks[key] = value
-        # TODO: Probe for the data types, 'mmr' is a guess for now.
-        append_column_type(column_types, key, 'mmr')
-    # TODO: Scan the tool details field for values.
-
-
-def flatten_annotations(annotations, column_types):
-    """
-    Flatten annotations.
-
-    Annotations are nested json blobs with a peculiar data format. So we
-    flatten it to make it easier to work with.
-
-    We also need to consider that some tasks have the same label. In that case
-    we add a tie breaker, which is handled in the annotation_key() function.
-    """
-    tasks = {}
-
-    for annotation in annotations:
-        flatten_annotation(column_types, tasks, annotation)
-
-    return tasks
-
 # #############################################################################
-
 
 def adjust_column_names(df, column_types):
     """Rename columns to add a "#1" suffix if there exists a "#2" suffix."""

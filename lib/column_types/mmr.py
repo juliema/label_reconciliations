@@ -1,4 +1,4 @@
-"""Get mean median and mode for the group. Handle blanks and non-numerics."""
+"""Get mean median and mode for the group. Handle non-numeric characters."""
 
 import numpy as np
 import scipy.stats as stats
