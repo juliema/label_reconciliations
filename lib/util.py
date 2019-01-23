@@ -1,9 +1,12 @@
 """Common utilities."""
 
 import sys
-from importlib.machinery import SourceFileLoader
+import importlib.util as iutil
 from glob import glob
 from os.path import join, dirname, splitext, basename
+
+# Allow room for inserting columns
+COLUMN_ADD = 100
 
 
 def get_plugins(subdir):
@@ -17,7 +20,9 @@ def get_plugins(subdir):
             continue
         name = splitext(basename(path))[0]
         module_name = 'lib.{}.{}'.format(subdir, name)
-        module = SourceFileLoader(module_name, path).load_module()
+        spec = iutil.spec_from_file_location(module_name, path)
+        module = iutil.module_from_spec(spec)
+        spec.loader.exec_module(module)
         plugins[name] = module
 
     return plugins
@@ -50,10 +55,9 @@ def last_column_type(column_types):
     return max([v['order'] for v in column_types.values()], default=0)
 
 
-def error_exit(msg):
+def error_exit(msgs):
     """Handle error exits."""
-    if not isinstance(msg, list):
-        msg = [msg]
-    for m in msg:
+    msgs = msgs if isinstance(msgs, list) else [msgs]
+    for msg in msgs:
         print(msg)
     sys.exit(1)

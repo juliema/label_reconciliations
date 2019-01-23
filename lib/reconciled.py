@@ -1,6 +1,5 @@
 """Format and output the reconciled dataframe."""
 
-import re
 import lib.util as util
 
 
@@ -27,7 +26,11 @@ def reconciled_output(
     del columns[0]
     reconciled = reconciled.reindex(columns, axis='columns').fillna('')
 
-    reconciled = split_mmr(reconciled, column_types)
+    plugins = util.get_plugins('column_types')
+    for _, plugin in plugins.items():
+        if hasattr(plugin, 'adjust_reconciled_columns'):
+            reconciled = plugin.adjust_reconciled_columns(
+                reconciled, column_types)
 
     if args.explanations:
         reconciled = add_explanations(reconciled, explanations, column_types)
@@ -37,28 +40,7 @@ def reconciled_output(
 
     reconciled.to_csv(args.reconciled)
 
-
-def split_mmr(reconciled, column_types):
-    """Split reconciled results into separate Mean, Mode, & Range columns."""
-    columns = {c for c in reconciled.columns
-               if column_types.get(c, {'type': 'mmr'})['type'] == 'mmr'}
-    for column in columns:
-        reconciled[f'{column} Mean'] = reconciled[column].apply(
-            lambda x: _get_mmr_part(x, r'mean=([0-9.]+)'))
-        reconciled[f'{column} Mode'] = reconciled[column].apply(
-            lambda x: _get_mmr_part(x, r'mode=([0-9.]+)'))
-        reconciled[f'{column} Range lower'] = reconciled[column].apply(
-            lambda x: _get_mmr_part(x, r'range=\[([0-9.]+)'))
-        reconciled[f'{column} Range upper'] = reconciled[column].apply(
-            lambda x: _get_mmr_part(x, r'range=\[[^,\s]+[,\s]*([0-9.]+)'))
-    return reconciled.drop(columns, axis='columns')
-
-
-def _get_mmr_part(value, regex):
-    if not value:
-        return ''
-    match = re.search(regex, value)
-    return match[1]
+    return reconciled
 
 
 def add_explanations(reconciled, explanations, column_types):

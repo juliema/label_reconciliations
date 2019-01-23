@@ -154,11 +154,12 @@ def parse_command_line():
 
     parser.add_argument(
         '--tool-label-hack', default='', metavar='HACK',
-        help="""*** This is a hack to work around the Notes from Nature tool
-            label tasks not having a human readable label. The format is
+        help="""*** This is a hack to work around Notes from Nature tool
+            label tasks not having human readable labels. The format is
             --tool-label-hack "a33c0ef367baa8:Label one,bf76cbd8a5a838:Label
             two". The is is comma separated with the hex value going before
-            the colon and the label going after the colon.""")
+            the colon and the label going after the colon. You should quote
+            this argument.""")
 
     parser.add_argument(
         '-V', '--version', action='version',
@@ -223,7 +224,7 @@ def get_column_types(args, column_types):
                 if column_types.get(name):
                     order = column_types[name]['order']
                 else:
-                    last += 1
+                    last += util.COLUMN_ADD
                     order = last
                 column_types[name] = {
                     'type': col_type,
@@ -232,11 +233,12 @@ def get_column_types(args, column_types):
     return column_types
 
 
-def validate_columns(args, column_types, unreconciled, plugins=None):
+def validate_columns(args, column_types, unreconciled):
     """Validate that the columns are in the unreconciled data frame.
 
     Also verify that the column types are an existing plug-in.
     """
+    plugins = util.get_plugins('column_types')
     plugin_types = list(plugins.keys())
 
     error = missing_headers(unreconciled, column_types, plugin_types)
@@ -281,13 +283,13 @@ def error_exit(unreconciled, plugin_types):
     sys.exit(1)
 
 
-def reconcile_data(args, unreconciled, column_types, plugins):
+def reconcile_data(args, unreconciled, column_types):
     """Build and output reconciled data."""
     reconciled, explanations = reconciler.build(
-        args, unreconciled, column_types, plugins=plugins)
+        args, unreconciled, column_types)
 
     if args.reconciled:
-        reconciled_df.reconciled_output(
+        reconciled = reconciled_df.reconciled_output(
             args, unreconciled, reconciled, explanations, column_types)
 
     if args.summary:
@@ -309,15 +311,14 @@ def main():
     if unreconciled.shape[0] == 0:
         sys.exit('Workflow {} has no data.'.format(args.workflow_id))
 
-    plugins = util.get_plugins('column_types')
     column_types = get_column_types(args, column_types)
-    validate_columns(args, column_types, unreconciled, plugins=plugins)
+    validate_columns(args, column_types, unreconciled)
 
     if args.unreconciled:
         unreconciled.to_csv(args.unreconciled, index=False)
 
     if args.reconciled or args.summary or args.merged:
-        reconcile_data(args, unreconciled, column_types, plugins)
+        reconcile_data(args, unreconciled, column_types)
 
     if args.zip:
         zip_files(args)

@@ -11,7 +11,6 @@ import lib.util as util
 SUBJECT_PREFIX = 'subject_'
 STARTED_AT = 'classification_started_at'
 USER_NAME = 'user_name'
-TOOL_EXCLUDE = ('tool', 'df', 'details', 'tool_label', 'frame')
 
 
 def read(args):
@@ -146,7 +145,7 @@ def extract_subject_data(df, column_types):
     # Put the subject columns into the column_types: They're all 'same'
     last = util.last_column_type(column_types)
     for name in data.columns:
-        last += 1
+        last += util.COLUMN_ADD
         column_types[name] = {'type': 'same', 'order': last, 'name': name}
 
     return df
@@ -226,19 +225,23 @@ def task_label_annotation(column_types, tasks, task):
 
 def tool_label_annotation(args, column_types, tasks, task):
     """Handle a tool label task annotation."""
-    items = [(k, v) for k, v in task.items() if k not in TOOL_EXCLUDE]
     # Get the tool label attributes
-    for key, value in items:
-        key = '{}: {}'.format(task['tool_label'], key)
-        key = annotation_key(tasks, key)
-        tasks[key] = value
-        append_column_type(column_types, key, 'mmr')
+    label = '{}: box'.format(task['tool_label'])
+    label = annotation_key(tasks, label)
+    value = {
+        'left': task['x'],
+        'right': task['x'] + task['width'],
+        'top': task['y'],
+        'bottom': task['y'] + task['height']}
+    tasks[label] = value
+    append_column_type(column_types, label, 'box')
+
     # Get the actual tool label value
-    key = '{}: {}'.format(task['tool_label'], 'value')
-    key = annotation_key(tasks, key)
+    label = '{}: select'.format(task['tool_label'])
+    label = annotation_key(tasks, label)
     value = task['details'][0]['value'][0]['value']
-    tasks[key] = args.tool_label_hack.get(value, '')
-    append_column_type(column_types, key, 'select')
+    tasks[label] = args.tool_label_hack.get(value, '')
+    append_column_type(column_types, label, 'select')
 
 
 def annotation_key(tasks, label):
@@ -257,7 +260,7 @@ def append_column_type(column_types, key, column_type):
     if key not in column_types:
         last = util.last_column_type(column_types)
         column_types[key] = {
-            'type': column_type, 'order': last + 1, 'name': key}
+            'type': column_type, 'order': last + util.COLUMN_ADD, 'name': key}
 
 
 # #############################################################################

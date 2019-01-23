@@ -1,14 +1,16 @@
 """Build reconciled and explanations dataframes from unreconciled dataframe."""
 
-
 from functools import partial
 import pandas as pd
+import lib.util as util
+
 
 NO_EXPLANATIONS = ['same']  # We may want these later
 
 
-def build(args, unreconciled, column_types, plugins=None):
+def build(args, unreconciled, column_types):
     """Build the reconciled and explanations data-frames."""
+    plugins = util.get_plugins('column_types')
     reconcilers = {k: plugins[v['type']] for k, v in column_types.items()}
 
     # Get group and then reconcile the data
