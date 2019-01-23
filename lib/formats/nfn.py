@@ -229,10 +229,10 @@ def tool_label_annotation(args, column_types, tasks, task):
     label = '{}: box'.format(task['tool_label'])
     label = annotation_key(tasks, label)
     value = {
-        'left': task['x'],
-        'right': task['x'] + task['width'],
-        'top': task['y'],
-        'bottom': task['y'] + task['height']}
+        'left': round(task['x']),
+        'right': round(task['x'] + task['width']),
+        'top': round(task['y']),
+        'bottom': round(task['y'] + task['height'])}
     tasks[label] = value
     append_column_type(column_types, label, 'box')
 
