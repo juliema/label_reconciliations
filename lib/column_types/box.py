@@ -1,5 +1,6 @@
 """Reconcile a box annotation."""
 
+import json
 from functools import partial
 import inflect
 
@@ -9,7 +10,7 @@ P = inflect.engine().plural
 
 def reconcile(group, args=None):  # pylint: disable=unused-argument
     """Reconcile the data."""
-    raw_boxes = [b for b in group]
+    raw_boxes = [json.loads(b) for b in group]
 
     overlaps = [0] * len(raw_boxes)
     for i, box1 in enumerate(raw_boxes[:-1]):
@@ -36,7 +37,7 @@ def reconcile(group, args=None):  # pylint: disable=unused-argument
         'top': round(sum(b['top'] for b in boxes) / count),
         'bottom': round(sum(b['bottom'] for b in boxes) / count)}
 
-    return reason, box
+    return reason, json.dumps(box)
 
 
 def overlaps_2d(box1, box2):
@@ -56,6 +57,7 @@ def adjust_reconciled_columns(reconciled, column_types):
     columns = {c for c in reconciled.columns
                if column_types.get(c, {'type': ''})['type'] == 'box'}
     for column in columns:
+        reconciled[column] = reconciled[column].apply(json.loads)
         for i, edge in enumerate(['left', 'right', 'top', 'bottom'], 1):
             column_name = '{} {}'.format(column, edge)
             column_types[column_name] = {
@@ -64,6 +66,7 @@ def adjust_reconciled_columns(reconciled, column_types):
                 'name': column_name}
             reconciled[column_name] = reconciled[column].apply(
                 partial(_get_edge, edge=edge))
+        reconciled[column] = reconciled[column].apply(json.dumps)
     return reconciled
 
 
