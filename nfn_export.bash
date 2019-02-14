@@ -52,7 +52,7 @@ PREFIX="${WORKFLOW}_${RENAME}"
 DIR="output/${PREFIX}"
 
 RAW="${DIR}/${PREFIX}.raw_transcripts.${VERSION}.csv"
-RECONCILE="${DIR}/${PREFIX}.reconcile.${VERSION}.csv"
+RECONCILE="${DIR}/${PREFIX}.reconciled.${VERSION}.csv"
 SUMMARY="${DIR}/${PREFIX}.summary.${VERSION}.html"
 
 echo ""
