@@ -34,14 +34,14 @@ while getopts "a:v:w:r:e:c:h" option; do
     r) RENAME=${OPTARG};;
     v) VERSION=${OPTARG};;
     w) WORKFLOW=${OPTARG};;
-    c) COPYTO=${OPTARG};;
-    a) XARGS=${OPTARG};;
-    h) echo "$USAGE"
+    c) COPY_TO=${OPTARG};;
+    a) X_ARGS=${OPTARG};;
+    h) echo "${USAGE}"
        exit 1
   esac
 done
 
-if [ -z $EXPORT ] || [ -z $RENAME ] || [ -z $VERSION ] || [ -z $WORKFLOW ]
+if [[ -z ${EXPORT} ]] || [[ -z ${RENAME} ]] || [[ -z ${VERSION} ] ]|| [[ -z ${WORKFLOW} ]]
 then
   echo "Arguments: -v, -w, -r, & -e are required."
   echo "$USAGE"
@@ -52,27 +52,30 @@ PREFIX="${WORKFLOW}_${RENAME}"
 DIR="output/${PREFIX}"
 
 RAW="${DIR}/${PREFIX}.raw_transcripts.${VERSION}.csv"
-RECONCILE="${DIR}/${PREFIX}.reconciled.${VERSION}.csv"
+RECONCILED="${DIR}/${PREFIX}.reconciled.${VERSION}.csv"
 SUMMARY="${DIR}/${PREFIX}.summary.${VERSION}.html"
+UNRECONCILED="${DIR}/${PREFIX}.unreconciled.${VERSION}.csv"
 
 echo ""
-echo "Workflow:                  ${WORKFLOW}"
-echo "Reconciler Version:        v${VERSION}"
-echo "Name of Reconciled Folder: ${PREFIX}"
-# echo "Reconciled file            ${RECONCILE}"
-# echo "Summary file               ${SUMMARY}"
-# echo "Raw file                   ${RAW}"
-# echo "Copy to:                   ${COPYTO}"
+echo "Workflow:           ${WORKFLOW}"
+echo "Version:            v${VERSION}"
+echo "Name of Folder:     ${PREFIX}"
+# echo "Unreconciled file   ${UNRECONCILED}"
+# echo "Reconciled file     ${RECONCILED}"
+# echo "Summary file        ${SUMMARY}"
+# echo "Raw file            ${RAW}"
+# echo "Copy to:            ${COPY_TO}"
 echo ""
 
-mkdir -p $DIR
+mkdir -p ${DIR}
 
-cp $EXPORT $RAW
-cp data/NfN_Reconciliation_HelpV1.0.pdf $DIR
+cp ${EXPORT} ${RAW}
+cp data/NfN_Reconciliation_HelpV1.0.pdf ${DIR}
 
-python3 reconcile.py $XARGS -w $WORKFLOW -r $RECONCILE -s $SUMMARY $RAW
+python3 reconcile.py ${X_ARGS} -w ${WORKFLOW} -u ${UNRECONCILED} -r ${RECONCILED} -s ${SUMMARY} ${RAW}
 
-if [ -n "$COPYTO" ]
+
+if [[ -n "$COPY_TO" ]]
 then
-  cp -r $DIR $COPYTO
+  cp -r ${DIR} ${COPY_TO}
 fi

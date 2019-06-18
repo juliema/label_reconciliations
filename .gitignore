@@ -1,6 +1,8 @@
 .ipynb_checkpoints/
 junk*
 .~lock*
+.vscode/
+.idea/
 
 .cache/
 *.pyc
@@ -12,6 +14,7 @@ __pycache__/
 venv/
 
 temp/
+junk*
 output/
 background/
 data/raw/
