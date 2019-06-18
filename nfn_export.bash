@@ -41,7 +41,7 @@ while getopts "a:v:w:r:e:c:h" option; do
   esac
 done
 
-if [[ -z ${EXPORT} ]] || [[ -z ${RENAME} ]] || [[ -z ${VERSION} ] ]|| [[ -z ${WORKFLOW} ]]
+if [ -z ${EXPORT} ] || [ -z ${RENAME} ] || [ -z ${VERSION} ] ]|| [ -z ${WORKFLOW} ]
 then
   echo "Arguments: -v, -w, -r, & -e are required."
   echo "$USAGE"
@@ -75,7 +75,7 @@ cp data/NfN_Reconciliation_HelpV1.0.pdf ${DIR}
 python3 reconcile.py ${X_ARGS} -w ${WORKFLOW} -u ${UNRECONCILED} -r ${RECONCILED} -s ${SUMMARY} ${RAW}
 
 
-if [[ -n "$COPY_TO" ]]
+if [ -n "$COPY_TO" ]
 then
   cp -r ${DIR} ${COPY_TO}
 fi
