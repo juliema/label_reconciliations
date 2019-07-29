@@ -41,7 +41,7 @@ while getopts "a:v:w:r:e:c:h" option; do
   esac
 done
 
-if [ -z ${EXPORT} ] || [ -z ${RENAME} ] || [ -z ${VERSION} ] ]|| [ -z ${WORKFLOW} ]
+if [ -z ${EXPORT} ] || [ -z ${RENAME} ] || [ -z ${VERSION} ] || [ -z ${WORKFLOW} ]
 then
   echo "Arguments: -v, -w, -r, & -e are required."
   echo "$USAGE"
