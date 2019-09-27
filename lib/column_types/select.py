@@ -1,4 +1,5 @@
-"""Reconcile select lists.
+"""
+Reconcile select lists.
 
 Classifications are chosen from a controlled vocabulary.
 """

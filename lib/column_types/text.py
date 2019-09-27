@@ -3,8 +3,9 @@
 import re
 from collections import namedtuple
 from itertools import combinations
-from fuzzywuzzy import fuzz
 import inflect
+from fuzzywuzzy import fuzz  # pylint: disable=import-error
+
 
 E = inflect.engine()
 E.defnoun('The', 'All')
@@ -64,13 +65,16 @@ def reconcile(group, args=None):
 
 
 def only_filled_values(values):
-    """Get the filled items items in the group.
+    """
+    Get the filled items items in the group.
 
     Then sort them by frequency. Normalize the text for comparison by removing
-    spaces and punctuation, and setting all letters to lower case. We return
-    the longest the same value ("atestlabel") but we will return the second
-    one:
-      "A test label"  "a test label."   "A TEST LABEL"
+    spaces and punctuation, and setting all letters to lower case. The exemplar
+    for the group is the longest pre-normalized value. So if we have three
+    values like so:
+      "A test label"  "a Test Label."   "A TEST LABEL"
+    They will normalize to "a test label" and the second value "a Test Label."
+    will become the exemplar for that group.
     """
     all_filled = {}
     for value in values:
@@ -93,7 +97,7 @@ def top_partial_ratio(group, user_weights):
     """Return the best partial ratio match from fuzzywuzzy module."""
     scores = []
     group = group.reset_index(level=0, drop=True)
-    for combo in combinations(zip(group, group.index), 2):  # zip in username
+    for combo in combinations(zip(group, group.index), 2):
         # combo format is ((value1, username1),(value2, username2))
         score = fuzz.partial_ratio(combo[0][0], combo[1][0])
         if len(combo[0][0]) >= len(combo[1][0]):
@@ -104,9 +108,8 @@ def top_partial_ratio(group, user_weights):
         score = min(max(score, 0), 100)  # enforce a ceiling and floor
         scores.append(FuzzyRatioScore(score, value))
 
-    scores = sorted(scores,
-                    reverse=True,
-                    key=lambda s: (s.score, len(s.value)))
+    scores = sorted(
+        scores, reverse=True, key=lambda s: (s.score, len(s.value)))
     return scores[0]
 
 

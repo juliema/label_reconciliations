@@ -26,7 +26,7 @@ python reconcile.py -r data/reconciled.csv -s data/summary.html data/classificat
 
 reconcile.py takes a group of raw Notes from Nature transcripts for each subject and reconciles them into the "best" values. The strategy and specific rules for doing this are described in [this document](https://docs.google.com/document/d/1DqhWNsy9UAEgkRnIU7VHrdQL4oQzIm2pjrPULGKK21M/edit#heading=h.967a32z3bwbb).
 
-To get an idea of what this program does let's say that we asked three volunteers to transcribe a label with a country, a species name, a location, and a collector. The country is selected from a drop-down list and the species name, location, and collector are free form text fields. If the result of the input is like so:
+To get an idea of what this program does let's say that we asked three volunteers to transcribe a label with a country, a species name, a location, and a collector. The country is selected from a drop-down list and the species name, location, and collector are free form text fields. If the result of the input is this:
 
 Volunteer | subject_id | Country | Species Name | Location | Collector
 --------- | ---------- | ------- | ------------ | -------- | ---------
@@ -34,7 +34,7 @@ Jane | 1234 | Canada | Canis lupus | south Lonely Point | Peter
 Jack | 1234 | Canada | Canis lupus | south of Lonely Point | Alvin
 Jill | 1234 | Canada | Canis loopy | 5 mi. south of Lonely Point|
 
-We use a set of measures and heuristics to collapse these three transcripts into a single best transcript like so.
+We use a set of measures and heuristics to collapse these three transcripts into a single best transcript like this.
 
 subject_id | Country | Species Name | Location | Collector
 ---------- | ------- | ------------ | -------- | ---------
@@ -42,32 +42,69 @@ subject_id | Country | Species Name | Location | Collector
 
 ### Other Program Features
 
-- Many researchers will want to know how the program determined the "best" match. Use the summary file ("-s" option) to see how the matches were chosen. It also provides an indication of all of the no matches and potentially problematic matches.
+- Many researchers will want to know how the program determined the "best" match. You can use the summary file ("--summary" option) to see how the matches were chosen. It also provides an indication of all of the no matches and potentially problematic matches.
 
-- Using the "-u" option, You may also output a CSV file of the raw unreconciled data with the data in the JSON objects extracted into columns.
+- If you use the "--unreconciled" option, you will output a CSV file of the raw unreconciled data with the data in the JSON objects extracted into columns.
 
 
 # Reconciliation Logic
 
-- Below we describe our logic and process of reconciling multiple transcriptions into a single reconciled transcript for providers. This process is the first order reconciliation logic, the main idea is to capture the label information verbatim and not add any interpretations of the data (e.g. change  rd. to road). This logic is ideal for two reasons, first the instructions for the users is to transcribe the labels as-is and therefore the reconciled transcription should capture that idea. Second, interpretations of these labels could be different from each transcriber  (st. could be street or state) and may require input from the providers about each collection, and may fall under goals for future work. This transcription reconciliation process should be useful across all expeditions regardless of museum origin or taxonomic group covered.
+How we reconcile multiple transcriptions into a single transcript for providers. The main idea is to capture the label information verbatim and not add any interpretations of the data. E.g. we do not change change "rd." to "road". We do this for two reasons. First, the instructions for the citizen scientists is to transcribe the labels as-is and therefore the reconciled transcription should reflect that. Second, interpretations of these labels may be different from expedition to expedition. For example, "st." could be "street" or "state" depending on the context. We have attempted to make the transcription reconciliation process useful across all expeditions regardless of the museum origin or the taxonomic group covered.
 
-- There are two types of transcription fields, those that include a drop down menu (e.g. Country, State) and those that are free text (e.g. Location and Habitat). We have a different process for reconciling each of these types explained below. The output of the reconciled transcription will include not only the reconciled transcript but also in the ‘summary’ file information about the transcriptions for each category, including the number of completed responses and how well they match for each category (see Figure 1). This will allow providers to determine their level of confidence in each reconciled transcription and check labels that may have been more difficult. For example, if only one transcriber out of three was able to fill in a category, this label is more difficult and providers may choose to check these ones.
+There are a few types of transcription fields, the most commonly used are those that include a drop-down menu (e.g. Country or State) and those that are free text (e.g. Location or Habitat). We have a different process for reconciling each of these types explained in the sections below this one. In addition to the reconciliation output itself you may also get a summary of how the reconciliation was done including the number of completed responses and how well they matched for each category (see Figure 1). This allows providers to determine their level of confidence in each reconciled transcription and check labels that may have been more difficult. For example, if only one transcriber out of three was able to fill in a category, this label is more difficult and providers may choose to check these transcripts.
 
 ### Controlled Vocabulary Menu Reconciliations:
-- The reconciliations for the drop down menu cells are frequency based. In the  reconciled transcript the users will be returned the most frequently selected answer (e.g. if two users selected Arkansas and one selected Alabama the reconciled label will say Arkansas). Providers will be given the most frequently selected response. If there is more than one answer then the most common one will be selected. If there are two conflicting transcripts (one person chose one option and another chose another option) then you will have a “no match” situation. If there is an even split with 4 or more transcripts (two people chose one option and two others another option) then one option is chosen at random. This will only occur if there are 4 (or more) transcripts with two (or more) groups of exact matches..
+- These are values from a drop-down menu select control.
+
+- The reconciled value is the most frequently selected answer. For example, if two users selected "Arkansas" and one selected "Alabama" the reconciled value will be "Arkansas".
+
+- The algorithm we use is:
+
+  - First the selections are sorted by how many times each choice was selected.
+
+  - Next we check to see if no one made a selection. If that is the case we return a blank value and flag it like, "All 3 records are blank."
+
+  - Then we look for a unanimous match. If there is one we return that value and note it like, "Unanimous match, 3 of 3 records.". Note: A unanimous match also implies that no one left the selection blank.
+
+  - Next we look for a majority match. We return that value and a flag like, "Majority match, 2 of 3 records with 1 blank". In this case two people chose one option and one person left the option blank. If the minority vote was not blank then the comment would look like, "Majority match, 2 of 3 records with 0 blanks." If there is a tie, for instance if 2 people chose one option and 2 people chose another, then we randomly chose one of those options. Note: A majority match implies that more than one person selected the option.
+
+  - If only one person selected an option we return it and flag it like, "Only 1 transcript in 3 records."
+
+  - Finally, when everyone chooses a different option we return a blank and mark it like, "No select match on 3 records with 1 blank."
 
 ### Free Text Reconciliations:
-- The first step with the reconciliation of the free text fields is to first look for identical labels and again select the most common. If no identical labels are found we  use a normalization step where we remove white spaces, punctuationa and turn the capital letters to small letters and then look for matches (e.g. ‘M.   Denslow’ will be normalized to ‘mdenslow’).
-- Finally we use a fuzzy matching method for comparing the labels. The label selected for the reconciliation will differ depending on the category as indicated below.  The users will again receive information about the number of transcripts and in the case of disagreements between transcripts all possible answers will be given.
-- The selected transcription will include the most words with the shortest word length. We want to include all of the words in the transcript, but it seems that generally if people do not write exactly what is on the label that is because they have expanded an abbreviation (e.g. hwy to  highway) therefore we want the label with the shortest length for each word. So the label selected will have the most words but the shortest length of those words.  
-- One issue with these categories is that in some cases it is unclear which category the label data should be added to. For example, often it is unclear if data should go in the locality or the habitat field, if a label says ‘middle of a field’, is that locality or habitat information?  Since we don’t legislate how expeditions are setup to capture information, we cannot solve this issue for our providers  Our approach does not move information between categories. Ultimately it will be up to the next level of reconciliation interpretations done by providers to determine if the data are misplaced.
+- These values are from a text box control.
 
-### Summary of Free - Text Reconciliation process:
-- exact match = perfect match between the transcripts
-- normalized exact match = removed white spaces, punctiationa and capital letters and checks for a match
-- partial ratio match = parts of words in one transcript are found in anohter (e.g., 'rd' and 'road) always reports the score of the two transcripts with the highest matching score and one of those is selected.
-- token set ratio match = the words of one transcript are a subset of another and removes punctuation again compares all the transcripts to each other and reports the highest matching score between two.
-- no match = nothing matched between the transcripts. This could be because they were completely different or because two were blank whereas only one had a response.    
+- We also chose the most commonly selected answer but in this case what that is is more complicated.
+
+- The algorithm we use is:
+
+  - The first step is **Space Normalization**. This is where we remove leading and trailing white space and compress all internal white space into single spaces. For example "M.   Smith  " becomes "M. Smith".
+
+  - Next, we perform a second **Full Normalization** step. These values are strictly for grouping and are not returned. In this normalization we lowercase all of the letters and remove any punctuation from the string. For example, "M. Smith" from above now becomes "m smith".
+
+  - Now we group the items by the values from the full normalization but choose an exemplar of that group from the values we created from the space normalization. The exemplar from the group is the longest value in group. An example might help, if we have the following: "JRR Tolkien", "J.R.R. Tolkien", and "jrr tolkien". They will all normalize to the same "jrr tolkien" group but the exemplar will be the longest space only normalized value, "J.R.R. Tolkien". The idea here is that we want to remove irrelevant characters from the matching process but we want to keep the text as close to the original as possible. We found that people often skip entering punctuation and change capitalization.
+
+  - Then we make sure there are filled values for that field. If there aren't then we return a blank and flag it like, "All 3 records are blank."
+
+  - Then we look for a unanimous group. That is a group that has all of the entered transcripts. If there is one we return the exemplar from that group and flag it like, "Normalized unanimous match, 3 of 3 records." Note: A Unanimous match also implies that no one left the selection blank.
+
+  - Next we look for a group that has the majority of the transcripts. If there is one we return the group's exemplar and flag it like, "Normalized majority match, 2 of 3 records with 1 blank". If there is a tie, for instance if there are two groups both with two values in it, then we randomly chose one of those groups. Note: A majority match implies that more than one person entered text for the option.
+
+  - If only one person entered any text value we return it and flag it like, "Only 1 transcript in 3 records."
+
+  - Now we start trying fuzzy matching. We are fuzzy matching on the space normalized values and not the fully normalized values. The first fuzzy match we use is called a partial ratio match. If we have two strings of differing lengths we are looking for the largest overlap between the two strings and giving them a score based on the length of the overlap and the length of the two strings. We examine every combination of values (pairs) looking for the best partial ratio score. If the best score is above a user selected threshold (default 90) we return the longest value of the pair and flag it like, "Partial ratio match on 3 records with 1 blank, score=92". See https://github.com/seatgeek/fuzzywuzzy
+    - This match is analogous to the normalized exact matching and the reason for choosing the longer string to return is similar.
+    - FuzzyWuzzy uses its own string normalization and a Levenshtein distance during matching.
+
+  - If that fails we perform another fuzzy match called the token set ratio match. In this fuzzy match the two strings are broken into sets of words and the intersection between the two sets are scored using the intersection size, the lengths of the set differences, and the lengths of the strings. If the best token set ratio is above a user selected threshold (default 50) then we return the **shortest string with the most words**. That is we sort by score then by the number of words and then by the string length. The flag is given as, "Token set ratio match on 3 records with 0 blanks, score=62".
+    - So why do we make this seemingly odd choice for which string to return?
+    - The token set ratio does not consider the word order and is not analogous to an exact match like the partial ratio match.
+    - The selected transcription will include the most words with the shortest word length. We want to include all of the words in the transcript, but it seems that generally if people do not write exactly what is on the label that is because they have expanded an abbreviation (e.g. hwy to  highway) therefore we want the label with the shortest length for each word. So the label selected will have the most words but the shortest length of those words.
+
+  - Finally, when everyone chooses a different option we return a blank and mark it like, "No text match on 3 records with 1 blank."
+
+- One issue with categories is that in some cases it is unclear which category the label data should be added to. For example, often it is unclear if data should go in the locality or the habitat field, if a label says "middle of a field", is that locality or habitat information?  Since we don’t force how expeditions are setup to capture information, we cannot solve this issue for our providers. Our approach does not move information between categories. Ultimately it will be up to the next level of reconciliation interpretations done by providers to determine if the data are misplaced.
 
 ## What if you need more help?
  - We want to make sure you can use these outputs as efficiently as possible!  We are happy to field questions, explain more to you about all the details, or otherwise make sure you get what you want.  However, we can’t necessarily customize this code in cases where you have a special need.  If you need further customizations, contact us and we can discuss options with you for this effort and how to potentially set up means to cover those costs for our developers.  Alternatively feel free to fork the code and make it your own or improve upon ours!
