@@ -2,6 +2,7 @@
 
 import json
 from functools import partial
+from statistics import mean
 import inflect
 
 
@@ -32,10 +33,10 @@ def reconcile(group, args=None):  # pylint: disable=unused-argument
         len(raw_boxes), P('record', len(raw_boxes)))
 
     box = {
-        'left': round(sum(b['left'] for b in boxes) / count),
-        'right': round(sum(b['right'] for b in boxes) / count),
-        'top': round(sum(b['top'] for b in boxes) / count),
-        'bottom': round(sum(b['bottom'] for b in boxes) / count)}
+        'left': round(mean(b['left'] for b in boxes)),
+        'right': round(mean(b['right'] for b in boxes)),
+        'top': round(mean(b['top'] for b in boxes)),
+        'bottom': round(mean(b['bottom'] for b in boxes))}
 
     return reason, json.dumps(box)
 

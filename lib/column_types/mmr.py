@@ -1,8 +1,7 @@
 """Get mean median and mode for the group. Handle non-numeric characters."""
 
 import re
-import numpy as np
-import scipy.stats as stats
+import statistics as stats
 import inflect
 
 
@@ -25,15 +24,16 @@ def reconcile(group, args=None):  # pylint: disable=unused-argument
             len(values), P('record', len(values)))
         return reason, ''
 
-    mean = np.mean(numbers)
+    mean = stats.mean(numbers)
     mode = stats.mode(numbers)
+    mode_count = len(n for n in numbers if n == mode)
 
     value = ('mean={:.2f}, mode={:.2f} (occurs {} {}) '
              'range=[{:.2f}, {:.2f}]').format(
                  mean,
-                 mode.mode[0],
-                 mode.count[0],
-                 P('time', mode.count[0]),
+                 mode,
+                 mode_count,
+                 P('time', mode_count),
                  min(numbers),
                  max(numbers))
 
