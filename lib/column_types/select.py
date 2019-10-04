@@ -34,7 +34,7 @@ def reconcile(group, args=None):  # pylint: disable=unused-argument
         return reason, filled[0][0]
 
     if filled[0][1] > 1:
-        reason = 'Majority match, {} of {} {} with {} {}'.format(
+        reason = 'Match, {} of {} {} with {} {}'.format(
             filled[0][1], count, P('record', count),
             blanks, P('blank', blanks))
         return reason, filled[0][0]

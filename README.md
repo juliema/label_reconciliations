@@ -52,67 +52,34 @@ How we reconcile multiple transcriptions into a single transcript for providers.
 
 There are a few types of transcription fields, and by far the most commonly used are those that include a drop-down menu (e.g. Country or State) and those that are free text (e.g. Location or Habitat). We have a different process for reconciling each of these types explained in section below. In addition to the reconciliation output itself you may also get a summary of how the reconciliation was done including the number of completed responses and how well they matched for each category (see Figure 1). This allows providers to determine their level of confidence in each reconciled transcription and check labels that may have been more difficult. For example, if only one transcriber out of three was able to fill in a category, this label is more difficult and providers may choose to check these transcripts.
 
+Please note that the reconciliation logic is geared towards having a low number of transcripts. In the single digits range probably 5 to 3.
+
 ### Controlled Vocabulary Menu Reconciliations:
 
-- These are values from a drop-down menu select control.
+These are values from a drop-down menu select control.
 
-- The reconciled value is the most frequently selected answer. For example, if two users selected "Arkansas" and one selected "Alabama" the reconciled value will be "Arkansas".
-
-- The algorithm we use is:
-
-  - First the selections are sorted by how many times each choice was selected.
-
-  - Next we check to see if no one made any selection. If that is the case we return a blank value and flag it like, "All 3 records are blank."
-
-  - Then we look for a unanimous match. If there is one we return that value and note it like, "Unanimous match, 3 of 3 records.". Note: A unanimous match also implies that no one left the selection blank.
-
-  - Next we look for a majority match. We return that value and a flag like, "Majority match, 2 of 3 records with 1 blank". In this case two people chose one option and one person left the option blank. If the minority vote was not blank then the comment would look like, "Majority match, 2 of 3 records with 0 blanks." If there is a tie, for instance if 2 people chose one option and 2 people chose another, then we randomly chose one of those options. Note: A majority match implies that more than one person selected the option.
-
-  - If only one person selected any option we return it and flag it like, "Only 1 transcript in 3 records."
-
-  - Finally, when everyone chooses a different option we return a blank and mark it like, "No select match on 3 records with 1 blank."
+The reconciled value is the most frequently selected answer. For example, if two users selected "Arkansas" and one selected "Alabama" the reconciled value will be "Arkansas".
+In the event that there is a tie we randomly chose one of those options.
 
 ### Free Text Reconciliations:
 
-- These values are from a text box control.
+These values are from a text box control.
 
-- We also chose the most commonly selected answer but in this case what that is is more complicated.
+We also chose the most commonly selected answer but in this case what that is is more complicated.
 
-- The algorithm we use is:
+The algorithm is:
 
-  - The first step is **Space Normalization**. This is where we remove leading and trailing white space and compress all internal white space into single spaces. For example "M.   Smith  " becomes "M. Smith".
+1. We space normalize the string. This is, we remove leading and trailing white space and compress all internal white space into single spaces. For example "M.   Smith  " becomes "M. Smith". Now we look for the most common of these values. In the event that there is a tie we choose the longest string.
 
-  - Next, we perform a second **Full Normalization** step. These values are strictly for grouping and are never returned as a reconciled value. In this normalization step we lowercase all of the letters and remove any punctuation from the string. For example, "M. Smith" from above now becomes "m smith".
+1. If that fails me try a more more complicated string normalization via a lowercase and the removal of any punctuation. For example, "M. Smith" from above now becomes "m smith". Now we look for the most common of these values. If we find one we don't return this normalized value but the longest space-only normalized value. An example might help, if we have the following: "JRR Tolkien", "J.R.R. Tolkien", and "jrr tolkien". They will all normalize to the same "jrr tolkien" the value returned for the group is "J.R.R. Tolkien". The idea here is that we want to remove irrelevant characters from the matching process but we want to keep the text as close to the original as possible. We found that people often skip entering punctuation and change capitalization.
 
-  - Now we group the items by the values from the full normalization but choose an exemplar of that group from the values we created from the space normalization. The exemplar from the group is the longest value in group. An example might help, if we have the following: "JRR Tolkien", "J.R.R. Tolkien", and "jrr tolkien". They will all normalize to the same "jrr tolkien" group but the exemplar will be the longest space only normalized value, "J.R.R. Tolkien". The idea here is that we want to remove irrelevant characters from the matching process but we want to keep the text as close to the original as possible. We found that people often skip entering punctuation and change capitalization.
+1. Now we start trying fuzzy matching on the space normalized values. The first fuzzy match we use is called a partial ratio match. If we have two strings of differing lengths we are looking for the largest overlap between the two strings and giving them a score based on the length of the overlap and the lengths of the two strings. If the best match is above a threshold we return the longer string from the match pair. See https://github.com/seatgeek/fuzzywuzzy
 
-  - Then we make sure there are filled values for that field. If there aren't then we return a blank and flag it like, "All 3 records are blank."
+1. If that fails we perform another fuzzy match called the token set ratio match. Here we have abandoned word order and are treating the strings as sets of words. The score is based upon a pair of words set intersection size and the lengths of the strings. If the best token set ratio is above a threshold we return the **string with the most words but with the shortest character length**. That is we sort by score, then by the number of words, and then by the string length. See https://github.com/seatgeek/fuzzywuzzy
 
-  - Then we look for a unanimous group. That is a group that has all of the entered transcripts. If there is one we return the exemplar from that group and flag it like, "Normalized unanimous match, 3 of 3 records." Note: A Unanimous match also implies that no one left the selection blank.
+  - So why do we make this seemingly odd choice for this fuzzy match? The token set ratio does not consider the word order and is not analogous to an exact match like the partial ratio match. We want to include all of the words in the transcript, but it seems that, generally, if people do not write exactly what is on the label that it is because they have expanded an abbreviation (e.g. hwy to highway) therefore we want the label with the shortest length for each word keeping all of the information but also keeping the transcript as close to the original as possible.
 
-  - Next we look for a group that has the majority of the transcripts. If there is one we return the group's exemplar and flag it like, "Normalized majority match, 2 of 3 records with 1 blank". If there is a tie, for instance if there are two groups both with two values in it, then we randomly chose one of those groups. Note: A majority match implies that more than one person entered text for the option.
-
-  - If only one person entered any text value we return it and flag it like, "Only 1 transcript in 3 records."
-
-  - Now we start trying fuzzy matching. We are fuzzy matching on the space normalized values and not the fully normalized values. The first fuzzy match we use is called a partial ratio match. If we have two strings of differing lengths we are looking for the largest overlap between the two strings and giving them a score based on the length of the overlap and the lengths of the two strings. We examine every combination of values (pairs) looking for the best partial ratio score. If the best score is above a user selected threshold (default 90) we return the longest value of the pair and flag it like, "Partial ratio match on 3 records with 1 blank, score=92". See https://github.com/seatgeek/fuzzywuzzy
-
-    - This match is analogous to the normalized exact matching and the reason for choosing the longer string to return is similar.
-
-    - FuzzyWuzzy uses its own string normalization and a Levenshtein distance during matching.
-
-    - We also allow weighting of scores by user. So if you have a few really trustworthy citizen scientists then you can weight the scores so that their transcripts are used more often.
-
-  - If that fails we perform another fuzzy match called the token set ratio match. In this fuzzy match the two strings are broken into sets of words and the intersection between the two sets are scored using the intersection size, the lengths of the set differences, and the lengths of the strings. If the best token set ratio is above a user selected threshold (default 50) then we return the **string with the most words with the shortest character length**. That is we sort by score, then by the number of words, and then by the string length. The flag is given as, "Token set ratio match on 3 records with 0 blanks, score=62". See https://github.com/seatgeek/fuzzywuzzy
-
-    - So why do we make this seemingly odd choice for which string to return?
-
-    - The token set ratio does not consider the word order and is not analogous to an exact match like the partial ratio match.
-
-    - The selected transcription will include the most words with the shortest character length. We want to include all of the words in the transcript, but it seems that generally if people do not write exactly what is on the label that it is because they have expanded an abbreviation (e.g. hwy to  highway) therefore we want the label with the shortest length for each word keeping all of the information but also keeping the transcript as close to the original as possible.
-
-  - Finally, when everyone chooses a different option we return a blank and mark it like, "No text match on 3 records with 1 blank."
-
-- One issue with label categories is that in some cases it is unclear which category the label data should be added to. For example, often it is unclear if data should go in the locality or the habitat field, if a label says "middle of a field", is that locality or habitat information?  Since we don’t force how expeditions are setup to capture information, we cannot solve this issue for our providers. Our approach does not move information between categories. Ultimately, it will be up to the next level of reconciliation interpretations done by providers to determine if the data are misplaced.
+One issue with label categories is that in some cases it is unclear which category the label data should be added to. For example, often it is unclear if data should go in the locality or the habitat field, if a label says "middle of a field", is that locality or habitat information?  Since we don’t force how expeditions are setup to capture information, we cannot solve this issue for our providers. Our approach does not move information between categories. Ultimately, it will be up to the next level of reconciliation interpretations done by providers to determine if the data are misplaced.
 
 ## What if you need more help?
 

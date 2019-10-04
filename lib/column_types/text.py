@@ -1,7 +1,7 @@
 """Reconcile free text fields."""
 
 import re
-from collections import namedtuple
+from collections import namedtuple, defaultdict
 from itertools import combinations
 import inflect
 from fuzzywuzzy import fuzz  # pylint: disable=import-error
@@ -20,13 +20,35 @@ def reconcile(group, args=None):
     """Reconcile the data."""
     values = ['\n'.join([' '.join(ln.split()) for ln in str(g).splitlines()])
               for g in group]
-    filled = only_filled_values(values)
 
     count = len(values)
+
+    # Look for exact matches
+    exact = exact_match(values)
+    blanks = count - sum(f.count for f in exact)
+
+    if not exact:  # Note: Only spaces are removed
+        reason = '{} {} {} {} blank'.format(
+            P('The', count), count, P('record', count), P('is', count))
+        return reason, ''
+
+    if exact[0].count > 1 and exact[0].count == count:
+        reason = 'Exact unanimous match, {} of {} {}'.format(
+            exact[0].count, count, P('record', count))
+        return reason, exact[0].value
+
+    if exact[0].count > 1:
+        reason = 'Exact match, {} of {} {} with {} {}'.format(
+            exact[0].count, count, P('record', count),
+            blanks, P('blank', blanks))
+        return reason, exact[0].value
+
+    # Look for normalized exact matches
+    filled = only_filled_values(values)
     blanks = count - sum(f.count for f in filled)
 
-    if not filled:
-        reason = '{} {} {} {} blank'.format(
+    if not filled:  # Note: Both spaces & punctuation are removed
+        reason = '{} {} normalized {} {} blank'.format(
             P('The', count), count, P('record', count), P('is', count))
         return reason, ''
 
@@ -36,7 +58,7 @@ def reconcile(group, args=None):
         return reason, filled[0].value
 
     if filled[0].count > 1:
-        reason = 'Normalized majority match, {} of {} {} with {} {}'.format(
+        reason = 'Normalized match, {} of {} {} with {} {}'.format(
             filled[0].count, count, P('record', count),
             blanks, P('blank', blanks))
         return reason, filled[0].value
@@ -64,6 +86,16 @@ def reconcile(group, args=None):
     return reason, ''
 
 
+def exact_match(values):
+    """Look for exact matches in the value list."""
+    filled = defaultdict(int)
+    for value in values:
+        filled[value] += 1
+
+    exact = [ExactScore(k, v) for k, v in filled.items() if k]
+    return sorted(exact, key=lambda s: (s.count, len(s.value)), reverse=True)
+
+
 def only_filled_values(values):
     """
     Get the filled items items in the group.
@@ -74,16 +106,14 @@ def only_filled_values(values):
     values like so:
       "A test label"  "a Test Label."   "A TEST LABEL"
     They will normalize to "a test label" and the second value "a Test Label."
-    will become the exemplar for that group.
+    will become the returned value for that group.
     """
-    all_filled = {}
+    all_filled = defaultdict(list)
     for value in values:
         value = value.strip()
         if value:
             squished = re.sub(r'\W+', '', value).lower()
-            same_values = all_filled.get(squished, [])
-            same_values.append(value)
-            all_filled[squished] = same_values
+            all_filled[squished].append(value)
 
     only_filled = []
     for _, vals in all_filled.items():
@@ -136,5 +166,5 @@ def top_token_set_ratio(values):
     ordered = sorted(
         scores,
         reverse=True,
-        key=lambda s: (s.score, s.tokens, 1000000 - len(s.value)))
+        key=lambda s: (s.score, s.tokens, -len(s.value)))
     return ordered[0]
