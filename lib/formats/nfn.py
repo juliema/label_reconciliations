@@ -47,8 +47,8 @@ def read(args):
                     if k not in unwanted_columns}
 
     columns = util.sort_columns(args, df.columns, column_types)
-    df = df.loc[:, ~df.columns.duplicated()]
     df = df.reindex(columns, axis='columns').fillna('')
+    df = df.loc[:, ~df.columns.duplicated()]
     df = df.sort_values([args.group_by, STARTED_AT])
     df = df.drop_duplicates([args.group_by, USER_NAME], keep='first')
     df = df.groupby(args.group_by).head(args.keep_count)
@@ -137,7 +137,7 @@ def extract_subject_data(df, column_types):
     columns = [re.sub(r'^_+|_$', '', c) for c in columns]
     columns = [SUBJECT_PREFIX + c for c in columns]
 
-    columns = {old: new for old, new in zip(data.columns, columns)}
+    columns = dict(zip(data.columns, columns))
     data = data.rename(columns=columns)
 
     df = pd.concat([df, data], axis=1)
