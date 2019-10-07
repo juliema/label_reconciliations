@@ -29,11 +29,11 @@ To get an idea of what this program does let's say that we asked three volunteer
 
 Volunteer | subject_id | Country | Species Name | Location | Collector
 --------- | ---------- | ------- | ------------ | -------- | ---------
-Jane | 1234 | Canada | Canis lupus | south Lonely Point | Peter
-Jack | 1234 | Canada | Canis lupus | south of Lonely Point | Alvin
-Jill | 1234 | Canada | Canis loopy | 5 mi. south of Lonely Point|
+Jane | 1234 | Canada | Canis lupus | south Lonely Point | Alvin
+Jack | 1234 | Canada | Canis lupus | south of Lonely Point | Simon
+Jill | 1234 | Canada | Canis loopy | 5 mi. south of Lonely Point| Theodore
 
-We use a set of measures and heuristics to collapse these three transcripts into a single best transcript like this.
+We use a set of measures and heuristics to collapse these three transcripts into a single "best" transcript like this.
 
 subject_id | Country | Species Name | Location | Collector
 ---------- | ------- | ------------ | -------- | ---------
@@ -45,7 +45,6 @@ Many researchers will want to know how the program determined the "best" match. 
 
 If you use the "--unreconciled" option, you will output a CSV file of the raw unreconciled data with the data in the JSON objects extracted into columns. This is useful for performing your own analysis on the data.
 
-
 # Reconciliation Logic
 
 The main idea is to capture the label information verbatim and not add any interpretations of the data. E.g. we do not change change "rd." to "road". We do this for two reasons. First, the instructions for the citizen scientists is to transcribe the labels as-is and therefore the reconciled transcription should reflect that. Second, interpretations of these labels may be different from expedition to expedition. For example, "st." could be "street" or "state" depending on the context. We have attempted to make the transcription reconciliation process useful across all expeditions regardless of the museum origin or the taxonomic group covered.
@@ -56,7 +55,7 @@ There are a few types of transcription fields, and by far the most commonly used
 
 Note that the reconciliation logic is geared towards having a low number of transcripts. In the single digits range, probably 5 to 3.
 
-### Controlled Vocabulary Menu Reconciliations:
+### Controlled Vocabulary Reconciliations:
 
 These are values from a drop-down menu select control. The reconciled value is the most frequently selected answer. For example, if two users selected "Arkansas" and one selected "Alabama" the reconciled value will be "Arkansas". In the event that there is a tie we randomly chose one of those options.
 
