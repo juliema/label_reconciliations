@@ -33,6 +33,12 @@ def reconcile(group, args=None):  # pylint: disable=unused-argument
             filled[0][1], count, P('record', count))
         return reason, filled[0][0]
 
+    if len(filled) > 1 and filled[0][1] > 1 and filled[0][1] == filled[1][1]:
+        reason = 'Match is a tie, {} of {} {} with {} {}'.format(
+            filled[0][1], count, P('record', count),
+            blanks, P('blank', blanks))
+        return reason, filled[0][0]
+
     if filled[0][1] > 1:
         reason = 'Match, {} of {} {} with {} {}'.format(
             filled[0][1], count, P('record', count),

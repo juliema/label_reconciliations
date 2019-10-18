@@ -37,6 +37,13 @@ def reconcile(group, args=None):
             exact[0].count, count, P('record', count))
         return reason, exact[0].value
 
+    if len(exact) > 1 and exact[0].count > 1 \
+            and exact[0].count == exact[1].count:
+        reason = 'Exact match is a tie, {} of {} {} with {} {}'.format(
+            exact[0].count, count, P('record', count),
+            blanks, P('blank', blanks))
+        return reason, exact[0].value
+
     if exact[0].count > 1:
         reason = 'Exact match, {} of {} {} with {} {}'.format(
             exact[0].count, count, P('record', count),
@@ -55,6 +62,13 @@ def reconcile(group, args=None):
     if filled[0].count > 1 and filled[0].count == count:
         reason = 'Normalized unanimous match, {} of {} {}'.format(
             filled[0].count, count, P('record', count))
+        return reason, filled[0].value
+
+    if len(filled) > 1 and filled[0].count > 1 \
+            and filled[0].count == filled[1].count:
+        reason = 'Normalized match is a tie, {} of {} {} with {} {}'.format(
+            filled[0].count, count, P('record', count),
+            blanks, P('blank', blanks))
         return reason, filled[0].value
 
     if filled[0].count > 1:
