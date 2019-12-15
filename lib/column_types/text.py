@@ -37,8 +37,8 @@ def reconcile(group, args=None):
             exact[0].count, count, P('record', count))
         return reason, exact[0].value
 
-    if len(exact) > 1 and exact[0].count > 1 \
-            and exact[0].count == exact[1].count:
+    if (len(exact) > 1 and exact[0].count > 1
+            and exact[0].count == exact[1].count):
         reason = 'Exact match is a tie, {} of {} {} with {} {}'.format(
             exact[0].count, count, P('record', count),
             blanks, P('blank', blanks))

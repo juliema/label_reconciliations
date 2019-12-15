@@ -8,12 +8,23 @@ import lib.util as util
 
 # These depend on the patterns put into explanations
 NO_MATCH_PATTERN = r'No (?:select|text) match on'
-MAJORITY_MATCH_PATTERN = r'^(?:Majority|Normalized majority) match'
-UNANIMOUS_MATCH_PATTERN = r'^(?:Unanimous|Normalized unanimous) match'
+
+MAJORITY_MATCH_PATTERN = (
+    '^(?:Majority|Normalized majority|Exact) match'
+    '|^(?:Exact|Normalized) match is a tie'
+    '|^Match is a tie,'
+    '|^Match,')
+
+UNANIMOUS_MATCH_PATTERN = (
+    r'^(?:Unanimous|Normalized unanimous|Exact unanimous) match')
+
 FUZZ_MATCH_PATTERN = r'^(?:Partial|Token set) ratio match'
-ALL_BLANK_PATTERN = (r'^(?:(?:All|The) \d+ record'
-                     r'|^There (?:was|were) no numbers? in)')
+
+ALL_BLANK_PATTERN = (
+    r'^(?:(?:All|The) \d+ record|^There (?:was|were) no numbers? in)')
+
 ONESIES_PATTERN = r'Only 1 transcript in|There was 1 number in'
+
 MMR_PATTERN = r'^There (?:was|were) (?:\d+) numbers? in'
 
 # Combine for the problem pattern
