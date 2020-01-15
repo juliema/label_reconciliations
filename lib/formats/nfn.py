@@ -47,8 +47,8 @@ def read(args):
                     if k not in unwanted_columns}
 
     columns = util.sort_columns(args, df.columns, column_types)
-    df = df.reindex(columns, axis='columns').fillna('')
     df = df.loc[:, ~df.columns.duplicated()]
+    df = df.reindex(columns, axis='columns').fillna('')
     df = df.sort_values([args.group_by, STARTED_AT])
     df = df.drop_duplicates([args.group_by, USER_NAME], keep='first')
     df = df.groupby(args.group_by).head(args.keep_count)
