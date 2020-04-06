@@ -1,5 +1,4 @@
 .ipynb_checkpoints/
-junk*
 .~lock*
 .vscode/
 .idea/
@@ -18,3 +17,4 @@ junk*
 output/
 background/
 data/raw/
+data/csv_input/
