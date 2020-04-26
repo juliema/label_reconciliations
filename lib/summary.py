@@ -188,7 +188,7 @@ def reconciled_summary(explanations, column_types):
             explanations[col].str.contains(ONESIES_PATTERN)].shape[0]
 
         num_mmr = ''
-        if col_type == 'mmr':
+        if col_type in ('mmr', 'mean'):
             num_mmr = '{:,}'.format(explanations[
                 explanations[col].str.contains(MMR_PATTERN)].shape[0]
                                     - num_onesies)
