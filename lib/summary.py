@@ -58,7 +58,7 @@ def report(args, unreconciled, reconciled, explanations, column_types):
     summary = template.render(
         args=vars(args),
         header=header_data(args, unreconciled, reconciled, transcribers),
-        groups=groups,
+        groups=iter(groups.items()),
         filters=filters,
         columns=util.sort_columns(args, unreconciled, column_types),
         transcribers=transcribers,
@@ -71,7 +71,7 @@ def report(args, unreconciled, reconciled, explanations, column_types):
 
 
 def get_groups(args, unreconciled, reconciled, explanations):
-    """Convert the dataframes into dictionaries."""
+    """Convert the data frames into dictionaries."""
     groups = {}
 
     # Put reconciled data into the dictionary
