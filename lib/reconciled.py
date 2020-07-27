@@ -2,8 +2,7 @@
 
 import lib.util as util
 
-
-EXPALNATION_SUFFIX = ' Explanation'
+EXPLANATION_SUFFIX = ' Explanation'
 
 
 def reconciled_output(
@@ -44,8 +43,8 @@ def reconciled_output(
 
 
 def add_explanations(reconciled, explanations, column_types):
-    """Add explation columns just after the reconciled value columns."""
-    reconciled = reconciled.join(explanations, rsuffix=EXPALNATION_SUFFIX)
+    """Add explanation columns just after the reconciled value columns."""
+    reconciled = reconciled.join(explanations, rsuffix=EXPLANATION_SUFFIX)
 
     transcribed = {c for c in reconciled.columns
                    if column_types.get(c, {'type': 'same'})['type'] != 'same'}
@@ -53,7 +52,7 @@ def add_explanations(reconciled, explanations, column_types):
     moves = []
     for column in transcribed:
         moves.append(column)
-        _append_column(reconciled, moves, column + EXPALNATION_SUFFIX)
+        _append_column(reconciled, moves, column + EXPLANATION_SUFFIX)
     others = [c for c in reconciled.columns if c not in moves]
 
     return reconciled.reindex(moves + others, axis='columns')
@@ -85,7 +84,7 @@ def add_transcribers(reconciled, unreconciled, column_types):
     moves = []
     for column in transcribed:
         moves.append(column)
-        _append_column(reconciled, moves, column + EXPALNATION_SUFFIX)
+        _append_column(reconciled, moves, column + EXPLANATION_SUFFIX)
         for i in range(1, max_transcriber):
             _append_column(reconciled, moves, f'user_name {i}')
             _append_column(reconciled, moves, f'{column} {i}')

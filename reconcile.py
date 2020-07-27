@@ -149,8 +149,8 @@ def parse_command_line():
             See https://github.com/seatgeek/fuzzywuzzy.""")
 
     parser.add_argument(
-        '--keep-count', default=3, type=int,
-        help="""How many raw rows to keep for each --group-by. Default=3.""")
+        '--keep-count', default=99, type=int,
+        help="""How many raw rows to keep for each --group-by. Default=99.""")
 
     parser.add_argument(
         '--tool-label-hack', default='', metavar='HACK',
