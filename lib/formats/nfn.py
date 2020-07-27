@@ -198,7 +198,7 @@ def flatten_annotation(args, column_types, tasks, task):
     elif 'tool_label' in task:
         tool_label_annotation(args, column_types, tasks, task)
     else:
-        raise ValueError('Annotation task type not found.')
+        print('Annotation task type not found: {}'.format(task))
 
 
 def subtask_annotation(args, column_types, tasks, task):

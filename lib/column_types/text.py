@@ -18,6 +18,7 @@ ExactScore = namedtuple('ExactScore', 'value count')
 
 def reconcile(group, args=None):
     """Reconcile the data."""
+    group = group.astype(str)
     values = ['\n'.join([' '.join(ln.split()) for ln in str(g).splitlines()])
               for g in group]
 

@@ -15,7 +15,7 @@ import lib.reconciled as reconciled_df
 import lib.summary as summary
 import lib.merged as merged
 
-VERSION = '0.4.7'
+VERSION = '0.4.8'
 
 
 def parse_command_line():
