@@ -3,7 +3,9 @@
 import re
 from datetime import datetime
 from urllib.parse import urlparse
+
 from jinja2 import Environment, PackageLoader
+
 import lib.util as util
 
 # These depend on the patterns put into explanations
@@ -179,7 +181,9 @@ def reconciled_summary(explanations, column_types):
         num_fuzzy_match = ''
         if col_type == 'text':
             num_fuzzy_match = '{:,}'.format(explanations[
-                explanations[col].str.contains(FUZZ_MATCH_PATTERN)].shape[0])
+                                                explanations[col].str.contains(
+                                                    FUZZ_MATCH_PATTERN)].shape[
+                                                0])
 
         num_no_match = explanations[
             explanations[col].str.contains(NO_MATCH_PATTERN)].shape[0]
@@ -190,7 +194,8 @@ def reconciled_summary(explanations, column_types):
         num_mmr = ''
         if col_type in ('mmr', 'mean'):
             num_mmr = '{:,}'.format(explanations[
-                explanations[col].str.contains(MMR_PATTERN)].shape[0]
+                                        explanations[col].str.contains(
+                                            MMR_PATTERN)].shape[0]
                                     - num_onesies)
 
         how_reconciled.append({
