@@ -9,6 +9,8 @@
 - Optional: `source venv/bin/activate`
 - `pip install -r requirements.txt`
 
+**Please note: There are reports of problems with 32-bit versions of Python , particularly combined with large input files.**
+
 ## Examples
 
 You may get program help via:
