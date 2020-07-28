@@ -129,6 +129,10 @@
 </script>
 
 <script>
+const groups = {
+    {% for key, value in groups %}"{{key | safe}}": {{value | safe}},
+    {% endfor %}
+};
 {% include 'lib/summary/transcriptions.js' -%}
 </script>
 
