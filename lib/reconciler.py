@@ -15,13 +15,12 @@ def build(args, unreconciled, column_types):
 
     # Get group and then reconcile the data
     aggregators = {r: partial(reconcilers[r].reconcile, args=args)
-                   for r in reconcilers
-                   if r in unreconciled.columns}
+                   for r in reconcilers if r in unreconciled.columns}
 
     # keep the userID associated with the data handed to the reconciler.
-    reconciled = unreconciled.set_index(
-        args.user_column, append=True).groupby(
-            args.group_by).agg(aggregators, args)
+    reconciled = unreconciled.set_index(args.user_column, append=True)
+    reconciled = reconciled.groupby(args.group_by)
+    reconciled = reconciled.agg(aggregators, args)
     explanations = pd.DataFrame()
     for column in reconciled.columns:
         reconciler = reconcilers.get(column)

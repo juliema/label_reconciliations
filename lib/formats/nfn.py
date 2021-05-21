@@ -2,10 +2,12 @@
 
 # pylint: disable=invalid-name,unused-argument
 
-import re
 import json
-from dateutil.parser import parse
+import re
+
 import pandas as pd
+from dateutil.parser import parse
+
 import lib.util as util
 
 SUBJECT_PREFIX = 'subject_'
@@ -63,6 +65,7 @@ def remove_rows_not_in_workflow(df, workflow_id):
 
 def get_nfn_only_defaults(df, args, workflow_id):
     """Set nfn-only argument defaults."""
+    workflow_name = ''
     if args.summary:
         workflow_name = get_workflow_name(df)
 
@@ -89,6 +92,7 @@ def get_workflow_id(df, args):
 
 def get_workflow_name(df):
     """Extract and format the workflow name from the data df."""
+    workflow_name = ''
     try:
         workflow_name = df.workflow_name.iloc[0]
         workflow_name = re.sub(r'^[^_]*_', '', workflow_name)
@@ -239,8 +243,10 @@ def tool_label_annotation(args, column_types, tasks, task):
     # Get the actual tool label value
     label = '{}: select'.format(task['tool_label'])
     label = annotation_key(tasks, label)
-    value = task['details'][0]['value'][0]['value']
-    tasks[label] = args.tool_label_hack.get(value, '')
+    # The commented out line is how Label Babel 1 was formatted
+    # value = task['details'][0]['value'][0]['value']
+    value = task['details'][0]['value']
+    tasks[label] = args.tool_label_hack.get(str(value), '')
     append_column_type(column_types, label, 'select')
 
 
