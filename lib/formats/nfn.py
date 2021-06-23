@@ -229,25 +229,36 @@ def task_label_annotation(column_types, tasks, task):
 
 def tool_label_annotation(args, column_types, tasks, task):
     """Handle a tool label task annotation."""
-    # Get the tool label attributes
-    label = '{}: box'.format(task['tool_label'])
-    label = annotation_key(tasks, label)
-    value = json.dumps({
-        'left': round(task['x']),
-        'right': round(task['x'] + task['width']),
-        'top': round(task['y']),
-        'bottom': round(task['y'] + task['height'])})
+    if task.get('width'):
+        label = '{}: box'.format(task['tool_label'])
+        label = annotation_key(tasks, label)
+        value = json.dumps({
+            'left': round(task['x']),
+            'right': round(task['x'] + task['width']),
+            'top': round(task['y']),
+            'bottom': round(task['y'] + task['height'])})
+    elif task.get('x1'):
+        label = '{}: line'.format(task['tool_label'])
+        value = json.dumps({
+            'x1': round(task['x1']),
+            'y1': round(task['y1']),
+            'x2': round(task['x2']),
+            'y2': round(task['y2'])})
+    else:
+        label = '{}: point'.format(task['tool_label'])
+        value = json.dumps({'x': round(task['x']), 'y': round(task['y'])})
+
     tasks[label] = value
     append_column_type(column_types, label, 'box')
 
-    # Get the actual tool label value
-    label = '{}: select'.format(task['tool_label'])
-    label = annotation_key(tasks, label)
-    # The commented out line is how Label Babel 1 was formatted
-    # value = task['details'][0]['value'][0]['value']
-    value = task['details'][0]['value']
-    tasks[label] = args.tool_label_hack.get(str(value), '')
-    append_column_type(column_types, label, 'select')
+    if task.get('tool_label') and task.get('details'):
+        label = '{}: select'.format(task['tool_label'])
+        label = annotation_key(tasks, label)
+        # The commented out line is how Label Babel 1 was formatted
+        # value = task['details'][0]['value'][0]['value']
+        value = task['details'][0]['value']
+        tasks[label] = args.tool_label_hack.get(str(value), '')
+        append_column_type(column_types, label, 'select')
 
 
 def annotation_key(tasks, label):
