@@ -248,6 +248,7 @@ def tool_label_annotation(args, column_types, tasks, task):
         label = '{}: point'.format(task['tool_label'])
         value = json.dumps({'x': round(task['x']), 'y': round(task['y'])})
 
+    label = annotation_key(tasks, label)
     tasks[label] = value
     append_column_type(column_types, label, 'box')
 
