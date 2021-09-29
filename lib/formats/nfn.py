@@ -34,7 +34,8 @@ def read(args):
 
     # Get the subject_id from the subject_ids list, use the first one
     df[args.group_by] = df.subject_ids.map(
-        lambda x: int(str(x).split(';')[0]))
+        lambda x: int(str(x).split(';')[0])
+    )
 
     # Remove unwanted columns
     unwanted_columns = [c for c in df.columns
@@ -84,8 +85,10 @@ def get_workflow_id(df, args):
     workflow_ids = df.workflow_id.unique()
 
     if len(workflow_ids) > 1:
-        util.error_exit('There are multiple workflows in this file. '
-                        'You must provide a workflow ID as an argument.')
+        util.error_exit(
+            'There are multiple workflows in this file. '
+            'You must provide a workflow ID as an argument.'
+            )
 
     return workflow_ids[0]
 
@@ -103,6 +106,7 @@ def get_workflow_name(df):
 
 def extract_metadata(df):
     """Extract a few fields from the metadata JSON object."""
+
     def _extract_date(value):
         return parse(value).strftime('%d-%b-%Y %H:%M:%S')
 
@@ -168,7 +172,8 @@ def extract_annotations(df, args, column_types):
     df = pd.concat([df, data], axis=1)
 
     return adjust_column_names(
-        df, column_types).drop(['annotations'], axis=1)
+        df, column_types
+    ).drop(['annotations'], axis=1)
 
 
 # #############################################################################
@@ -193,7 +198,11 @@ def flatten_annotations(annotations, args, column_types):
 
 def flatten_annotation(args, column_types, tasks, task):
     """Flatten one annotation recursively."""
-    if isinstance(task.get('value'), list):
+    if (isinstance(task.get('value'), list) and task['value'] and isinstance(
+            task['value'][0], str
+    )):
+        list_annotation(column_types, tasks, task)
+    elif isinstance(task.get('value'), list):
         subtask_annotation(args, column_types, tasks, task)
     elif 'select_label' in task:
         select_label_annotation(column_types, tasks, task)
@@ -220,6 +229,14 @@ def select_label_annotation(column_types, tasks, task):
     append_column_type(column_types, key, 'select')
 
 
+def list_annotation(column_types, tasks, task):
+    """Handle a list of literals annotation."""
+    key = annotation_key(tasks, task['task_label'])
+    values = sorted(task.get('value', ''))
+    tasks[key] = ' '.join(values)
+    append_column_type(column_types, key, 'text')
+
+
 def task_label_annotation(column_types, tasks, task):
     """Handle a task label task annotation."""
     key = annotation_key(tasks, task['task_label'])
@@ -232,18 +249,24 @@ def tool_label_annotation(args, column_types, tasks, task):
     if task.get('width'):
         label = '{}: box'.format(task['tool_label'])
         label = annotation_key(tasks, label)
-        value = json.dumps({
-            'left': round(task['x']),
-            'right': round(task['x'] + task['width']),
-            'top': round(task['y']),
-            'bottom': round(task['y'] + task['height'])})
+        value = json.dumps(
+            {
+                'left': round(task['x']),
+                'right': round(task['x'] + task['width']),
+                'top': round(task['y']),
+                'bottom': round(task['y'] + task['height'])
+            }
+        )
     elif task.get('x1'):
         label = '{}: line'.format(task['tool_label'])
-        value = json.dumps({
-            'x1': round(task['x1']),
-            'y1': round(task['y1']),
-            'x2': round(task['x2']),
-            'y2': round(task['y2'])})
+        value = json.dumps(
+            {
+                'x1': round(task['x1']),
+                'y1': round(task['y1']),
+                'x2': round(task['x2']),
+                'y2': round(task['y2'])
+            }
+        )
     else:
         label = '{}: point'.format(task['tool_label'])
         value = json.dumps({'x': round(task['x']), 'y': round(task['y'])})
@@ -278,7 +301,8 @@ def append_column_type(column_types, key, column_type):
     if key not in column_types:
         last = util.last_column_type(column_types)
         column_types[key] = {
-            'type': column_type, 'order': last + util.COLUMN_ADD, 'name': key}
+            'type': column_type, 'order': last + util.COLUMN_ADD, 'name': key
+        }
 
 
 # #############################################################################
