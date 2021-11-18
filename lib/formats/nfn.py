@@ -98,11 +98,9 @@ def get_workflow_strings(workflow_csv, workflow_id):
 
     def _task_dive(node):
         if isinstance(node, dict) and node.get("value"):
-            if string := strings.get(node.get("label")):
+            string = strings.get(node.get("label"))
+            if string:
                 string = string.strip()
-                # task = node.get("label")
-                # tasks_ = [k for k, v in label_strings.items() if task.startswith(k)]
-                # task = tasks_[-1] if tasks_ else ""
                 label = node["label"].strip()
                 labels = [v for k, v in instructions.items() if label.startswith(k)]
                 label = labels[-1] if labels else ""
