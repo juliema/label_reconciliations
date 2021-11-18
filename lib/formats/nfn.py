@@ -6,6 +6,7 @@ import json
 import re
 from collections import defaultdict, namedtuple
 from dataclasses import dataclass, field
+from typing import Dict, List
 
 import pandas as pd
 from dateutil.parser import parse
@@ -21,8 +22,8 @@ WorkflowString = namedtuple("WorkflowString", "value label")
 
 @dataclass
 class WorkflowStrings:
-    label_strings: dict[str, list[str]] = field(default_factory=defaultdict(list))
-    value_strings: dict[str, WorkflowString] = field(default_factory=dict)
+    label_strings: Dict[str, List[str]] = field(default_factory=defaultdict(list))
+    value_strings: Dict[str, WorkflowString] = field(default_factory=dict)
 
 
 def read(args):
