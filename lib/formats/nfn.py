@@ -1,18 +1,28 @@
-"""Convert Adler's Notes from Nature expedition CSV format."""
+"""Convert Zooniverse Notes from Nature expedition CSV format to something sane."""
 
 # pylint: disable=invalid-name,unused-argument
 
 import json
 import re
+from collections import defaultdict, namedtuple
+from dataclasses import dataclass, field
 
 import pandas as pd
 from dateutil.parser import parse
 
 import lib.util as util
 
-SUBJECT_PREFIX = 'subject_'
 STARTED_AT = 'classification_started_at'
 USER_NAME = 'user_name'
+
+
+WorkflowString = namedtuple("WorkflowString", "value label")
+
+
+@dataclass
+class WorkflowStrings:
+    label_strings: dict[str, list[str]] = field(default_factory=defaultdict(list))
+    value_strings: dict[str, WorkflowString] = field(default_factory=dict)
 
 
 def read(args):
@@ -26,9 +36,12 @@ def read(args):
 
     get_nfn_only_defaults(df, args, workflow_id)
 
+    # A hack to workaround crap coming back from Zooniverse
+    workflow_strings = get_workflow_strings(args.workflow_csv, workflow_id)
+
     # Extract the various json blobs
     column_types = {}
-    df = (extract_annotations(df, args, column_types)
+    df = (extract_annotations(df, column_types, workflow_strings)
           .pipe(extract_subject_data, column_types)
           .pipe(extract_metadata))
 
@@ -44,7 +57,7 @@ def read(args):
                             'user_ip',
                             'subject_ids',
                             'subject_data',
-                            (SUBJECT_PREFIX + 'retired').lower()]]
+                            'subject_retired']]
     df = df.drop(unwanted_columns, axis=1)
     column_types = {k: v for k, v in column_types.items()
                     if k not in unwanted_columns}
@@ -57,6 +70,54 @@ def read(args):
     df = df.groupby(args.group_by).head(args.keep_count)
 
     return df, column_types
+
+
+def get_workflow_strings(workflow_csv, workflow_id):
+    """Get strings from the workflow when they're not in the annotations."""
+    value_strings = {}
+    if not workflow_csv:
+        return value_strings
+
+    df = pd.read_csv(workflow_csv)
+    df = df.loc[df.workflow_id == int(workflow_id), :]
+    row = df.iloc[-1]
+
+    strings = {k: v for k, v in json.loads(row['strings']).items()}
+
+    instructions = {}
+    label_strings = defaultdict(list)
+    for key, value in strings.items():
+        if key.endswith("instruction"):
+            parts = key.split(".")
+            key = ".".join(parts[:-1])
+            value = value.strip()
+            instructions[key] = value
+            key = ".".join(parts[:-2])
+            if key:
+                label_strings[key].append(value)
+
+    def _task_dive(node):
+        if isinstance(node, dict) and node.get("value"):
+            if string := strings.get(node.get("label")):
+                string = string.strip()
+                # task = node.get("label")
+                # tasks_ = [k for k, v in label_strings.items() if task.startswith(k)]
+                # task = tasks_[-1] if tasks_ else ""
+                label = node["label"].strip()
+                labels = [v for k, v in instructions.items() if label.startswith(k)]
+                label = labels[-1] if labels else ""
+                value_strings[node["value"]] = WorkflowString(string, label)
+        elif isinstance(node, dict):
+            for child in node.values():
+                _task_dive(child)
+        elif isinstance(node, list):
+            for child in node:
+                _task_dive(child)
+
+    tasks = json.loads(row['tasks'])
+    _task_dive(tasks)
+
+    return WorkflowStrings(label_strings=label_strings, value_strings=value_strings)
 
 
 def remove_rows_not_in_workflow(df, workflow_id):
@@ -143,7 +204,7 @@ def extract_subject_data(df, column_types):
 
     columns = [re.sub(r'\W+', '_', c) for c in data.columns]
     columns = [re.sub(r'^_+|_$', '', c) for c in columns]
-    columns = [SUBJECT_PREFIX + c for c in columns]
+    columns = ['subject_' + c for c in columns]
 
     columns = dict(zip(data.columns, columns))
     data = data.rename(columns=columns)
@@ -158,27 +219,26 @@ def extract_subject_data(df, column_types):
 
     return df
 
+# #############################################################################
 
-def extract_annotations(df, args, column_types):
+
+def extract_annotations(df, column_types, workflow_strings):
     """
     Extract annotations from the json object in the annotations column.
 
-    Annotations are nested json blobs with a peculiar data format.
+    Annotations are nested json blobs with a WTF format.
     """
     data = df.annotations.map(json.loads)
-    data = [flatten_annotations(a, args, column_types) for a in data]
+    data = [flatten_annotations(a, column_types, workflow_strings)
+            for a in data]
     data = pd.DataFrame(data, index=df.index)
 
     df = pd.concat([df, data], axis=1)
 
-    return adjust_column_names(
-        df, column_types
-    ).drop(['annotations'], axis=1)
+    return adjust_column_names(df, column_types).drop(['annotations'], axis=1)
 
 
-# #############################################################################
-
-def flatten_annotations(annotations, args, column_types):
+def flatten_annotations(annotations, column_types, workflow_strings):
     """
     Flatten annotations.
 
@@ -191,33 +251,36 @@ def flatten_annotations(annotations, args, column_types):
     tasks = {}
 
     for annotation in annotations:
-        flatten_annotation(args, column_types, tasks, annotation)
+        flatten_annotation(column_types, tasks, annotation, workflow_strings, "")
 
     return tasks
 
 
-def flatten_annotation(args, column_types, tasks, task):
+def flatten_annotation(column_types, tasks, task, workflow_strings, task_id):
     """Flatten one annotation recursively."""
+    task_id = task.get("task", task_id)
+
     if (isinstance(task.get('value'), list) and task['value'] and isinstance(
             task['value'][0], str
     )):
         list_annotation(column_types, tasks, task)
     elif isinstance(task.get('value'), list):
-        subtask_annotation(args, column_types, tasks, task)
+        subtask_annotation(column_types, tasks, task, workflow_strings, task_id)
     elif 'select_label' in task:
         select_label_annotation(column_types, tasks, task)
     elif 'task_label' in task:
         task_label_annotation(column_types, tasks, task)
     elif 'tool_label' in task:
-        tool_label_annotation(args, column_types, tasks, task)
+        tool_label_annotation(column_types, tasks, task, workflow_strings, task_id)
     else:
         print('Annotation task type not found: {}'.format(task))
 
 
-def subtask_annotation(args, column_types, tasks, task):
+def subtask_annotation(column_types, tasks, task, workflow_strings, task_id):
     """Handle a task annotation with subtasks."""
+    task_id = task.get("task", task_id)
     for subtask in task['value']:
-        flatten_annotation(args, column_types, tasks, subtask)
+        flatten_annotation(column_types, tasks, subtask, workflow_strings, task_id)
 
 
 def select_label_annotation(column_types, tasks, task):
@@ -244,7 +307,7 @@ def task_label_annotation(column_types, tasks, task):
     append_column_type(column_types, key, 'text')
 
 
-def tool_label_annotation(args, column_types, tasks, task):
+def tool_label_annotation(column_types, tasks, task, workflow_strings, task_id):
     """Handle a tool label task annotation."""
     if task.get('width'):
         label = '{}: box'.format(task['tool_label'])
@@ -276,13 +339,31 @@ def tool_label_annotation(args, column_types, tasks, task):
     append_column_type(column_types, label, 'box')
 
     if task.get('tool_label') and task.get('details'):
-        label = '{}: select'.format(task['tool_label'])
-        label = annotation_key(tasks, label)
-        # The commented out line is how Label Babel 1 was formatted
-        # value = task['details'][0]['value'][0]['value']
-        value = task['details'][0]['value']
-        tasks[label] = args.tool_label_hack.get(str(value), '')
-        append_column_type(column_types, label, 'select')
+        candidates = [v for k, v in workflow_strings.label_strings.items()
+                      if k.startswith(task_id) and k.endswith('details')]
+        labels = candidates[-1] if candidates else []
+        for i, detail in enumerate(task['details']):
+            outer_value = detail["value"]
+            type_ = "select"
+            if isinstance(outer_value, list):
+                values = []
+                for item in outer_value:
+                    if item["value"] in workflow_strings.value_strings:
+                        value, label = workflow_strings.value_strings[item["value"]]
+                        values.append(value)
+                    else:
+                        value = item["value"]
+                        label = item.get("label", "unknown")
+                        values.append(value)
+                value = ','.join(v for v in values if v)
+            else:
+                value = outer_value
+                label = labels[i] if i < len(labels) else "unknown"
+                type_ = "text"
+            label = f"{task['tool_label']}.{label}"
+            label = annotation_key(tasks, label)
+            tasks[label] = value
+            append_column_type(column_types, label, type_)
 
 
 def annotation_key(tasks, label):

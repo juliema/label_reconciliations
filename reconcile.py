@@ -15,7 +15,7 @@ import lib.reconciled as reconciled_df
 import lib.summary as summary
 import lib.merged as merged
 
-VERSION = '0.4.10'
+VERSION = '0.4.11'
 
 
 def parse_command_line():
@@ -153,13 +153,10 @@ def parse_command_line():
         help="""How many raw rows to keep for each --group-by. Default=99.""")
 
     parser.add_argument(
-        '--tool-label-hack', default='', metavar='HACK',
-        help="""*** This is a hack to work around Notes from Nature tool
-            label tasks not having human readable labels. The format is
-            --tool-label-hack "a33c0ef367baa8:Label one,bf76cbd8a5a838:Label
-            two". The is is comma separated with the hex value going before
-            the colon and the label going after the colon. You should quote
-            this argument.""")
+        '--workflow-csv', default='', metavar='CSV',
+        help="""Sometimes we need to translate a value from its numeric code to a
+            human-readable string. The workflow file will contain these translations.
+            """)
 
     parser.add_argument(
         '-V', '--version', action='version',
@@ -174,13 +171,6 @@ def parse_command_line():
                               re.split(r'\s*,\s*', args.user_weights)]}
     else:
         args.user_weights = {}
-
-    if args.tool_label_hack:
-        args.tool_label_hack = {key.lower(): value for key, value in
-                                [(re.split(r'\s*:\s*', i)) for i in
-                                 re.split(r'\s*,\s*', args.tool_label_hack)]}
-    else:
-        args.tool_label_hack = {}
 
     if args.fuzzy_ratio_threshold < 0 or args.fuzzy_ratio_threshold > 100:
         print('--fuzzy-ratio-threshold must be between 0 and 100.')
