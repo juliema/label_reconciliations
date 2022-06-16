@@ -7,7 +7,6 @@ import pandas as pd
 
 
 def parse_command_line():
-    """Get user input."""
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawDescriptionHelpFormatter,
         fromfile_prefix_chars="@",
@@ -98,7 +97,6 @@ def write_args(args, df):
 
 
 def main():
-    """Main function."""
     args = parse_command_line()
     df = process_csv(args)
     write_args(args, df)
