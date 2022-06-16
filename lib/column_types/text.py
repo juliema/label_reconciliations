@@ -1,26 +1,23 @@
 """Reconcile free text fields."""
-
 import re
-from collections import namedtuple, defaultdict
+from collections import defaultdict
+from collections import namedtuple
 from itertools import combinations
-import inflect
+
 from fuzzywuzzy import fuzz  # pylint: disable=import-error
 
+from ..util import P
 
-E = inflect.engine()
-E.defnoun('The', 'All')
-P = E.plural
-
-FuzzyRatioScore = namedtuple('FuzzyRatioScore', 'score value')
-FuzzySetScore = namedtuple('FuzzySetScore', 'score value tokens')
-ExactScore = namedtuple('ExactScore', 'value count')
+FuzzyRatioScore = namedtuple("FuzzyRatioScore", "score value")
+FuzzySetScore = namedtuple("FuzzySetScore", "score value tokens")
+ExactScore = namedtuple("ExactScore", "value count")
 
 
 def reconcile(group, args=None):
-    """Reconcile the data."""
     group = group.astype(str)
-    values = ['\n'.join([' '.join(ln.split()) for ln in str(g).splitlines()])
-              for g in group]
+    values = [
+        "\n".join([" ".join(ln.split()) for ln in str(g).splitlines()]) for g in group
+    ]
 
     count = len(values)
 
@@ -29,26 +26,27 @@ def reconcile(group, args=None):
     blanks = count - sum(f.count for f in exact)
 
     if not exact:  # Note: Only spaces are removed
-        reason = '{} {} {} {} blank'.format(
-            P('The', count), count, P('record', count), P('is', count))
-        return reason, ''
+        reason = "{} {} {} {} blank".format(
+            P("The", count), count, P("record", count), P("is", count)
+        )
+        return reason, ""
 
     if exact[0].count > 1 and exact[0].count == count:
-        reason = 'Exact unanimous match, {} of {} {}'.format(
-            exact[0].count, count, P('record', count))
+        reason = "Exact unanimous match, {} of {} {}".format(
+            exact[0].count, count, P("record", count)
+        )
         return reason, exact[0].value
 
-    if (len(exact) > 1 and exact[0].count > 1
-            and exact[0].count == exact[1].count):
-        reason = 'Exact match is a tie, {} of {} {} with {} {}'.format(
-            exact[0].count, count, P('record', count),
-            blanks, P('blank', blanks))
+    if len(exact) > 1 and exact[0].count > 1 and exact[0].count == exact[1].count:
+        reason = "Exact match is a tie, {} of {} {} with {} {}".format(
+            exact[0].count, count, P("record", count), blanks, P("blank", blanks)
+        )
         return reason, exact[0].value
 
     if exact[0].count > 1:
-        reason = 'Exact match, {} of {} {} with {} {}'.format(
-            exact[0].count, count, P('record', count),
-            blanks, P('blank', blanks))
+        reason = "Exact match, {} of {} {} with {} {}".format(
+            exact[0].count, count, P("record", count), blanks, P("blank", blanks)
+        )
         return reason, exact[0].value
 
     # Look for normalized exact matches
@@ -56,49 +54,53 @@ def reconcile(group, args=None):
     blanks = count - sum(f.count for f in filled)
 
     if not filled:  # Note: Both spaces & punctuation are removed
-        reason = '{} {} normalized {} {} blank'.format(
-            P('The', count), count, P('record', count), P('is', count))
-        return reason, ''
+        reason = "{} {} normalized {} {} blank".format(
+            P("The", count), count, P("record", count), P("is", count)
+        )
+        return reason, ""
 
     if filled[0].count > 1 and filled[0].count == count:
-        reason = 'Normalized unanimous match, {} of {} {}'.format(
-            filled[0].count, count, P('record', count))
+        reason = "Normalized unanimous match, {} of {} {}".format(
+            filled[0].count, count, P("record", count)
+        )
         return reason, filled[0].value
 
-    if len(filled) > 1 and filled[0].count > 1 \
-            and filled[0].count == filled[1].count:
-        reason = 'Normalized match is a tie, {} of {} {} with {} {}'.format(
-            filled[0].count, count, P('record', count),
-            blanks, P('blank', blanks))
+    if len(filled) > 1 and filled[0].count > 1 and filled[0].count == filled[1].count:
+        reason = "Normalized match is a tie, {} of {} {} with {} {}".format(
+            filled[0].count, count, P("record", count), blanks, P("blank", blanks)
+        )
         return reason, filled[0].value
 
     if filled[0].count > 1:
-        reason = 'Normalized match, {} of {} {} with {} {}'.format(
-            filled[0].count, count, P('record', count),
-            blanks, P('blank', blanks))
+        reason = "Normalized match, {} of {} {} with {} {}".format(
+            filled[0].count, count, P("record", count), blanks, P("blank", blanks)
+        )
         return reason, filled[0].value
 
     if len(filled) == 1:
-        reason = 'Only 1 transcript in {} {}'.format(count, P('record', count))
+        reason = "Only 1 transcript in {} {}".format(count, P("record", count))
         return reason, filled[0].value
 
     # Check for simple in-place fuzzy matches
     top = top_partial_ratio(group, args.user_weights)
     if top.score >= args.fuzzy_ratio_threshold:
-        reason = 'Partial ratio match on {} {} with {} {}, score={}'.format(
-            count, P('record', count), blanks, P('blank', blanks), top.score)
+        reason = "Partial ratio match on {} {} with {} {}, score={}".format(
+            count, P("record", count), blanks, P("blank", blanks), top.score
+        )
         return reason, top.value
 
     # Now look for the best token match
     top = top_token_set_ratio(values)
     if top.score >= args.fuzzy_set_threshold:
-        reason = 'Token set ratio match on {} {} with {} {}, score={}'.format(
-            count, P('record', count), blanks, P('blank', blanks), top.score)
+        reason = "Token set ratio match on {} {} with {} {}, score={}".format(
+            count, P("record", count), blanks, P("blank", blanks), top.score
+        )
         return reason, top.value
 
-    reason = 'No text match on {} {} with {} {}'.format(
-        count, P('record', count), blanks, P('blank', blanks))
-    return reason, ''
+    reason = "No text match on {} {} with {} {}".format(
+        count, P("record", count), blanks, P("blank", blanks)
+    )
+    return reason, ""
 
 
 def exact_match(values):
@@ -127,7 +129,7 @@ def only_filled_values(values):
     for value in values:
         value = value.strip()
         if value:
-            squished = re.sub(r'\W+', '', value).lower()
+            squished = re.sub(r"\W+", "", value).lower()
             all_filled[squished].append(value)
 
     only_filled = []
@@ -153,8 +155,7 @@ def top_partial_ratio(group, user_weights):
         score = min(max(score, 0), 100)  # enforce a ceiling and floor
         scores.append(FuzzyRatioScore(score, value))
 
-    scores = sorted(
-        scores, reverse=True, key=lambda s: (s.score, len(s.value)))
+    scores = sorted(scores, reverse=True, key=lambda s: (s.score, len(s.value)))
     return scores[0]
 
 
@@ -179,7 +180,6 @@ def top_token_set_ratio(values):
         scores.append(FuzzySetScore(score, value, tokens))
 
     ordered = sorted(
-        scores,
-        reverse=True,
-        key=lambda s: (s.score, s.tokens, -len(s.value)))
+        scores, reverse=True, key=lambda s: (s.score, s.tokens, -len(s.value))
+    )
     return ordered[0]

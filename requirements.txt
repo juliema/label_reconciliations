@@ -1,6 +1,6 @@
 fuzzywuzzy
 inflect
-Jinja2==2.11.2
+Jinja2
 MarkupSafe
 numpy
 pandas

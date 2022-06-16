@@ -6,19 +6,18 @@ isn't then we return a blank.
 """
 
 
-def reconcile(group, args=None):  # pylint: disable=unused-argument
-    """Reconcile the data."""
+def reconcile(group, args=None):  # noqa
     values = [g for g in group]
     count = len(values)
 
     if count == 1:
         value = values[0]
-        reason = 'There is only one record'
+        reason = "There is only one record"
     elif all(v == values[0] for v in values):
         value = values[0]
-        reason = 'All {} records are identical'.format(count)
+        reason = f"All {count} records are identical"
     else:
-        value = ''
-        reason = 'All {} records are not identical'.format(count)
+        value = ""
+        reason = f"All {count} records are not identical"
 
     return reason, value
