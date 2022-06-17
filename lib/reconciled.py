@@ -1,11 +1,12 @@
 """Format and output the reconciled dataframe."""
+import lib.column_types
 import lib.util as util
 
 EXPLANATION_SUFFIX = " Explanation"
 
 
 def reconciled_output(args, unreconciled, reconciled, explanations, column_types):
-    columns = util.sort_columns(args, reconciled.columns, column_types)
+    columns = lib.column_types.sort_columns(args, reconciled.columns, column_types)
     del columns[0]
     del columns[0]
     del columns[0]
@@ -92,4 +93,4 @@ def add_transcribers(reconciled, unreconciled, column_types):
 
 def _append_column(reconciled, columns, name):
     if name not in columns and name in reconciled.columns:
-        columns.append(name)
+        columns.new(name)

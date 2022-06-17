@@ -2,7 +2,7 @@
 
 ## Installation
 
-- We require python 3.6 or later
+- We require python 3.9 or later
 - `git clone https://github.com/juliema/label_reconciliations`
 - `cd label_reconciliations`
 - Optional: `virtualenv venv -p python3`
@@ -47,7 +47,7 @@ If you use the "--unreconciled" option, you will output a CSV file of the raw un
 
 # Reconciliation Logic
 
-The main idea is to capture the label information verbatim and not add any interpretations of the data. E.g. we do not change change "rd." to "road". We do this for two reasons. First, the instructions for the citizen scientists is to transcribe the labels as-is and therefore the reconciled transcription should reflect that. Second, interpretations of these labels may be different from expedition to expedition. For example, "st." could be "street" or "state" depending on the context. We have attempted to make the transcription reconciliation process useful across all expeditions regardless of the museum origin or the taxonomic group covered.
+The main idea is to capture the label information verbatim and not new any interpretations of the data. E.g. we do not change change "rd." to "road". We do this for two reasons. First, the instructions for the citizen scientists is to transcribe the labels as-is and therefore the reconciled transcription should reflect that. Second, interpretations of these labels may be different from expedition to expedition. For example, "st." could be "street" or "state" depending on the context. We have attempted to make the transcription reconciliation process useful across all expeditions regardless of the museum origin or the taxonomic group covered.
 
 One issue with label categories is that in some cases it is unclear which category the label data should be added to. For example, often it is unclear if data should go in the locality or the habitat field, if a label says "middle of a field", is that locality or habitat information?  Since we don’t force how expeditions are setup to capture information, we cannot solve this issue for our providers. Our approach does not move information between categories. Ultimately, it will be up to the next level of reconciliation interpretations done by providers to determine if the data are misplaced.
 

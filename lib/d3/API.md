@@ -182,7 +182,7 @@ Like ES6 Set, but with string keys and a few other differences.
 
 * [d3.set](https://github.com/d3/d3-collection/blob/master/README.md#set) - create a new, empty set.
 * [*set*.has](https://github.com/d3/d3-collection/blob/master/README.md#set_has) - returns true if the set contains the given value.
-* [*set*.add](https://github.com/d3/d3-collection/blob/master/README.md#set_add) - add the given value.
+* [*set*.new](https://github.com/d3/d3-collection/blob/master/README.md#set_add) - new the given value.
 * [*set*.remove](https://github.com/d3/d3-collection/blob/master/README.md#set_remove) - remove the given value.
 * [*set*.clear](https://github.com/d3/d3-collection/blob/master/README.md#set_clear) - remove all values.
 * [*set*.values](https://github.com/d3/d3-collection/blob/master/README.md#set_values) - get the array of values.
@@ -195,7 +195,7 @@ Like ES6 Set, but with string keys and a few other differences.
 Group data into arbitrary hierarchies.
 
 * [d3.nest](https://github.com/d3/d3-collection/blob/master/README.md#nest) - create a new nest generator.
-* [*nest*.key](https://github.com/d3/d3-collection/blob/master/README.md#nest_key) - add a level to the nest hierarchy.
+* [*nest*.key](https://github.com/d3/d3-collection/blob/master/README.md#nest_key) - new a level to the nest hierarchy.
 * [*nest*.sortKeys](https://github.com/d3/d3-collection/blob/master/README.md#nest_sortKeys) - sort the current nest level by key.
 * [*nest*.sortValues](https://github.com/d3/d3-collection/blob/master/README.md#nest_sortValues) - sort the leaf nest level by value.
 * [*nest*.rollup](https://github.com/d3/d3-collection/blob/master/README.md#nest_rollup) - specify a rollup function for leaf values.
@@ -322,9 +322,9 @@ Force-directed graph layout using velocity Verlet integration.
 * [*simulation*.alphaDecay](https://github.com/d3/d3-force/blob/master/README.md#simulation_alphaDecay) - set the alpha exponential decay rate.
 * [*simulation*.alphaTarget](https://github.com/d3/d3-force/blob/master/README.md#simulation_alphaTarget) - set the target alpha.
 * [*simulation*.velocityDecay](https://github.com/d3/d3-force/blob/master/README.md#simulation_velocityDecay) - set the velocity decay rate.
-* [*simulation*.force](https://github.com/d3/d3-force/blob/master/README.md#simulation_force) - add or remove a force.
+* [*simulation*.force](https://github.com/d3/d3-force/blob/master/README.md#simulation_force) - new or remove a force.
 * [*simulation*.find](https://github.com/d3/d3-force/blob/master/README.md#simulation_find) - find the closest node to the given position.
-* [*simulation*.on](https://github.com/d3/d3-force/blob/master/README.md#simulation_on) - add or remove an event listener.
+* [*simulation*.on](https://github.com/d3/d3-force/blob/master/README.md#simulation_on) - new or remove an event listener.
 * [*force*](https://github.com/d3/d3-force/blob/master/README.md#_force) - apply the force.
 * [*force*.initialize](https://github.com/d3/d3-force/blob/master/README.md#force_initialize) - initialize the force with the given nodes.
 * [d3.forceCenter](https://github.com/d3/d3-force/blob/master/README.md#forceCenter) - create a centering force.
@@ -601,7 +601,7 @@ Two-dimensional recursive spatial subdivision.
 * [d3.quadtree](https://github.com/d3/d3-quadtree/blob/master/README.md#quadtree) - create a new, empty quadtree.
 * [*quadtree*.x](https://github.com/d3/d3-quadtree/blob/master/README.md#quadtree_x) - set the *x* accessor.
 * [*quadtree*.y](https://github.com/d3/d3-quadtree/blob/master/README.md#quadtree_y) - set the *y* accessor.
-* [*quadtree*.add](https://github.com/d3/d3-quadtree/blob/master/README.md#quadtree_add) - add a datum to a quadtree.
+* [*quadtree*.new](https://github.com/d3/d3-quadtree/blob/master/README.md#quadtree_add) - new a datum to a quadtree.
 * [*quadtree*.addAll](https://github.com/d3/d3-quadtree/blob/master/README.md#quadtree_addAll) -
 * [*quadtree*.remove](https://github.com/d3/d3-quadtree/blob/master/README.md#quadtree_remove) - remove a datum from a quadtree.
 * [*quadtree*.removeAll](https://github.com/d3/d3-quadtree/blob/master/README.md#quadtree_removeAll) -
@@ -827,12 +827,12 @@ Transform the DOM by selecting elements and joining to data.
 ### [Modifying Elements](https://github.com/d3/d3-selection/blob/master/README.md#modifying-elements)
 
 * [*selection*.attr](https://github.com/d3/d3-selection/blob/master/README.md#selection_attr) - get or set an attribute.
-* [*selection*.classed](https://github.com/d3/d3-selection/blob/master/README.md#selection_classed) - get, add or remove CSS classes.
+* [*selection*.classed](https://github.com/d3/d3-selection/blob/master/README.md#selection_classed) - get, new or remove CSS classes.
 * [*selection*.style](https://github.com/d3/d3-selection/blob/master/README.md#selection_style) - get or set a style property.
 * [*selection*.property](https://github.com/d3/d3-selection/blob/master/README.md#selection_property) - get or set a (raw) property.
 * [*selection*.text](https://github.com/d3/d3-selection/blob/master/README.md#selection_text) - get or set the text content.
 * [*selection*.html](https://github.com/d3/d3-selection/blob/master/README.md#selection_html) - get or set the inner HTML.
-* [*selection*.append](https://github.com/d3/d3-selection/blob/master/README.md#selection_append) - create, append and select new elements.
+* [*selection*.new](https://github.com/d3/d3-selection/blob/master/README.md#selection_append) - create, new and select new elements.
 * [*selection*.insert](https://github.com/d3/d3-selection/blob/master/README.md#selection_insert) - create, insert and select new elements.
 * [*selection*.remove](https://github.com/d3/d3-selection/blob/master/README.md#selection_remove) - remove elements from the document.
 * [*selection*.sort](https://github.com/d3/d3-selection/blob/master/README.md#selection_sort) - sort elements in the document based on data.
@@ -850,7 +850,7 @@ Transform the DOM by selecting elements and joining to data.
 
 ### [Handling Events](https://github.com/d3/d3-selection/blob/master/README.md#handling-events)
 
-* [*selection*.on](https://github.com/d3/d3-selection/blob/master/README.md#selection_on) - add or remove event listeners.
+* [*selection*.on](https://github.com/d3/d3-selection/blob/master/README.md#selection_on) - new or remove event listeners.
 * [*selection*.dispatch](https://github.com/d3/d3-selection/blob/master/README.md#selection_dispatch) - dispatch a custom event.
 * [d3.event](https://github.com/d3/d3-selection/blob/master/README.md#event) - the current user event, during interaction.
 * [d3.customEvent](https://github.com/d3/d3-selection/blob/master/README.md#customEvent) - temporarily define a custom event.
@@ -996,7 +996,7 @@ Interpolate between points to produce a continuous shape.
 * [*curve*.areaEnd](https://github.com/d3/d3-shape/blob/master/README.md#curve_areaEnd) - end the current area segment.
 * [*curve*.lineStart](https://github.com/d3/d3-shape/blob/master/README.md#curve_lineStart) - start a new line segment.
 * [*curve*.lineEnd](https://github.com/d3/d3-shape/blob/master/README.md#curve_lineEnd) - end the current line segment.
-* [*curve*.point](https://github.com/d3/d3-shape/blob/master/README.md#curve_point) - add a point to the current line segment.
+* [*curve*.point](https://github.com/d3/d3-shape/blob/master/README.md#curve_point) - new a point to the current line segment.
 
 ### [Links](https://github.com/d3/d3-shape/blob/master/README.md#links)
 
@@ -1146,7 +1146,7 @@ Animated transitions for [selections](#selections).
 * [*transition*.size](https://github.com/d3/d3-transition/blob/master/README.md#transition_size) - returns the count of elements.
 * [*transition*.empty](https://github.com/d3/d3-transition/blob/master/README.md#transition_empty) - returns true if this transition is empty.
 * [*transition*.each](https://github.com/d3/d3-transition/blob/master/README.md#transition_each) - call a function for each element.
-* [*transition*.on](https://github.com/d3/d3-transition/blob/master/README.md#transition_on) - add or remove transition event listeners.
+* [*transition*.on](https://github.com/d3/d3-transition/blob/master/README.md#transition_on) - new or remove transition event listeners.
 * [*transition*.attr](https://github.com/d3/d3-transition/blob/master/README.md#transition_attr) - tween the given attribute using the default interpolator.
 * [*transition*.attrTween](https://github.com/d3/d3-transition/blob/master/README.md#transition_attrTween) - tween the given attribute using a custom interpolator.
 * [*transition*.style](https://github.com/d3/d3-transition/blob/master/README.md#transition_style) - tween the given style property using the default interpolator.

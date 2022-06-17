@@ -1,4 +1,3 @@
-"""Common utilities."""
 import importlib.util as i_util
 import sys
 from glob import glob
@@ -13,12 +12,9 @@ E = inflect.engine()
 E.defnoun("The", "All")
 P = E.plural
 
-# Allow room for inserting columns
-COLUMN_ADD = 100
-
 
 def get_plugins(subdir):
-    """Get the plug-ins from the reconcilers directory."""
+    """Get plug-ins from a directory."""
     pattern = join(dirname(__file__), subdir, "*.py")
 
     plugins = {}
@@ -45,23 +41,6 @@ def unreconciled_setup(args, unreconciled):
     unreconciled = unreconciled.fillna("")
     unreconciled = unreconciled.sort_values([args.group_by, args.key_column])
     return unreconciled
-
-
-def sort_columns(args, all_columns, column_types):
-    """Put columns into an order useful for displaying."""
-    columns = [args.group_by, args.key_column]
-    if args.user_column:
-        columns += [args.user_column]
-    columns += [
-        c["name"] for c in sorted(column_types.values(), key=lambda x: x["order"])
-    ]
-    columns += [c for c in all_columns if c not in columns]
-    return columns
-
-
-def last_column_type(column_types):
-    """Return the max order in the order types."""
-    return max((v["order"] for v in column_types.values()), default=0)
 
 
 def error_exit(msgs):

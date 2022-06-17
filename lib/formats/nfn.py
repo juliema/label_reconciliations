@@ -5,25 +5,24 @@ from collections import defaultdict
 from collections import namedtuple
 from dataclasses import dataclass
 from dataclasses import field
-from typing import Dict
-from typing import List
 
 import pandas as pd
 from dateutil.parser import parse
 
-import lib.util as util
+from .. import util
 
 STARTED_AT = "classification_started_at"
 USER_NAME = "user_name"
 
+UNWANTED = " user_id user_ip subject_ids subject_data subject_retired ".split()
 
 WorkflowString = namedtuple("WorkflowString", "value label")
 
 
 @dataclass
 class WorkflowStrings:
-    label_strings: Dict[str, List[str]] = field(default_factory=defaultdict(list))
-    value_strings: Dict[str, WorkflowString] = field(default_factory=dict)
+    label_strings: dict[str, list[str]] = field(default_factory=defaultdict(list))
+    value_strings: dict[str, WorkflowString] = field(default_factory=dict)
 
 
 def read(args):
@@ -41,29 +40,24 @@ def read(args):
     workflow_strings = get_workflow_strings(args.workflow_csv, workflow_id)
 
     # Extract the various json blobs
-    column_types = {}
-    df = (
-        extract_annotations(df, column_types, workflow_strings)
-        .pipe(extract_subject_data, column_types)
-        .pipe(extract_metadata)
-    )
+    df, column_types = extract_annotations(df, workflow_strings)
+    df = extract_subject_data(df, column_types)
+    df = extract_metadata(df)
 
     # Get the subject_id from the subject_ids list, use the first one
     df[args.group_by] = df.subject_ids.map(lambda x: int(str(x).split(";")[0]))
 
     # Remove unwanted columns
-    unwanted_columns = [
-        c
-        for c in df.columns
-        if c.lower()
-        in ["user_id", "user_ip", "subject_ids", "subject_data", "subject_retired"]
-    ]
+    unwanted_columns = [c for c in df.columns if c.lower() in UNWANTED]
     df = df.drop(unwanted_columns, axis=1)
-    column_types = {k: v for k, v in column_types.items() if k not in unwanted_columns}
 
-    columns = util.sort_columns(args, df.columns, column_types)
+    column_types = {k: v for k, v in column_types.items() if k.lower() not in UNWANTED}
+
+    columns_ = df_sort_order(
+        column_types, df.columns, args.group_by, args.key_column, args.user_column
+    )
     df = df.loc[:, ~df.columns.duplicated()]
-    df = df.reindex(columns, axis="columns").fillna("")
+    df = df.reindex(columns_, axis="columns").fillna("")
     df = df.sort_values([args.group_by, STARTED_AT])
     df = df.drop_duplicates([args.group_by, USER_NAME], keep="first")
     df = df.groupby(args.group_by).head(args.keep_count)
@@ -156,6 +150,7 @@ def get_workflow_name(df):
     return workflow_name
 
 
+# #############################################################################
 def extract_metadata(df):
     """Extract a few field from the metadata JSON object."""
 
@@ -173,9 +168,9 @@ def extract_metadata(df):
     return df.drop(["metadata"], axis=1)
 
 
+# #############################################################################
 def extract_subject_data(df, column_types):
-    """
-    Extract subject data from the json object in the subject_data column.
+    """Extract subject data from the json object in the subject_data column.
 
     We prefix the new column names with "subject_" to keep them separate from
     the other data df columns. The subject data json looks like:
@@ -191,51 +186,48 @@ def extract_subject_data(df, column_types):
     if "id" in data.columns:
         data = data.rename(columns={"id": "external_id"})
 
-    columns = [re.sub(r"\W+", "_", c) for c in data.columns]
-    columns = [re.sub(r"^_+|_$", "", c) for c in columns]
-    columns = ["subject_" + c for c in columns]
+    columns_ = [re.sub(r"\W+", "_", c) for c in data.columns]
+    columns_ = [re.sub(r"^_+|_$", "", c) for c in columns_]
+    columns_ = ["subject_" + c for c in columns_]
 
-    columns = dict(zip(data.columns, columns))
-    data = data.rename(columns=columns)
+    columns_ = dict(zip(data.columns, columns_))
+    data = data.rename(columns=columns_)
 
     df = pd.concat([df, data], axis=1)
 
     # Put the subject columns into the column_types: They're all 'same'
-    last = util.last_column_type(column_types)
     for name in data.columns:
-        last += util.COLUMN_ADD
-        column_types[name] = {"type": "same", "order": last, "name": name}
+        column_types[name] = "same"
 
     return df
 
 
 # #############################################################################
-
-
-def extract_annotations(df, column_types, workflow_strings):
-    """
-    Extract annotations from the json object in the annotations column.
+def extract_annotations(df, workflow_strings):
+    """Extract annotations from the json object in the annotations column.
 
     Annotations are nested json blobs with a WTF format.
     """
+    column_types: dict[str, str] = {}
+
     data = df.annotations.map(json.loads)
     data = [flatten_annotations(a, column_types, workflow_strings) for a in data]
     data = pd.DataFrame(data, index=df.index)
 
     df = pd.concat([df, data], axis=1)
 
-    return adjust_column_names(df, column_types).drop(["annotations"], axis=1)
+    column_types, renames = rename_columns(column_types)
+
+    return df.rename(columns=renames).drop(["annotations"], axis=1), column_types
 
 
+# #############################################################################
 def flatten_annotations(annotations, column_types, workflow_strings):
-    """
-    Flatten annotations.
+    """Flatten annotations.
 
-    Annotations are nested json blobs with a peculiar data format. So we
-    flatten it to make it easier to reconcile.
-
-    We also need to consider that some tasks have the same label. In that case
-    we add a tie breaker, which is handled in the annotation_key() function.
+    Annotations are nested json blobs with a peculiar data format. So we flatten it to
+    make it easier to reconcile.  We also need to consider that some tasks have the
+    same label. In that case we use a tie breaker.
     """
     tasks = {}
 
@@ -267,6 +259,14 @@ def flatten_annotation(column_types, tasks, task, workflow_strings, task_id):
         print(f"Annotation task type not found: {task}")
 
 
+def list_annotation(column_types, tasks, task):
+    """Handle a list of literals annotation."""
+    key = unique_name(column_types, task["task_label"])
+    values = sorted(task.get("value", ""))
+    tasks[key] = " ".join(values)
+    column_types[key] = "text"
+
+
 def subtask_annotation(column_types, tasks, task, workflow_strings, task_id):
     """Handle a task annotation with subtasks."""
     task_id = task.get("task", task_id)
@@ -276,33 +276,25 @@ def subtask_annotation(column_types, tasks, task, workflow_strings, task_id):
 
 def select_label_annotation(column_types, tasks, task):
     """Handle a select label task annotation."""
-    key = annotation_key(tasks, task["select_label"])
+    key = unique_name(column_types, task["select_label"])
     option = task.get("option")
     value = task.get("label", "") if option else task.get("value", "")
     tasks[key] = value
-    append_column_type(column_types, key, "select")
-
-
-def list_annotation(column_types, tasks, task):
-    """Handle a list of literals annotation."""
-    key = annotation_key(tasks, task["task_label"])
-    values = sorted(task.get("value", ""))
-    tasks[key] = " ".join(values)
-    append_column_type(column_types, key, "text")
+    column_types[key] = "select"
 
 
 def task_label_annotation(column_types, tasks, task):
     """Handle a task label task annotation."""
-    key = annotation_key(tasks, task["task_label"])
+    key = unique_name(column_types, task["task_label"])
     tasks[key] = task.get("value", "")
-    append_column_type(column_types, key, "text")
+    column_types[key] = "text"
 
 
 def tool_label_annotation(column_types, tasks, task, workflow_strings, task_id):
     """Handle a tool label task annotation."""
     if task.get("width"):
         label = "{}: box".format(task["tool_label"])
-        label = annotation_key(tasks, label)
+        label = unique_name(column_types, label)
         col_type = "box"
         value = json.dumps(
             {
@@ -328,9 +320,9 @@ def tool_label_annotation(column_types, tasks, task, workflow_strings, task_id):
         value = json.dumps({"x": round(task["x"]), "y": round(task["y"])})
         col_type = "point"
 
-    label = annotation_key(tasks, label)
+    label = unique_name(column_types, label)
     tasks[label] = value
-    append_column_type(column_types, label, col_type)
+    column_types[label] = col_type
 
     if task.get("tool_label") and task.get("details"):
         candidates = [
@@ -358,48 +350,47 @@ def tool_label_annotation(column_types, tasks, task, workflow_strings, task_id):
                 label = labels[i] if i < len(labels) else "unknown"
                 type_ = "text"
             label = f"{task['tool_label']}.{label}"
-            label = annotation_key(tasks, label)
+            label = unique_name(column_types, label)
             tasks[label] = value
-            append_column_type(column_types, label, type_)
-
-
-def annotation_key(tasks, label):
-    """Make a key for the annotation."""
-    label = re.sub(r"^\s+|\s+$", "", label)
-    i = 1
-    base = label
-    while label in tasks:
-        i += 1
-        label = f"{base} #{i}"
-    return label
-
-
-def append_column_type(column_types, key, column_type):
-    """Append the column type to the end of the list of columns."""
-    if key not in column_types:
-        last = util.last_column_type(column_types)
-        column_types[key] = {
-            "type": column_type,
-            "order": last + util.COLUMN_ADD,
-            "name": key,
-        }
+            column_types[label] = type_
 
 
 # #############################################################################
+def unique_name(columns_types, name):
+    """Make the column name unique."""
+    name = name.strip()
+    base = name
+    i = 1
+    while name in columns_types.columns:
+        i += 1
+        name = f"{base} #{i}"
+    return name
 
 
-def adjust_column_names(df, column_types):
-    """Rename columns to add a "#1" suffix if there exists a "#2" suffix."""
-    rename = {}
-    for name in column_types.keys():
+def df_sort_order(
+    columns_types, df_columns: list[str], group_by: str, key_column: str, user_column=""
+):
+    """Get the sort order for data frame columns."""
+    sort_order = [group_by, key_column]
+    if user_column:
+        sort_order.append(user_column)
+    sort_order += list(columns_types.keys())
+    sort_order += [c for c in df_columns if c not in sort_order]
+    return sort_order
+
+
+def rename_columns(columns_types):
+    """Rename columns to use a "#1" suffix if there exists a "#2" suffix."""
+    renames = {}
+
+    for name in columns_types.keys():
         old_name = name[:-3]
-        if name.endswith("#2") and column_types.get(old_name):
-            rename[old_name] = old_name + " #1"
+        if name.endswith("#2") and old_name in columns_types:
+            renames[old_name] = old_name + " #1"
 
-    for old_name, new_name in rename.items():
-        new_task = column_types[old_name]
-        new_task["name"] = new_name
-        column_types[new_name] = new_task
-        del column_types[old_name]
+    new_columns: dict[str, str] = {}
+    for name, type_ in columns_types.items():
+        new_name = renames.get(name, name)
+        new_columns[new_name] = type_
 
-    return df.rename(columns=rename)
+    return new_columns, renames

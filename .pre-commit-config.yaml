@@ -34,13 +34,4 @@ repos:
     rev: v2.34.0
     hooks:
     -   id: pyupgrade
-        args: [--py36-plus]
-
-- repo: https://github.com/pocc/pre-commit-hooks
-  rev: v1.3.5
-  hooks:
-  - id: clang-tidy
-    args:
-      - --extra-arg=-I./.venv/lib/python3.10/site-packages/pybind11/include/
-      - --extra-arg=-I/usr/include/python3.10/
-  - id: cppcheck
+        args: [--py310-plus]

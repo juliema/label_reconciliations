@@ -6,7 +6,7 @@ from urllib.parse import urlparse
 from jinja2 import Environment
 from jinja2 import PackageLoader
 
-import lib.util as util
+import lib.column_types
 
 # These depend on the patterns put into explanations
 NO_MATCH_PATTERN = r"No (?:select|text) match on"
@@ -62,7 +62,7 @@ def report(args, unreconciled, reconciled, explanations, column_types):
         header=header_data(args, unreconciled, reconciled, transcribers),
         groups=iter(groups.items()),
         filters=filters,
-        columns=util.sort_columns(args, unreconciled, column_types),
+        columns=lib.column_types.sort_columns(args, unreconciled, column_types),
         transcribers=transcribers,
         reconciled=reconciled_summary(explanations, column_types),
         problem_pattern=PROBLEM_PATTERN,
@@ -105,7 +105,9 @@ def get_filters(args, groups, column_types):
 
     # Get the remaining filters. They are the columns in the explanations row.
     group = next(iter(groups.values()))
-    columns = util.sort_columns(args, group["explanations"].keys(), column_types)
+    columns = lib.column_types.sort_columns(
+        args, group["explanations"].keys(), column_types
+    )
     filters["__select__"] += [
         "Show problems with: " + c for c in columns if c in group["explanations"].keys()
     ]

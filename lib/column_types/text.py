@@ -82,7 +82,7 @@ def reconcile(group, args=None):
         return reason, filled[0].value
 
     # Check for simple in-place fuzzy matches
-    top = top_partial_ratio(group, args.user_weights)
+    top = top_partial_ratio(group, args.user_weights_)
     if top.score >= args.fuzzy_ratio_threshold:
         reason = "Partial ratio match on {} {} with {} {}, score={}".format(
             count, P("record", count), blanks, P("blank", blanks), top.score
@@ -151,7 +151,7 @@ def top_partial_ratio(group, user_weights):
             value, user_name = combo[0][0], combo[0][1]
         else:
             value, user_name = combo[1][0], combo[1][1]
-        score = score + user_weights.get(user_name.lower(), 0)  # add weight
+        score = score + user_weights.get(user_name.lower(), 0)  # new weight
         score = min(max(score, 0), 100)  # enforce a ceiling and floor
         scores.append(FuzzyRatioScore(score, value))
 
