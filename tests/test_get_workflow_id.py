@@ -1,16 +1,13 @@
-"""Test functions in lib/formats/nfn.py."""
 import unittest
 from argparse import Namespace
 from unittest.mock import patch
 
 import pandas as pd
 
-import lib.formats.nfn as nfn
+from lib.formats import nfn
 
 
-class TestFormatsNfn(unittest.TestCase):
-    """Test functions in lib/formats/nfn.py."""
-
+class TestGetWorkflowId(unittest.TestCase):
     @staticmethod
     def setup_dataframes():
         """Build test dataframes."""
@@ -27,7 +24,7 @@ class TestFormatsNfn(unittest.TestCase):
 
         assert workflow_id == "1001"
 
-    def test_get_workflow_id_unique(self):
+    def test_get_workflow_id_02(self):
         """It finds a unique workflow ID."""
         df1, _ = self.setup_dataframes()
         args = Namespace(workflow_id=None)
@@ -37,7 +34,7 @@ class TestFormatsNfn(unittest.TestCase):
         assert workflow_id == "1001"
 
     @patch("lib.util.error_exit")
-    def test_get_workflow_id_error(self, error_exit):
+    def test_get_workflow_id_03(self, error_exit):
         """It errors when there are multiple workflow IDs to choose."""
         _, df2 = self.setup_dataframes()
         args = Namespace(workflow_id=None)

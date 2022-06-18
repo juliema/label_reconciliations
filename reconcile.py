@@ -25,7 +25,7 @@ def parse_args():
             That is, it reduces n classifications per subject to the "best"
             values. The summary file will provide explanations of how the
             reconciliations were done. NOTE: You may use a file to hold the
-            command-line arguments like: @/path/to/args.txt."""
+            command-line arguments like: @path/to/args.txt."""
         ),
         epilog=textwrap.dedent(
             """
@@ -40,18 +40,6 @@ def parse_args():
     )
 
     parser.add_argument("input_file", metavar="INPUT-FILE", help="""The input file.""")
-
-    parser.add_argument(
-        "-f",
-        "--format",
-        choices=["nfn", "csv", "json"],
-        default="nfn",
-        help="""The unreconciled data is in what type of file? nfn=A Zooniverse
-            classification data dump. csv=A flat CSV file. json=A JSON file. When the
-            format is "csv" or "json" we require the --column-types. If the type is
-            "nfn" we can guess the --column-types but the --column-types option will
-            still override our guesses. (default: %(default)s)""",
-    )
 
     parser.add_argument(
         "-c",
@@ -91,20 +79,6 @@ def parse_args():
     )
 
     parser.add_argument(
-        "--explanations",
-        action="store_true",
-        help="""Output the reconciled explanations with the reconciled classifications
-            CSV file.""",
-    )
-
-    parser.add_argument(
-        "--transcribers",
-        action="store_true",
-        help="""Output the transcriber name and the entered value for every
-            classification in the reconciled classifications CSV file.""",
-    )
-
-    parser.add_argument(
         "-s",
         "--summary",
         help="""Write a summary of the reconciliation to this HTML file.""",
@@ -113,8 +87,7 @@ def parse_args():
     parser.add_argument(
         "-z",
         "--zip",
-        help="""Zip files and put them into this archive. Remove the uncompressed files
-            afterwards.""",
+        help="""Zip the output files and put them into this archive.""",
     )
 
     parser.add_argument(
@@ -123,40 +96,6 @@ def parse_args():
         type=int,
         help="""The workflow to extract. Required if there is more than one workflow in
             the classifications file. This is only used for nfn formats.""",
-    )
-
-    parser.add_argument(
-        "--title",
-        default="",
-        help="""The title to put on the summary report. We will build this when the
-            format is nfn. For other formats the default is the INPUT-FILE.""",
-    )
-
-    parser.add_argument(
-        "--group-by",
-        default="subject_id",
-        help="""Group the rows by this column (Default=subject_id).""",
-    )
-
-    parser.add_argument(
-        "--key-column",
-        default="classification_id",
-        help="""The column containing the primary key. (default: %(default)s)""",
-    )
-
-    parser.add_argument(
-        "--user-column",
-        help="""Which column to use to get a count of user transcripts. For
-            --format=nfn the default=user_name for other formats there is no default.
-            This will affect which sections appear on the summary report.""",
-    )
-
-    parser.add_argument(
-        "--page-size",
-        default=20,
-        type=int,
-        help="""Page size for the summary report's detail section.
-            (default: %(default)s)""",
     )
 
     parser.add_argument(
@@ -176,14 +115,6 @@ def parse_args():
     )
 
     parser.add_argument(
-        "--keep-count",
-        default=99,
-        type=int,
-        help="""How many raw rows to keep for each --group-by.
-            (default: %(default)s)""",
-    )
-
-    parser.add_argument(
         "--workflow-csv",
         default="",
         metavar="CSV",
@@ -197,6 +128,17 @@ def parse_args():
     )
 
     args = parser.parse_args()
+
+    # We may want to make these arguments in the future
+    defaults = {
+        "format": "nfn_sql",  # "nfn",
+        "group_by": "subject_id",
+        "key_column": "classification_id",
+        "user_column": "user_name",
+        "page_size": 20,
+    }
+    for key, value in defaults.items():
+        args[key] = value
 
     # Format the user weights: user1:weight1, user2:weight2, ...
     args.user_weights_ = {}
@@ -299,9 +241,7 @@ def reconcile_data(args, unreconciled, column_types):
     reconciled, explanations = reconciler.build(args, unreconciled, column_types)
 
     if args.reconciled:
-        reconciled = reconciled_df.reconciled_output(
-            args, unreconciled, reconciled, explanations, column_types
-        )
+        reconciled = reconciled_df.reconciled_output(args, reconciled, column_types)
 
     if args.summary:
         summary.report(args, unreconciled, reconciled, explanations, column_types)
@@ -322,6 +262,9 @@ def main():
 
     if args.unreconciled:
         unreconciled.to_csv(args.unreconciled, index=False)
+
+    if args.reconciled or args.summary:
+        reconcile_data(args, unreconciled, column_types)
 
     if args.zip:
         zip_files(args)

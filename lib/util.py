@@ -1,10 +1,8 @@
 import importlib.util as i_util
+import sqlite3
 import sys
-from glob import glob
-from os.path import basename
-from os.path import dirname
-from os.path import join
-from os.path import splitext
+from contextlib import contextmanager
+from pathlib import Path
 
 import inflect
 
@@ -13,34 +11,31 @@ E.defnoun("The", "All")
 P = E.plural
 
 
+@contextmanager
+def db_connect(db_path):
+    """Add a row factory to the normal connection context manager."""
+    try:
+        with sqlite3.connect(db_path) as cxn:
+            cxn.row_factory = sqlite3.Row
+            yield cxn
+    finally:
+        pass
+
+
 def get_plugins(subdir):
     """Get plug-ins from a directory."""
-    pattern = join(dirname(__file__), subdir, "*.py")
+    dir_ = Path(__file__).parent / subdir
 
     plugins = {}
 
-    for path in glob(pattern):
-        if path.find("__init__") > -1:
-            continue
-        name = splitext(basename(path))[0]
-        module_name = f"lib.{subdir}.{name}"
-        spec = i_util.spec_from_file_location(module_name, path)
+    for path in [p for p in dir_.glob("*.py") if p.find("__init__") > -1]:
+        module_name = f"lib.{subdir}.{path.name}"
+        spec = i_util.spec_from_file_location(module_name, str(path))
         module = i_util.module_from_spec(spec)
         spec.loader.exec_module(module)
-        plugins[name] = module
+        plugins[path.name] = module
 
     return plugins
-
-
-def unreconciled_setup(args, unreconciled):
-    """
-    Process the unreconciled data frame.
-
-    Not used when there is a large amount of processing of the input.
-    """
-    unreconciled = unreconciled.fillna("")
-    unreconciled = unreconciled.sort_values([args.group_by, args.key_column])
-    return unreconciled
 
 
 def error_exit(msgs):

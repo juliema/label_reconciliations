@@ -2,7 +2,7 @@
 
 ## Installation
 
-- We require python 3.9 or later
+- We require python 3.10 or later
 - `git clone https://github.com/juliema/label_reconciliations`
 - `cd label_reconciliations`
 - Optional: `virtualenv venv -p python3`
