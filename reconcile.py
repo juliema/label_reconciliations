@@ -6,8 +6,9 @@ import textwrap
 import zipfile
 from os.path import basename
 
-from pylib import reconciler
+from pylib import reconciled_data
 from pylib import summary
+from pylib import unreconciled_data
 from pylib import utils
 
 VERSION = "0.5.0"
@@ -236,36 +237,29 @@ def error_exit(unreconciled, plugin_types):
     sys.exit(1)
 
 
-def reconcile_data(args, unreconciled, column_types):
-    """Build and output reconciled data."""
-    df = reconciler.build(args, unreconciled, column_types)
-
-    if args.reconciled:
-        unwanted = [c for c in df.columns if c.split()[-1] in ["note", "flag"]]
-        reconciled_df = df.drop(unwanted, axis="columns")
-        reconciled_df.to_csv(args.reconciled, index=False)
-
-    return df
-
-
 def main():
     """Reconcile the data."""
     args = parse_args()
 
     formats = utils.get_plugins("formats")
-    unreconciled, column_types = formats[args.format].read(args)
+    raw_data, column_types = formats[args.format].read(args)
 
-    if unreconciled.shape[0] == 0:
+    if raw_data.shape[0] == 0:
         sys.exit(f"Workflow {args.workflow_id} has no data.")
 
     append_column_types(args, column_types)
-    validate_columns(args, column_types, unreconciled)
+    validate_columns(args, column_types, raw_data)
+
+    unreconciled = unreconciled_data.build(args, raw_data, column_types)
 
     if args.unreconciled:
         unreconciled.to_csv(args.unreconciled, index=False)
 
     if args.reconciled or args.summary:
-        reconciled = reconcile_data(args, unreconciled, column_types)
+        reconciled = reconciled_data.build(args, raw_data, column_types)
+
+        if args.reconciled:
+            reconciled_data.output_csv(args, reconciled)
 
         if args.summary:
             summary.report(args, unreconciled, reconciled, column_types)

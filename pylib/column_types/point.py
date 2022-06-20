@@ -1,10 +1,11 @@
-"""Reconcile points.            )
-"""
+"""Reconcile points."""
 import json
 import statistics as stats
 
 from pylib import cell
 from pylib.utils import P
+
+RAW_DATA_TYPE = "json"
 
 
 def reconcile(group, args=None):  # noqa pylint: disable=unused-argument
@@ -24,7 +25,7 @@ def reconcile(group, args=None):  # noqa pylint: disable=unused-argument
         f'{P("point", raw_count)} in {raw_count} {P("record", raw_count)}'
     )
 
-    x = stats.mean([ln["x"] for ln in points])
-    y = stats.mean([ln["y"] for ln in points])
+    x = round(stats.mean([ln["x"] for ln in points]))
+    y = round(stats.mean([ln["y"] for ln in points]))
 
     return cell.ok(note=note, x=x, y=y)

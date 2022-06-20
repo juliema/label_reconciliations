@@ -59,6 +59,8 @@ def read(args):
     df = df.drop_duplicates([args.group_by, args.user_column], keep="first")
     df = df.fillna("")
 
+    df = df.sort_values([args.group_by, args.key_column])
+
     return df, column_types
 
 
@@ -69,6 +71,8 @@ def extract_annotations(df, workflow_strings):
     Annotations are nested json blobs with a WTF format. Part of the WTF is that each
     record can have a different format which means that we need to update the
     column_types in every record eventho they are mostly quite similar.
+
+    pd.json_normalize() is not effective?!
     """
     column_types: dict[str, str] = {}
 
@@ -77,6 +81,7 @@ def extract_annotations(df, workflow_strings):
     data = pd.DataFrame(data, index=df.index)
 
     df = pd.concat([df, data], axis="columns")
+    df = df.drop(["annotations"], axis="columns")
 
     return df, column_types
 
@@ -233,7 +238,7 @@ def workflow_annotation(column_types, annos, anno, anno_id, workflow_strings):
 
 def column_name(anno_id, name):
     """Make the column name unique."""
-    return f"[{anno_id}] {name.strip()}"
+    return f"#{anno_id.removeprefix('T')} {name.strip()}"
 
 
 # #############################################################################

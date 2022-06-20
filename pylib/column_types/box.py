@@ -5,6 +5,8 @@ from statistics import mean
 from pylib import cell
 from pylib.utils import P
 
+RAW_DATA_TYPE = "json"
+
 
 def reconcile(group, args=None):  # noqa pylint: disable=unused-argument
     raw_boxes = [json.loads(b) for b in group]
