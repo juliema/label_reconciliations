@@ -1,9 +1,9 @@
 """Reconcile a group where all values are supposed to be the same."""
-from .. import cell
+from pylib import cell
 
 
-def reconcile(group, args=None):  # noqa
-    values = [g for g in group]
+def reconcile(group, args=None):  # noqa pylint: disable=unused-argument
+    values = list(group)
     count = len(values)
 
     if count == 1:
@@ -13,4 +13,4 @@ def reconcile(group, args=None):  # noqa
         return cell.ok(note=f"All {count} records are identical", value=values[0])
 
     value = ",".join(values)
-    return cell.error(note="All {count} records are not identical", value=value)
+    return cell.error(note=f"All {count} records are not identical", value=value)

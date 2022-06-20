@@ -346,7 +346,7 @@ const-naming-style=UPPER_CASE
 docstring-min-length=-1
 
 # Naming style matching correct function names.
-function-naming-style=snake_case
+# function-naming-style=snake_case
 
 # Regular expression matching correct function names. Overrides function-
 # naming-style. If left empty, function names will be checked with the set
@@ -365,7 +365,8 @@ good-names=i,
            y0, y1,
            ln, lb,
            df,
-           lr
+           lr,
+           ok
 
 # Good variable names regexes, separated by a comma. If names match any regex,
 # they will always be accepted
@@ -414,7 +415,7 @@ property-classes=abc.abstractproperty
 #typevar-rgx=
 
 # Naming style matching correct variable names.
-variable-naming-style=snake_case
+# variable-naming-style=snake_case
 
 # Regular expression matching correct variable names. Overrides variable-
 # naming-style. If left empty, variable names will be checked with the set

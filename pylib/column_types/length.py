@@ -1,11 +1,12 @@
 """Reconcile line lengths."""
+# noqa pylint: disable=invalid-name
 import json
 import math
 import re
 import statistics as stats
 
-from .. import cell
-from ..util import P
+from pylib import cell
+from pylib.utils import P
 
 
 SCALE_RE = re.compile(
@@ -14,7 +15,7 @@ SCALE_RE = re.compile(
 )
 
 
-def reconcile(group, args=None):  # noqa
+def reconcile(group, args=None):  # noqa pylint: disable=unused-argument
     raw_lines = [json.loads(ln) for ln in group]
 
     lines = [ln for ln in raw_lines if ln.get("x1")]
@@ -39,19 +40,22 @@ def reconcile(group, args=None):  # noqa
     return cell.ok(note=note, length_pixels=math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2))
 
 
-def reconcile_row(reconciled_row, args=None):  # noqa
+def reconcile_row(reconciled_row, args=None):  # noqa pylint: disable=unused-argument
     """Calculate lengths using units and pixel_lengths."""
     units, factor = None, None
     for field, value in reconciled_row.items():
-        if field.find("length pixels") > -1 and (match := SCALE_RE.search(field)):
+        if field.find("length_pixels") > -1 and (match := SCALE_RE.search(field)):
             units = match.group("units")
-            factor = value / float(match.group("scale"))
+            factor = float(match.group("scale")) / value
             break
 
     if not units:
         return
 
+    new_field = {}
     for key, value in reconciled_row.items():
-        if key.find("length pixels") > -1:
+        if key.find("length_pixels") > -1:
             field = key.replace("pixels", units)
-            reconciled_row[field] = value * factor
+            new_field[field] = value * factor
+
+    reconciled_row |= new_field

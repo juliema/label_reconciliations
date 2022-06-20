@@ -8,7 +8,7 @@ from typing import Any
 import pandas as pd
 from dateutil.parser import parse
 
-from .. import util
+from pylib.utils import error_exit
 
 
 @dataclass
@@ -41,10 +41,12 @@ def read(args):
     df, column_types = extract_metadata(df, column_types)
 
     # Get the subject_id from the subject_ids list, use the first one
-    df[args.group_by] = df.subject_ids.map(lambda x: int(str(x).split(";")[0]))
+    df[args.group_by] = df.subject_ids.map(
+        lambda x: int(str(x).split(";", maxsplit=1)[0])
+    )
 
     # Remove unwanted columns
-    unwanted = " user_id user_ip subject_ids subject_data subject_retired ".split()
+    unwanted = "user_id user_ip subject_ids subject_data subject_retired".split()
     unwanted_columns = [c for c in df.columns if c.lower() in unwanted]
     df = df.drop(unwanted_columns, axis="columns")
     column_types = {k: v for k, v in column_types.items() if k.lower() not in unwanted}
@@ -76,17 +78,13 @@ def extract_annotations(df, workflow_strings):
 
     df = pd.concat([df, data], axis="columns")
 
-    column_types, renames = rename_columns(column_types)
-
-    df = df.rename(columns=renames).drop(["annotations"], axis="columns")
-
     return df, column_types
 
 
 def flatten_annotations(column_types, annotations, workflow_strings):
     """Flatten annotations.
 
-    Annotations are nested json blobs with a peculiar data format. So we flatten it to
+    Annotations are nested json blobs with a peculiar data format. We flatten it to
     make it easier to reconcile. We also need to consider that different tasks may have
     the same label, in that case we add a tie breaker.
     """
@@ -104,28 +102,27 @@ def flatten_annotation(column_types, annos, anno, anno_id, workflow_strings):
 
     match anno:
         case {"value": [str(), *__], **___}:
-            list_annotation(column_types, annos, anno)
+            list_annotation(column_types, annos, anno, anno_id)
         case {"value": list(), **__}:
             subtask_annotation(column_types, annos, anno, anno_id, workflow_strings)
         case {"select_label": _, **__}:
-            select_label_annotation(column_types, annos, anno)
+            select_label_annotation(column_types, annos, anno, anno_id)
         case {"task_label": _, **__}:
-            task_label_annotation(column_types, annos, anno)
+            task_label_annotation(column_types, annos, anno, anno_id)
         case {"tool_label": _, "width": __, **___}:
-            box_annotation(column_types, annos, anno)
+            box_annotation(column_types, annos, anno, anno_id)
         case {"tool_label": _, "x1": __, **___}:
-            line_annotation(column_types, annos, anno)
+            line_annotation(column_types, annos, anno, anno_id)
         case {"tool_label": _, "x": __, **___}:
-            point_annotation(column_types, annos, anno)
+            point_annotation(column_types, annos, anno, anno_id)
         case {"tool_label": _, "details": __, **___}:
             workflow_annotation(column_types, annos, anno, anno_id, workflow_strings)
         case _:
             print(f"Annotation type not found: {anno}")
 
 
-def list_annotation(column_types, annos, anno):
-    """Handle a list of literals annotation."""
-    key = unique_name(column_types, anno["task_label"])
+def list_annotation(column_types, annos, anno, anno_id):
+    key = column_name(anno_id, anno["task_label"])
     values = sorted(anno.get("value", ""))
     annos[key] = " ".join(values)
     column_types[key] = "text"
@@ -138,25 +135,22 @@ def subtask_annotation(column_types, annos, anno, anno_id, workflow_strings):
         flatten_annotation(column_types, annos, subtask, anno_id, workflow_strings)
 
 
-def select_label_annotation(column_types, annos, anno):
-    """Handle a select label annotation."""
-    key = unique_name(column_types, anno["select_label"])
+def select_label_annotation(column_types, annos, anno, anno_id):
+    key = column_name(anno_id, anno["select_label"])
     option = anno.get("option")
     value = anno.get("label", "") if option else anno.get("value", "")
     annos[key] = value
     column_types[key] = "select"
 
 
-def task_label_annotation(column_types, annos, anno):
-    """Handle a label annotation."""
-    key = unique_name(column_types, anno["task_label"])
+def task_label_annotation(column_types, annos, anno, anno_id):
+    key = column_name(anno_id, anno["task_label"])
     annos[key] = anno.get("value", "")
     column_types[key] = "text"
 
 
-def box_annotation(column_types, annos, anno):
-    label = "{}: box".format(anno["tool_label"])
-    label = unique_name(column_types, label)
+def box_annotation(column_types, annos, anno, anno_id):
+    label = column_name(anno_id, anno["tool_label"])
     column_types[label] = "box"
     annos[label] = json.dumps(
         {
@@ -168,9 +162,8 @@ def box_annotation(column_types, annos, anno):
     )
 
 
-def line_annotation(column_types, annos, anno):
-    label = "{}: length".format(anno["tool_label"])
-    label = unique_name(column_types, label)
+def line_annotation(column_types, annos, anno, anno_id):
+    label = column_name(anno_id, anno["tool_label"])
     column_types[label] = "length"
     annos[label] = json.dumps(
         {
@@ -182,9 +175,8 @@ def line_annotation(column_types, annos, anno):
     )
 
 
-def point_annotation(column_types, annos, anno):
-    label = "{}: point".format(anno["tool_label"])
-    label = unique_name(column_types, label)
+def point_annotation(column_types, annos, anno, anno_id):
+    label = column_name(anno_id, anno["tool_label"])
     annos[label] = json.dumps({"x": round(anno["x"]), "y": round(anno["y"])})
     column_types[label] = "point"
 
@@ -198,11 +190,11 @@ def workflow_annotation(column_types, annos, anno, anno_id, workflow_strings):
     label = "unknown"
 
     # Get all possible strings for the annotation
-    candidates = []
+    values = []
     for key, value in workflow_strings.label_strings.items():
         if key.startswith(anno_id) and key.endswith("details"):
-            candidates.append(value)
-    labels = candidates[-1] if candidates else []
+            values.append(value)
+    labels = values[-1] if values else []
 
     # Loop thru the UUID values
     for i, detail in enumerate(anno["details"]):
@@ -234,21 +226,14 @@ def workflow_annotation(column_types, annos, anno, anno_id, workflow_strings):
             type_ = "text"
 
         # Now we can use the reconstructed annotation
-        label = f"{anno['tool_label']}.{label}"
-        label = unique_name(column_types, label)
+        label = column_name(anno_id, f"{anno['tool_label']}.{label}")
         annos[label] = value
         column_types[label] = type_
 
 
-def unique_name(columns_types, name):
+def column_name(anno_id, name):
     """Make the column name unique."""
-    name = name.strip()
-    base = name
-    i = 1
-    while name in columns_types:
-        i += 1
-        name = f"{base} #{i}"
-    return name
+    return f"[{anno_id}] {name.strip()}"
 
 
 # #############################################################################
@@ -293,8 +278,8 @@ def extract_metadata(df, column_types):
     data = df.metadata.map(json.loads).tolist()
     data = pd.DataFrame(data, index=df.index)
 
-    df.classification_started_at = data.started_at.map(_extract_date)
-    df.classification_finished_at = data.finished_at.map(_extract_date)
+    df["classification_started_at"] = data.started_at.map(_extract_date)
+    df["classification_finished_at"] = data.finished_at.map(_extract_date)
 
     return df.drop(["metadata"], axis="columns"), column_types
 
@@ -308,7 +293,7 @@ def get_workflow_id(df, args):
     workflow_ids = df.workflow_id.unique()
 
     if len(workflow_ids) > 1:
-        util.error_exit(
+        error_exit(
             "There are multiple workflows in this file. "
             "You must provide a workflow ID as an argument."
         )
@@ -323,7 +308,7 @@ def get_workflow_name(df):
         workflow_name = df.workflow_name.iloc[0]
         workflow_name = re.sub(r"^[^_]*_", "", workflow_name)
     except KeyError:
-        util.error_exit("Workflow name not found in classifications file.")
+        error_exit("Workflow name not found in classifications file.")
     return workflow_name
 
 
@@ -338,7 +323,7 @@ def get_workflow_strings(workflow_csv, workflow_id):
     df = df.loc[df.workflow_id == int(workflow_id), :]
     row = df.iloc[-1]
 
-    strings = {k: v for k, v in json.loads(row["strings"]).items()}
+    strings = json.loads(row["strings"]).items()
 
     instructions = {}
     label_strings = defaultdict(list)
@@ -372,21 +357,3 @@ def get_workflow_strings(workflow_csv, workflow_id):
     _task_dive(annos)
 
     return WorkflowStrings(label_strings=label_strings, value_strings=value_strings)
-
-
-# #####################################################################################
-def rename_columns(columns_types):
-    """Rename columns to use a "#1" suffix if there exists a "#2" suffix."""
-    renames = {}
-
-    for name in columns_types.keys():
-        old_name = name[:-3]
-        if name.endswith("#2") and old_name in columns_types:
-            renames[old_name] = old_name + " #1"
-
-    new_columns: dict[str, str] = {}
-    for name, type_ in columns_types.items():
-        new_name = renames.get(name, name)
-        new_columns[new_name] = type_
-
-    return new_columns, renames

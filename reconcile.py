@@ -8,7 +8,7 @@ from os.path import basename
 
 from pylib import reconciler
 from pylib import summary
-from pylib import util
+from pylib import utils
 
 VERSION = "0.5.0"
 
@@ -130,21 +130,22 @@ def parse_args():
 
     # We may want to make these arguments in the future
     defaults = {
-        "format": "nfn_sql",  # "nfn",
+        "format": "nfn",
         "group_by": "subject_id",
         "key_column": "classification_id",
         "user_column": "user_name",
         "page_size": 20,
     }
     for key, value in defaults.items():
-        args[key] = value
+        setattr(args, key, value)
 
     # Format the user weights: user1:weight1, user2:weight2, ...
     args.user_weights_ = {}
-    for user_weight in args.user_weights.split(","):
-        user_weight = user_weight.strip()
-        for user, weight in user_weight.split(":"):
-            args.user_weights_[user.lower()] = int(weight)
+    if args.user_weights:
+        for user_weight in args.user_weights.split(","):
+            user_weight = user_weight.strip()
+            for user, weight in user_weight.split(":"):
+                args.user_weights_[user.lower()] = int(weight)
 
     if args.fuzzy_ratio_threshold < 0 or args.fuzzy_ratio_threshold > 100:
         print("--fuzzy-ratio-threshold must be between 0 and 100.")
@@ -192,7 +193,7 @@ def validate_columns(args, column_types, unreconciled):
 
     Also verify that the column types are an existing plug-in.
     """
-    plugins = util.get_plugins("column_types")
+    plugins = utils.get_plugins("column_types")
     plugin_types = list(plugins.keys())
 
     error = missing_headers(unreconciled, column_types, plugin_types)
@@ -209,9 +210,9 @@ def missing_headers(unreconciled, column_types, plugin_types):
         if column not in unreconciled.columns:
             error = True
             print(f'ERROR: "{column}" is not a column header')
-        if column_type["type"] not in plugin_types:
+        if column_type not in plugin_types:
             error = True
-            print('ERROR: "{}" is not a column type'.format(column_type["type"]))
+            print(f'ERROR: "{column_type["type"]}" is not a column type')
     return error
 
 
@@ -251,7 +252,7 @@ def main():
     """Reconcile the data."""
     args = parse_args()
 
-    formats = util.get_plugins("formats")
+    formats = utils.get_plugins("formats")
     unreconciled, column_types = formats[args.format].read(args)
 
     if unreconciled.shape[0] == 0:

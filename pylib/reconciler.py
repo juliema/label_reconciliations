@@ -1,20 +1,19 @@
 import pandas as pd
 
-import pylib.util as util
+from pylib import utils
 from pylib.cell import rename
 
 
 def build(args, unreconciled, column_types):
-    plugins = util.get_plugins("column_types")
+    plugins = utils.get_plugins("column_types")
     reconcilers = {
         k: plugins[v]
         for k, v in column_types.items()
         if hasattr(plugins[v], "reconcile")
     }
-    # Dicts preserve order, sets do not
     row_reconcilers = {
         plugins[v]: 1
-        for v in column_types.items()
+        for k, v in column_types.items()
         if hasattr(plugins[v], "reconcile_row")
     }
 
@@ -28,7 +27,7 @@ def build(args, unreconciled, column_types):
         for col_type in group_df.columns:
 
             if module := reconcilers.get(col_type):
-                fields = module.reconcile(group_df[col_type], col_type, args)
+                fields = module.reconcile(group_df[col_type], args)
                 reconciled_row |= rename(prefix=col_type, fields=fields)
 
         # Process the whole row because some values depend on values in other columns
@@ -37,9 +36,10 @@ def build(args, unreconciled, column_types):
 
         rows.append(reconciled_row)
 
-    df = pd.DataFrame(rows)
-    sort_columns(df)
-    return df
+    rows = pd.DataFrame(rows)
+    sort_columns(rows)
+    print(rows)
+    return rows
 
 
 def sort_columns(df):

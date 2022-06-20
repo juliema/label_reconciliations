@@ -6,7 +6,7 @@
 <title>{{header.title}}</title>
 
 <style>
-{% include 'lib/summary/report.css' -%}
+{% include 'pylib/summary/report.css' -%}
 </style>
 
 </head>
@@ -125,7 +125,7 @@
   </section>
 
 <script>
-{% include 'lib/d3/d3.min.js' -%}
+{% include 'pylib/d3/d3.min.js' -%}
 </script>
 
 <script>
@@ -133,15 +133,15 @@ const groups = {
     {% for key, value in groups %}"{{key | safe}}": {{value | safe}},
     {% endfor %}
 };
-{% include 'lib/summary/transcriptions.js' -%}
+{% include 'pylib/summary/transcriptions.js' -%}
 </script>
 
 <script>
-{% include 'lib/summary/users.js' -%}
+{% include 'pylib/summary/users.js' -%}
 </script>
 
 <script>
-{% include 'lib/summary/reconciliation.js' -%}
+{% include 'pylib/summary/reconciliation.js' -%}
 </script>
 
 </body>

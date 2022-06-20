@@ -1,12 +1,13 @@
-"""Reconcile points."""
+"""Reconcile points.            )
+"""
 import json
 import statistics as stats
 
-from .. import cell
-from ..util import P
+from pylib import cell
+from pylib.utils import P
 
 
-def reconcile(group, args=None):  # noqa
+def reconcile(group, args=None):  # noqa pylint: disable=unused-argument
     raw_points = [json.loads(ln) for ln in group]
 
     points = [ln for ln in raw_points if ln.get("x")]

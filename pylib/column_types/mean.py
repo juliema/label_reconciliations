@@ -1,13 +1,12 @@
 """Get mean and range for the group. Handle non-numeric characters."""
 import statistics as stats
 
-from .. import cell
-from ..util import P
+from pylib import cell
+from pylib.utils import P
 
 
-def reconcile(group, args=None):  # noqa
-    values = [g for g in group]
-
+def reconcile(group, args=None):  # noqa pylint: disable=unused-argument
+    values = list(group)
     numbers = []
     for value in values:
         try:
@@ -16,17 +15,12 @@ def reconcile(group, args=None):  # noqa
             pass
 
     if not numbers:
-        note = "There are no numbers in {} {}".format(
-            len(values), P("record", len(values))
-        )
+        note = f"There are no numbers in {len(values)} {P('record', len(values))}"
         return cell.empty(note=note)
 
-    note = "There {} {} {} in {} {}".format(
-        P("is", len(numbers)),
-        len(numbers),
-        P("number", len(numbers)),
-        len(values),
-        P("record", len(values)),
+    note = (
+        f"There {P('is', len(numbers))} {len(numbers)} {P('number', len(numbers))} "
+        f"in {len(values)} {P('record', len(values))}"
     )
 
     mean = stats.mean(numbers)

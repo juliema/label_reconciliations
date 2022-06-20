@@ -24,6 +24,7 @@ if [ -f requirements.txt ]; then python -m pip install -r requirements.txt; fi
 
 # ##############################################################################
 # Dev only pip installs (not required because they're personal preference)
+
 python -m pip install -U pynvim
 python -m pip install -U 'python-lsp-server[all]'
 python -m pip install -U pre-commit pre-commit-hooks

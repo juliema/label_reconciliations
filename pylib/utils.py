@@ -1,5 +1,5 @@
-import importlib.util as i_util
 import sys
+from importlib import util as i_util
 from pathlib import Path
 
 import inflect
@@ -15,12 +15,12 @@ def get_plugins(subdir):
 
     plugins = {}
 
-    for path in [p for p in dir_.glob("*.py") if p.find("__init__") > -1]:
-        module_name = f"lib.{subdir}.{path.name}"
+    for path in [p for p in dir_.glob("*.py") if p.stem != "__init__"]:
+        module_name = f"pylib.{subdir}.{path.name}"
         spec = i_util.spec_from_file_location(module_name, str(path))
         module = i_util.module_from_spec(spec)
         spec.loader.exec_module(module)
-        plugins[path.name] = module
+        plugins[path.stem] = module
 
     return plugins
 

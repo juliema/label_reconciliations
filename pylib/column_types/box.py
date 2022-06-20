@@ -2,11 +2,11 @@
 import json
 from statistics import mean
 
-from .. import cell
-from ..util import P
+from pylib import cell
+from pylib.utils import P
 
 
-def reconcile(group, args=None):  # noqa
+def reconcile(group, args=None):  # noqa pylint: disable=unused-argument
     raw_boxes = [json.loads(b) for b in group]
 
     overlaps = [0] * len(raw_boxes)
@@ -18,19 +18,17 @@ def reconcile(group, args=None):  # noqa
     boxes = [b for i, b in enumerate(raw_boxes) if overlaps[i]]
 
     if not boxes:
-        note = "There are no overlapping boxes in {} {}".format(
-            len(raw_boxes), P("record", len(raw_boxes))
+        note = (
+            f"There are no overlapping boxes in {len(raw_boxes)} "
+            f"{P('record', len(raw_boxes))}"
         )
         return cell.empty(note=note)
 
     count = len(boxes)
 
-    note = "There {} {} overlapping {} in {} {}".format(
-        P("was", count),
-        count,
-        P("box", count),
-        len(raw_boxes),
-        P("record", len(raw_boxes)),
+    note = (
+        f"There {P('was', count)} {count} overlapping {P('box', count)} "
+        f"in {len(raw_boxes)} {P('record', len(raw_boxes))}"
     )
 
     return cell.ok(
