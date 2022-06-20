@@ -4,7 +4,7 @@ from unittest.mock import patch
 
 import pandas as pd
 
-from lib.formats import nfn
+from pylib.formats import nfn
 
 
 class TestGetWorkflowId(unittest.TestCase):
@@ -33,7 +33,7 @@ class TestGetWorkflowId(unittest.TestCase):
 
         assert workflow_id == "1001"
 
-    @patch("lib.util.error_exit")
+    @patch("pylib.util.error_exit")
     def test_get_workflow_id_03(self, error_exit):
         """It errors when there are multiple workflow IDs to choose."""
         _, df2 = self.setup_dataframes()

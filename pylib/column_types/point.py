@@ -2,6 +2,7 @@
 import json
 import statistics as stats
 
+from .. import cell
 from ..util import P
 
 
@@ -14,15 +15,15 @@ def reconcile(group, args=None):  # noqa
     count = len(points)
 
     if not count:
-        return f'There are no points in {raw_count} {P("records", raw_count)}.', {}
+        note = f'There are no points in {raw_count} {P("records", raw_count)}.'
+        return cell.empty(note=note)
 
-    x = round(stats.mean([ln["x"] for ln in points]))
-    y = round(stats.mean([ln["y"] for ln in points]))
-
-    reason = (
+    note = (
         f'There {P("was", count)} {count} '
         f'{P("point", raw_count)} in {raw_count} {P("record", raw_count)}'
     )
-    line = {"x": x, "y": y}
 
-    return reason, json.dumps(line)
+    x = stats.mean([ln["x"] for ln in points])
+    y = stats.mean([ln["y"] for ln in points])
+
+    return cell.ok(note=note, x=x, y=y)

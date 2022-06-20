@@ -1,7 +1,5 @@
 import importlib.util as i_util
-import sqlite3
 import sys
-from contextlib import contextmanager
 from pathlib import Path
 
 import inflect
@@ -9,17 +7,6 @@ import inflect
 E = inflect.engine()
 E.defnoun("The", "All")
 P = E.plural
-
-
-@contextmanager
-def db_connect(db_path):
-    """Add a row factory to the normal connection context manager."""
-    try:
-        with sqlite3.connect(db_path) as cxn:
-            cxn.row_factory = sqlite3.Row
-            yield cxn
-    finally:
-        pass
 
 
 def get_plugins(subdir):

@@ -6,10 +6,9 @@ import textwrap
 import zipfile
 from os.path import basename
 
-from lib import reconciled as reconciled_df
-from lib import reconciler
-from lib import summary
-from lib import util
+from pylib import reconciler
+from pylib import summary
+from pylib import util
 
 VERSION = "0.5.0"
 
@@ -238,13 +237,14 @@ def error_exit(unreconciled, plugin_types):
 
 def reconcile_data(args, unreconciled, column_types):
     """Build and output reconciled data."""
-    reconciled, explanations = reconciler.build(args, unreconciled, column_types)
+    df = reconciler.build(args, unreconciled, column_types)
 
     if args.reconciled:
-        reconciled = reconciled_df.reconciled_output(args, reconciled, column_types)
+        unwanted = [c for c in df.columns if c.split()[-1] in ["note", "flag"]]
+        reconciled_df = df.drop(unwanted, axis="columns")
+        reconciled_df.to_csv(args.reconciled, index=False)
 
-    if args.summary:
-        summary.report(args, unreconciled, reconciled, explanations, column_types)
+    return df
 
 
 def main():
@@ -264,7 +264,10 @@ def main():
         unreconciled.to_csv(args.unreconciled, index=False)
 
     if args.reconciled or args.summary:
-        reconcile_data(args, unreconciled, column_types)
+        reconciled = reconcile_data(args, unreconciled, column_types)
+
+        if args.summary:
+            summary.report(args, unreconciled, reconciled, column_types)
 
     if args.zip:
         zip_files(args)

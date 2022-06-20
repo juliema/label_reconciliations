@@ -6,6 +6,7 @@ from itertools import combinations
 
 from fuzzywuzzy import fuzz  # pylint: disable=import-error
 
+from .. import cell
 from ..util import P
 
 FuzzyRatioScore = namedtuple("FuzzyRatioScore", "score value")
@@ -25,82 +26,88 @@ def reconcile(group, args=None):
     exact = exact_match(values)
     blanks = count - sum(f.count for f in exact)
 
-    if not exact:  # Note: Only spaces are removed
-        reason = "{} {} {} {} blank".format(
-            P("The", count), count, P("record", count), P("is", count)
-        )
-        return reason, ""
+    match exact:
 
-    if exact[0].count > 1 and exact[0].count == count:
-        reason = "Exact unanimous match, {} of {} {}".format(
-            exact[0].count, count, P("record", count)
-        )
-        return reason, exact[0].value
+        # No matches
+        case []:
+            note = "{} {} {} {} blank".format(
+                P("The", count), count, P("record", count), P("is", count)
+            )
+            return cell.error(note=note)
 
-    if len(exact) > 1 and exact[0].count > 1 and exact[0].count == exact[1].count:
-        reason = "Exact match is a tie, {} of {} {} with {} {}".format(
-            exact[0].count, count, P("record", count), blanks, P("blank", blanks)
-        )
-        return reason, exact[0].value
+        # Everyone chose the same value
+        case [e0] if e0.count == count:
+            note = "Exact unanimous match, {} of {} {}".format(
+                exact[0].count, count, P("record", count)
+            )
+            return cell.ok(note=note, value=e0.value)
 
-    if exact[0].count > 1:
-        reason = "Exact match, {} of {} {} with {} {}".format(
-            exact[0].count, count, P("record", count), blanks, P("blank", blanks)
-        )
-        return reason, exact[0].value
+        # It was a tie for the text chosen
+        case [e0, e1, *_] if e0.count > 1 and e0.count == e1.count:
+            note = "Exact match is a tie, {} of {} {} with {} {}".format(
+                exact[0].count, count, P("record", count), blanks, P("blank", blanks)
+            )
+            return cell.ok(note=note, value=e0.value)
+
+        # We have a winner
+        case [e0, *_] if e0.count > 1:
+            note = "Exact match, {} of {} {} with {} {}".format(
+                exact[0].count, count, P("record", count), blanks, P("blank", blanks)
+            )
+            return cell.ok(note=note, value=e0.value)
 
     # Look for normalized exact matches
     filled = only_filled_values(values)
     blanks = count - sum(f.count for f in filled)
 
-    if not filled:  # Note: Both spaces & punctuation are removed
-        reason = "{} {} normalized {} {} blank".format(
-            P("The", count), count, P("record", count), P("is", count)
-        )
-        return reason, ""
+    match filled:
 
-    if filled[0].count > 1 and filled[0].count == count:
-        reason = "Normalized unanimous match, {} of {} {}".format(
-            filled[0].count, count, P("record", count)
-        )
-        return reason, filled[0].value
+        # No matches
+        case []:
+            note = "{} {} normalized {} {} blank".format(
+                P("The", count), count, P("record", count), P("is", count)
+            )
+            return cell.error(note=note)
 
-    if len(filled) > 1 and filled[0].count > 1 and filled[0].count == filled[1].count:
-        reason = "Normalized match is a tie, {} of {} {} with {} {}".format(
-            filled[0].count, count, P("record", count), blanks, P("blank", blanks)
-        )
-        return reason, filled[0].value
+        # Everyone chose the same value
+        case [f0] if f0.count == count:
+            note = "Normalized unanimous match, {} of {} {}".format(
+                f0.count, count, P("record", count)
+            )
+            return cell.ok(note=note, value=f0.value)
 
-    if filled[0].count > 1:
-        reason = "Normalized match, {} of {} {} with {} {}".format(
-            filled[0].count, count, P("record", count), blanks, P("blank", blanks)
-        )
-        return reason, filled[0].value
+        # It was a tie for the values chosen
+        case [f0, f1, *_] if f0.count == f1.count:
+            note = "Normalized match is a tie, {} of {} {} with {} {}".format(
+                f0.count, count, P("record", count), blanks, P("blank", blanks)
+            )
+            return cell.ok(note=note, value=f0.value)
 
-    if len(filled) == 1:
-        reason = "Only 1 transcript in {} {}".format(count, P("record", count))
-        return reason, filled[0].value
+        case [f0] if f0 == 1:
+            note = "Only 1 transcript in {} {}".format(count, P("record", count))
+            return cell.warning(note=note, value=f0.value)
 
     # Check for simple in-place fuzzy matches
     top = top_partial_ratio(group, args.user_weights_)
+
     if top.score >= args.fuzzy_ratio_threshold:
-        reason = "Partial ratio match on {} {} with {} {}, score={}".format(
+        note = "Partial ratio match on {} {} with {} {}, score={}".format(
             count, P("record", count), blanks, P("blank", blanks), top.score
         )
-        return reason, top.value
+        return cell.ok(note=note, value=top.value)
 
     # Now look for the best token match
     top = top_token_set_ratio(values)
     if top.score >= args.fuzzy_set_threshold:
-        reason = "Token set ratio match on {} {} with {} {}, score={}".format(
+        note = "Token set ratio match on {} {} with {} {}, score={}".format(
             count, P("record", count), blanks, P("blank", blanks), top.score
         )
-        return reason, top.value
+        return cell.ok(note=note, value=top.value)
 
-    reason = "No text match on {} {} with {} {}".format(
+    note = "No text match on {} {} with {} {}".format(
         count, P("record", count), blanks, P("blank", blanks)
     )
-    return reason, ""
+    return cell.error(note)
 
 
 def exact_match(values):

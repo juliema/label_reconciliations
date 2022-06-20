@@ -1,7 +1,6 @@
 import json
 import re
 from collections import defaultdict
-from collections import namedtuple
 from dataclasses import dataclass
 from dataclasses import field
 from typing import Any
@@ -11,17 +10,13 @@ from dateutil.parser import parse
 
 from .. import util
 
-STARTED_AT = "classification_started_at"
-
-WorkflowString = namedtuple("WorkflowString", "value label")
-
 
 @dataclass
 class WorkflowStrings:
     label_strings: dict[str, list[str]] = field(
         default_factory=lambda: defaultdict(list)
     )
-    value_strings: dict[str, WorkflowString] = field(default_factory=dict)
+    value_strings: dict[str, dict[str, str]] = field(default_factory=dict)
 
 
 # #####################################################################################
@@ -37,7 +32,7 @@ def read(args):
     # Get the classifications for the workflow
     df = df.loc[df.workflow_id == str(args.workflow_id), :]
 
-    # A hack to workaround crap coming back from Zooniverse
+    # A hack to workaround coded values returned from Zooniverse
     workflow_strings = get_workflow_strings(args.workflow_csv, args.workflow_id)
 
     # Extract the various json blobs
@@ -51,8 +46,18 @@ def read(args):
     # Remove unwanted columns
     unwanted = " user_id user_ip subject_ids subject_data subject_retired ".split()
     unwanted_columns = [c for c in df.columns if c.lower() in unwanted]
-    df = df.drop(unwanted_columns, axis=1)
+    df = df.drop(unwanted_columns, axis="columns")
     column_types = {k: v for k, v in column_types.items() if k.lower() not in unwanted}
+
+    # There are cases of duplicate columns
+    df = df.loc[:, ~df.columns.duplicated()]
+
+    # Sometimes multiple copies of the same record are added
+    # And sometimes a subject gets presented to a user repeatedly
+    df = df.drop_duplicates([args.group_by, args.user_column], keep="first")
+    df = df.fillna("")
+
+    return df, column_types
 
 
 # #############################################################################
@@ -69,11 +74,13 @@ def extract_annotations(df, workflow_strings):
     data = [flatten_annotations(column_types, a, workflow_strings) for a in annotations]
     data = pd.DataFrame(data, index=df.index)
 
-    df = pd.concat([df, data], axis=1)
+    df = pd.concat([df, data], axis="columns")
 
     column_types, renames = rename_columns(column_types)
 
-    return df.rename(columns=renames).drop(["annotations"], axis=1), column_types
+    df = df.rename(columns=renames).drop(["annotations"], axis="columns")
+
+    return df, column_types
 
 
 def flatten_annotations(column_types, annotations, workflow_strings):
@@ -162,9 +169,9 @@ def box_annotation(column_types, annos, anno):
 
 
 def line_annotation(column_types, annos, anno):
-    label = "{}: line".format(anno["tool_label"])
+    label = "{}: length".format(anno["tool_label"])
     label = unique_name(column_types, label)
-    column_types[label] = "line"
+    column_types[label] = "length"
     annos[label] = json.dumps(
         {
             "x1": round(anno["x1"]),
@@ -254,10 +261,10 @@ def extract_subject_data(df, column_types):
     """
     data = df.subject_data.map(json.loads).apply(lambda x: list(x.values())[0]).tolist()
     data = pd.DataFrame(data, index=df.index)
-    df = df.drop(["subject_data"], axis=1)
+    df = df.drop(["subject_data"], axis="columns")
 
     if "retired" in data.columns:
-        data = data.drop(["retired"], axis=1)
+        data = data.drop(["retired"], axis="columns")
 
     if "id" in data.columns:
         data = data.rename(columns={"id": "external_id"})
@@ -267,7 +274,7 @@ def extract_subject_data(df, column_types):
     columns_ = dict(zip(data.columns, columns_))
     data = data.rename(columns=columns_)
 
-    df = pd.concat([df, data], axis=1)
+    df = pd.concat([df, data], axis="columns")
 
     # Put the subject columns into the column_types: They're all 'same'
     for name in data.columns:
@@ -286,12 +293,10 @@ def extract_metadata(df, column_types):
     data = df.metadata.map(json.loads).tolist()
     data = pd.DataFrame(data, index=df.index)
 
-    df[STARTED_AT] = data.started_at.map(_extract_date)
+    df.classification_started_at = data.started_at.map(_extract_date)
+    df.classification_finished_at = data.finished_at.map(_extract_date)
 
-    name = "classification_finished_at"
-    df[name] = data.finished_at.map(_extract_date)
-
-    return df.drop(["metadata"], axis=1), column_types
+    return df.drop(["metadata"], axis="columns"), column_types
 
 
 # #############################################################################
@@ -355,7 +360,7 @@ def get_workflow_strings(workflow_csv, workflow_id):
                 label = node["label"].strip()
                 labels = [v for k, v in instructions.items() if label.startswith(k)]
                 label = labels[-1] if labels else ""
-                value_strings[node["value"]] = WorkflowString(string, label)
+                value_strings[node["value"]] = {string: label}
         elif isinstance(node, dict):
             for child in node.values():
                 _task_dive(child)

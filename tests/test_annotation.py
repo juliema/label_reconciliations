@@ -1,6 +1,6 @@
 import unittest
 
-from lib.formats import nfn
+from pylib.formats import nfn
 
 
 class TestFlattenAnnotation(unittest.TestCase):
