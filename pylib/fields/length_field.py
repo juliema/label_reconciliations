@@ -4,17 +4,35 @@ import json
 import math
 import re
 import statistics as stats
+from dataclasses import dataclass
 
 from pylib import cell
+from pylib.fields.base_field import BaseField
 from pylib.utils import P
-
-RAW_DATA_TYPE = "json"
-DATA_WIDTH = 5
 
 SCALE_RE = re.compile(
     r"(?P<scale> [0-9.]+ ) \s* (?P<units> (mm|cm|dm|m) ) \b",
     flags=re.VERBOSE | re.IGNORECASE,
 )
+
+
+@dataclass(kw_only=True)
+class LengthField(BaseField):
+    x1: float
+    y1: float
+    x2: float
+    y2: float
+    pixel_length: float = 0.0
+    length: float = 0.0
+    units: str = ""
+
+    def to_dict(self):
+        dict_ = self.round("x1", "y1", "x2", "y2")
+        if self.is_reconciled:
+            dict_ |= self.round("length pixels", digits=2)
+        if self.units:
+            dict_[self.header(f"length {self.units}")] = round(self.length, 2)
+        return dict_
 
 
 def reconcile(group, args=None):  # noqa pylint: disable=unused-argument

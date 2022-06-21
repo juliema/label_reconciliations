@@ -1,8 +1,20 @@
 """Get mean and range for the group. Handle non-numeric characters."""
 import statistics as stats
+from dataclasses import dataclass
 
 from pylib import cell
+from pylib.fields.base_field import BaseField
 from pylib.utils import P
+
+
+@dataclass(kw_only=True)
+class MeanField(BaseField):
+    mean: float
+    min: float
+    max: float
+
+    def to_dict(self):
+        return self.round("mean", "min", "max")
 
 
 def reconcile(group, args=None):  # noqa pylint: disable=unused-argument

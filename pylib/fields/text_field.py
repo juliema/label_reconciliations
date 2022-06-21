@@ -2,16 +2,26 @@
 import re
 from collections import defaultdict
 from collections import namedtuple
+from dataclasses import dataclass
 from itertools import combinations
 
 from fuzzywuzzy import fuzz  # pylint: disable=import-error
 
 from pylib import cell
+from pylib.fields.base_field import BaseField
 from pylib.utils import P
 
 FuzzyRatioScore = namedtuple("FuzzyRatioScore", "score value")
 FuzzySetScore = namedtuple("FuzzySetScore", "score value tokens")
 ExactScore = namedtuple("ExactScore", "value count")
+
+
+@dataclass(kw_only=True)
+class TextField(BaseField):
+    value: str
+
+    def to_dict(self):
+        return {self.label: self.value}
 
 
 def reconcile(group, args=None):  # noqa pylint: disable=unused-argument
@@ -92,7 +102,7 @@ def reconcile(group, args=None):  # noqa pylint: disable=unused-argument
             return cell.only_one(note=note, value=f0.value)
 
     # Check for simple in-place fuzzy matches
-    top = top_partial_ratio(group, args.user_weights_)
+    top = top_partial_ratio(group)
 
     if top.score >= args.fuzzy_ratio_threshold:
         note = (
@@ -155,19 +165,13 @@ def only_filled_values(values):
     return sorted(only_filled, key=lambda s: s.count, reverse=True)
 
 
-def top_partial_ratio(group, user_weights):
+def top_partial_ratio(group):
     """Return the best partial ratio match from fuzzywuzzy module."""
     scores = []
     group = group.reset_index(level=0, drop=True).astype(str)
     for combo in combinations(zip(group, group.index), 2):
-        # combo format is ((value1, username1),(value2, username2))
         score = fuzz.partial_ratio(combo[0][0], combo[1][0])
-        if len(combo[0][0]) >= len(combo[1][0]):
-            value, user_name = combo[0][0], str(combo[0][1])
-        else:
-            value, user_name = combo[1][0], str(combo[1][1])
-        score = score + user_weights.get(user_name.lower(), 0)  # new weight
-        score = min(max(score, 0), 100)  # enforce a ceiling and floor
+        value = combo[0][0] if len(combo[0][0]) >= len(combo[1][0]) else combo[1][0]
         scores.append(FuzzyRatioScore(score, value))
 
     scores = sorted(scores, reverse=True, key=lambda s: (s.score, len(s.value)))

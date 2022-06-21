@@ -1,12 +1,20 @@
 """Reconcile points."""
 import json
 import statistics as stats
+from dataclasses import dataclass
 
 from pylib import cell
+from pylib.fields.base_field import BaseField
 from pylib.utils import P
 
-RAW_DATA_TYPE = "json"
-DATA_WIDTH = 2
+
+@dataclass(kw_only=True)
+class PointField(BaseField):
+    x: float
+    y: float
+
+    def to_dict(self):
+        return self.round("x", "y")
 
 
 def reconcile(group, args=None):  # noqa pylint: disable=unused-argument

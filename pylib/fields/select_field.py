@@ -4,11 +4,21 @@ Classifications are chosen from a controlled vocabulary.
 """
 # noqa pylint: disable=invalid-name
 from collections import Counter
+from dataclasses import dataclass
 
 from pylib import cell
+from pylib.fields.base_field import BaseField
 from pylib.utils import P
 
 PLACEHOLDERS = ["placeholder"]
+
+
+@dataclass(kw_only=True)
+class SelectField(BaseField):
+    value: str
+
+    def to_dict(self):
+        return {self.label: self.value}
 
 
 def reconcile(group, args=None):  # noqa pylint: disable=unused-argument

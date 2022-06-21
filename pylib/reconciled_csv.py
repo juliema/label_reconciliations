@@ -5,8 +5,8 @@ from pylib import cell
 from pylib import utils
 
 
-def build(args, raw_data, column_types):
-    plugins = utils.get_plugins("column_types")
+def build(args, unreconciled_df, column_types):
+    plugins = utils.get_plugins("fields")
     reconcilers = {
         k: plugins[v]
         for k, v in column_types.items()
@@ -18,7 +18,7 @@ def build(args, raw_data, column_types):
         if hasattr(plugins[v], "reconcile_row")
     }
 
-    grouped = raw_data.groupby(args.group_by)
+    grouped = unreconciled_df.groupby(args.group_by)
 
     reconciled = []
     for group_by, group_df in grouped:

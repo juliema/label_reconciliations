@@ -10,18 +10,18 @@
 # from pylib import utils
 #
 #
-# def report(args, unreconciled, reconciled, column_types):
+# def report(args, unreconciled, reconciled, fields):
 #     # Get the report template
 #     env = Environment(loader=PackageLoader("reconcile", "."))
 #     template = env.get_template("pylib/summary/template.html")
 #
 #     # Create the group dataset
-#     field_sets = get_field_sets(args, unreconciled, reconciled, column_types)
+#     field_sets = get_field_sets(args, unreconciled, reconciled, fields)
 #     from pprint import pp
 #
 #     pp(field_sets)
 # Create filter lists
-# filters = get_filters(args, groups, column_types)
+# filters = get_filters(args, groups, fields)
 # Get transcriber summary data
 # transcribers = user_summary(args, unreconciled)
 # Build the summary report
@@ -30,33 +30,33 @@
 #     groups=iter(groups.items()),
 #     filters=filters,
 #     header=header_data(args, unreconciled, reconciled, transcribers),
-#     columns=pylib.column_types.sort_columns(args, unreconciled, column_types),
+#     columns=pylib.fields.sort_columns(args, unreconciled, fields),
 #     transcribers=transcribers,
-#     reconciled=reconciled_summary(notes, column_types),
+#     reconciled=reconciled_summary(notes, fields),
 #     problem_pattern=PROBLEM_PATTERN,
 # )
 # Output the report
 # with open(args.summary, "w", encoding="utf-8") as out_file:
 #     out_file.write(summary)
-# def get_field_sets(args, unreconciled, reconciled, column_types):
+# def get_field_sets(args, unreconciled, reconciled, fields):
 #     """Convert the data frames into dictionaries."""
 #     df = pd.concat([reconciled, unreconciled]).fillna("")
 #     df = df.sort_values([args.group_by, args.key_column])
 #     columns = [args.group_by, args.key_column]
 #     if args.user_column:
 #         columns += [args.user_column]
-#     df = pylib.columns.sort_columns(columns, df, column_types)
+#     df = pylib.columns.sort_columns(columns, df, fields)
 #     print(df)
-#     print(column_types)
+#     print(fields)
 #     field_set = [c.split(":")[0].strip() for c in df.columns]
 #     fields = [c.split(":")[-1].strip() for c in df.columns]
 #     fields = ["" if t == b else b for t, b in zip(field_set, fields)]
 #     df.columns = pd.MultiIndex.from_arrays([field_set, fields])
 #     df.to_csv("data/temp/junk.csv")
-# plugins = utils.get_plugins("column_types")
+# plugins = utils.get_plugins("fields")
 # note_widths = {
 #     k: getattr(plugins[v], "NOTE_WIDTH")
-#     for k, v in column_types.items()
+#     for k, v in fields.items()
 #     if hasattr(plugins[v], "NOTE_WIDTH")
 # }
 #
@@ -80,7 +80,7 @@
 #     array.append(row.to_dict())
 #     groups[key]["unreconciled"] = array
 # return df
-# def get_filters(args, groups, column_types):
+# def get_filters(args, groups, fields):
 #     """Create list of group IDs that will be used to filter group rows."""
 #     filters = {
 #         "__select__": ["Show All", "Show All Problems"],
@@ -89,7 +89,7 @@
 #     }
 # Get the remaining filters. They are the columns in the notes row.
 # group = next(iter(groups.values()))
-# columns = pylib.columns.sort_columns(args, group["notes"].keys(), column_types)
+# columns = pylib.columns.sort_columns(args, group["notes"].keys(), fields)
 # filters["__select__"] += [
 #     "Show problems with: " + c for c in columns if c in group["notes"].keys()
 # ]
@@ -137,7 +137,7 @@
 # PROBLEM_PATTERN = "|".join([NO_MATCH_PATTERN, ONESIES_PATTERN])
 #
 #
-# def report(args, unreconciled, reconciled, column_types):
+# def report(args, unreconciled, reconciled, fields):
 #     """Generate the report."""
 #     # Everything as strings
 #     reconciled = reconciled.applymap(str)
@@ -155,7 +155,7 @@
 #     groups = get_groups(args, unreconciled, reconciled, notes)
 #
 #     # Create filter lists
-#     filters = get_filters(args, groups, column_types)
+#     filters = get_filters(args, groups, fields)
 #
 #     # Get transcriber summary data
 #     transcribers = user_summary(args, unreconciled)
@@ -166,9 +166,9 @@
 #         header=header_data(args, unreconciled, reconciled, transcribers),
 #         groups=iter(groups.items()),
 #         filters=filters,
-#         columns=pylib.column_types.sort_columns(args, unreconciled, column_types),
+#         columns=pylib.fields.sort_columns(args, unreconciled, fields),
 #         transcribers=transcribers,
-#         reconciled=reconciled_summary(notes, column_types),
+#         reconciled=reconciled_summary(notes, fields),
 #         problem_pattern=PROBLEM_PATTERN,
 #     )
 #
@@ -177,7 +177,7 @@
 #         out_file.write(summary)
 #
 #
-# def get_filters(args, groups, column_types):
+# def get_filters(args, groups, fields):
 #     """Create list of group IDs that will be used to filter group rows."""
 #     filters = {
 #         "__select__": ["Show All", "Show All Problems"],
@@ -187,8 +187,8 @@
 #
 #     # Get the remaining filters. They are the columns in the notes row.
 #     group = next(iter(groups.values()))
-#     columns = pylib.column_types.sort_columns(
-#         args, group["notes"].keys(), column_types
+#     columns = pylib.fields.sort_columns(
+#         args, group["notes"].keys(), fields
 #     )
 #     filters["__select__"] += [
 #         "Show problems with: " + c for c in columns
@@ -243,14 +243,14 @@
 #     }
 #
 #
-# def reconciled_summary(notes, column_types):
+# def reconciled_summary(notes, fields):
 #     """Build a summary of how each field was reconciled."""
 #     # TODO: Delete this
 #
 #     how_reconciled = []
-#     for col in order_column_names(notes, column_types):
+#     for col in order_column_names(notes, fields):
 #
-#         col_type = column_types.get(col, {"type": "text"})["type"]
+#         col_type = fields.get(col, {"type": "text"})["type"]
 #
 #         num_fuzzy_match = ""
 #         if col_type == "text":
@@ -307,19 +307,19 @@
 #     return how_reconciled
 #
 #
-# def order_column_names(df, column_types):
+# def order_column_names(df, fields):
 #     """Sort column names by the column order."""
 #     # TODO: Delete this
 #
 #     columns = [
 #         v["name"]
-#         for v in sorted(column_types.values(), key=lambda x: x["order"])
+#         for v in sorted(fields.values(), key=lambda x: x["order"])
 #         if v["name"] in df.columns
 #     ]
 #     return columns
 #
 #
-# def problems(notes, column_types):
+# def problems(notes, fields):
 #     """Make a list of problems for each subject."""
 #     # TODO: Delete this
 #
@@ -332,7 +332,7 @@
 #         if not opts:
 #             opts = [(f"problem-{i}", k) for i, (k, v) in
 #               enumerate(cols.iteritems(), 1)]
-#             opts = sorted(opts, key=lambda x: column_types[x[1]]["order"])
+#             opts = sorted(opts, key=lambda x: fields[x[1]]["order"])
 #
 #         # get the row's problems
 #         probs[group_by] = {}
@@ -349,7 +349,7 @@
 # from jinja2 import Environment
 # from jinja2 import PackageLoader
 #
-# import pylib.column_types
+# import pylib.fields
 #
 # # These depend on the patterns put into notes
 # NO_MATCH_PATTERN = r"No (?:select|text) match on"
@@ -376,7 +376,7 @@
 # PROBLEM_PATTERN = "|".join([NO_MATCH_PATTERN, ONESIES_PATTERN])
 #
 #
-# def report(args, unreconciled, reconciled, column_types):
+# def report(args, unreconciled, reconciled, fields):
 #     """Generate the report."""
 #     # Everything as strings
 #     reconciled = reconciled.applymap(str)
@@ -394,7 +394,7 @@
 #     groups = get_groups(args, unreconciled, reconciled, notes)
 #
 #     # Create filter lists
-#     filters = get_filters(args, groups, column_types)
+#     filters = get_filters(args, groups, fields)
 #
 #     # Get transcriber summary data
 #     transcribers = user_summary(args, unreconciled)
@@ -405,9 +405,9 @@
 #         header=header_data(args, unreconciled, reconciled, transcribers),
 #         groups=iter(groups.items()),
 #         filters=filters,
-#         columns=pylib.column_types.sort_columns(args, unreconciled, column_types),
+#         columns=pylib.fields.sort_columns(args, unreconciled, fields),
 #         transcribers=transcribers,
-#         reconciled=reconciled_summary(notes, column_types),
+#         reconciled=reconciled_summary(notes, fields),
 #         problem_pattern=PROBLEM_PATTERN,
 #     )
 #
@@ -438,7 +438,7 @@
 #     return groups
 #
 #
-# def get_filters(args, groups, column_types):
+# def get_filters(args, groups, fields):
 #     """Create list of group IDs that will be used to filter group rows."""
 #     filters = {
 #         "__select__": ["Show All", "Show All Problems"],
@@ -448,8 +448,8 @@
 #
 #     # Get the remaining filters. They are the columns in the notes row.
 #     group = next(iter(groups.values()))
-#     columns = pylib.column_types.sort_columns(
-#         args, group["notes"].keys(), column_types
+#     columns = pylib.fields.sort_columns(
+#         args, group["notes"].keys(), fields
 #     )
 #     filters["__select__"] += [
 #         "Show problems with: " + c for c in columns if c
@@ -517,14 +517,14 @@
 #     }
 #
 #
-# def reconciled_summary(notes, column_types):
+# def reconciled_summary(notes, fields):
 #     """Build a summary of how each field was reconciled."""
 #     # TODO: Delete this
 #
 #     how_reconciled = []
-#     for col in order_column_names(notes, column_types):
+#     for col in order_column_names(notes, fields):
 #
-#         col_type = column_types.get(col, {"type": "text"})["type"]
+#         col_type = fields.get(col, {"type": "text"})["type"]
 #
 #         num_fuzzy_match = ""
 #         if col_type == "text":
@@ -581,19 +581,19 @@
 #     return how_reconciled
 #
 #
-# def order_column_names(df, column_types):
+# def order_column_names(df, fields):
 #     """Sort column names by the column order."""
 #     # TODO: Delete this
 #
 #     columns = [
 #         v["name"]
-#         for v in sorted(column_types.values(), key=lambda x: x["order"])
+#         for v in sorted(fields.values(), key=lambda x: x["order"])
 #         if v["name"] in df.columns
 #     ]
 #     return columns
 #
 #
-# def problems(notes, column_types):
+# def problems(notes, fields):
 #     """Make a list of problems for each subject."""
 #     # TODO: Delete this
 #
@@ -606,7 +606,7 @@
 #         if not opts:
 #             opts = [(f"problem-{i}", k) for i, (k, v)
 #             in enumerate(cols.iteritems(), 1)]
-#             opts = sorted(opts, key=lambda x: column_types[x[1]]["order"])
+#             opts = sorted(opts, key=lambda x: fields[x[1]]["order"])
 #
 #         # get the row's problems
 #         probs[group_by] = {}

@@ -6,7 +6,15 @@ from dataclasses import field
 import pandas as pd
 from dateutil.parser import parse
 
-from pylib.utils import error_exit
+from pylib import utils
+from pylib.fields.box_field import BoxField
+from pylib.fields.length_field import LengthField
+from pylib.fields.noop_field import NoOpField
+from pylib.fields.point_field import PointField
+from pylib.fields.same_field import SameField
+from pylib.fields.select_field import SelectField
+from pylib.fields.text_field import TextField
+from pylib.table import Table
 
 
 @dataclass
@@ -31,28 +39,28 @@ def read(args):
     workflow_strings = get_workflow_strings(args.workflow_csv, args.workflow_id)
 
     # Extract the various json blobs
-    data = []
+    table = Table()
     for raw_row in raw_records:
-        row = {
-            "subject_id": raw_row["subject_ids"].split(",", maxsplit=1)[0],
-            "classification_id": raw_row["classification_id"],
-            "user_name": raw_row.get("user_name", ""),
-        }
+        row = [
+            SameField(
+                value=raw_row["subject_ids"].split(",", maxsplit=1)[0],
+                label="subject_id",
+            ),
+            NoOpField(value=raw_row["classification_id"], label="classification_id"),
+            NoOpField(value=raw_row.get("user_name", ""), label="user_name"),
+        ]
         extract_annotations(raw_row, row, workflow_strings)
         extract_subject_data(raw_row, row)
         extract_metadata(raw_row, row)
         extract_misc_data(raw_row, row)
 
-        data.append(row)
+        table.append(row)
 
-    data = sorted(data, key=lambda d: (d["subject_id"], d["classification_id"]))
-    df = pd.DataFrame(data)
-
-    return df
+    return table
 
 
 # #############################################################################
-def extract_annotations(raw_row: dict, row: dict, workflow_strings: WorkflowStrings):
+def extract_annotations(raw_row: dict, row: list, workflow_strings: WorkflowStrings):
     """Extract annotations from the json object in the annotations column.
 
     Annotations are nested json blobs with a WTF format. Part of the WTF is that each
@@ -62,37 +70,29 @@ def extract_annotations(raw_row: dict, row: dict, workflow_strings: WorkflowStri
         flatten_annotation(anno, row, workflow_strings)
 
 
-def flatten_annotation(
-    anno: dict, row: dict, workflow_strings: WorkflowStrings, anno_id: str = ""
-):
+def flatten_annotation(anno, row, workflow_strings, anno_id=""):
     """Flatten one annotation recursively."""
     anno_id = anno.get("task", anno_id)
 
     match anno:
-        case {"value": [str(), *__], **___}:
-            list_annotation(anno, row, anno_id)
         case {"value": list(), **__}:
             subtask_annotation(anno, row, workflow_strings, anno_id)
+        case {"value": [str(), *__], **___}:
+            list_annotation(anno, row)
         case {"select_label": _, **__}:
-            select_label_annotation(anno, row, anno_id)
+            select_label_annotation(anno, row)
         case {"task_label": _, **__}:
-            task_label_annotation(anno, row, anno_id)
+            task_label_annotation(anno, row)
         case {"tool_label": _, "width": __, **___}:
-            box_annotation(anno, row, anno_id)
+            box_annotation(anno, row)
         case {"tool_label": _, "x1": __, **___}:
-            line_annotation(anno, row, anno_id)
+            length_annotation(anno, row)
         case {"tool_label": _, "x": __, **___}:
-            point_annotation(anno, row, anno_id)
+            point_annotation(anno, row)
         case {"tool_label": _, "details": __, **___}:
             workflow_annotation(anno, row, workflow_strings, anno_id)
         case _:
             print(f"Annotation type not found: {anno}")
-
-
-def list_annotation(anno, row, anno_id):
-    label = column_name(anno_id, anno["task_label"])
-    values = sorted(anno.get("value", ""))
-    row[label] = " ".join(values)
 
 
 def subtask_annotation(anno, row, workflow_strings, anno_id):
@@ -102,38 +102,54 @@ def subtask_annotation(anno, row, workflow_strings, anno_id):
         flatten_annotation(subtask, row, workflow_strings, anno_id)
 
 
-def select_label_annotation(anno, row, anno_id):
-    label = column_name(anno_id, anno["select_label"])
+def list_annotation(anno, row):
+    values = sorted(anno.get("value", ""))
+    row.append(TextField(value=" ".join(values), label=anno["task_label"].strip()))
+
+
+def select_label_annotation(anno, row):
+    label = anno["select_label"]
     option = anno.get("option")
     value = anno.get("label", "") if option else anno.get("value", "")
-    row[label] = value
+    row.append(SelectField(value=value, label=label))
 
 
-def task_label_annotation(anno, row, anno_id):
-    label = column_name(anno_id, anno["task_label"])
-    row[label] = anno.get("value", "")
+def task_label_annotation(anno, row):
+    row.append(TextField(value=anno.get("value", ""), label=anno["task_label"].strip()))
 
 
-def box_annotation(anno, row, anno_id):
-    label = column_name(anno_id, anno["tool_label"])
-    row[f"{label}: left"] = round(anno["x"])
-    row[f"{label}: right"] = round(anno["x"] + anno["width"])
-    row[f"{label}: top"] = round(anno["y"])
-    row[f"{label}: bottom"] = round(anno["y"] + anno["height"])
+def box_annotation(anno, row):
+    row.append(
+        BoxField(
+            label=anno["tool_label"].strip(),
+            left=round(anno["x"]),
+            right=round(anno["x"] + anno["width"]),
+            top=round(anno["y"]),
+            bottom=round(anno["y"] + anno["height"]),
+        )
+    )
 
 
-def line_annotation(anno, row, anno_id):
-    label = column_name(anno_id, anno["tool_label"])
-    row[f"{label}: x1"] = round(anno["x1"])
-    row[f"{label}: y1"] = round(anno["y1"])
-    row[f"{label}: x2"] = round(anno["x2"])
-    row[f"{label}: y2"] = round(anno["y2"])
+def length_annotation(anno, row):
+    row.append(
+        LengthField(
+            label=anno["tool_label"].strip(),
+            x1=round(anno["x1"]),
+            y1=round(anno["y1"]),
+            x2=round(anno["x2"]),
+            y2=round(anno["y2"]),
+        )
+    )
 
 
-def point_annotation(anno, row, anno_id):
-    label = column_name(anno_id, anno["tool_label"])
-    row[f"{label}: x"] = round(anno["x"])
-    row[f"{label}: y"] = round(anno["y"])
+def point_annotation(anno, row):
+    row.append(
+        PointField(
+            label=anno["tool_label"].strip(),
+            x=round(anno["x"]),
+            y=round(anno["y"]),
+        )
+    )
 
 
 def workflow_annotation(anno, row, workflow_strings, anno_id):
@@ -172,20 +188,14 @@ def workflow_annotation(anno, row, workflow_strings, anno_id):
                     values.append(value)
 
             value = ",".join(v for v in values if v)
+            label = f"{anno['tool_label']}.{label}".strip()
+            row.append(TextField(value=value, label=label))
 
         # It's a single text value
         else:
-            value = outer_value
             label = labels[i] if i < len(labels) else "unknown"
-
-        # Now we can use the reconstructed annotation
-        label = column_name(anno_id, f"{anno['tool_label']}.{label}")
-        row[label] = value
-
-
-def column_name(anno_id, name):
-    """Make the column name unique."""
-    return f"#{anno_id.removeprefix('T')} {name.strip()}"
+            label = f"{anno['tool_label']}.{label}".strip()
+            row.append(TextField(value=outer_value, label=label))
 
 
 # #############################################################################
@@ -200,8 +210,8 @@ def extract_subject_data(raw_row, row):
 
     for val1 in annos.values():
         for key2, val2 in val1.items():
-            if key2 != "retired" and key2 not in row:
-                row[key2] = val2
+            if key2 != "retired":
+                row.append(SameField(value=val2, label=key2))
 
 
 # #############################################################################
@@ -209,11 +219,11 @@ def extract_metadata(raw_row, row):
     """Extract a few field from the metadata JSON object."""
     annos = json.loads(raw_row["metadata"])
 
-    def _extract_date(value):
+    def _date(value):
         return parse(value).strftime("%d-%b-%Y %H:%M:%S")
 
-    row["classification_started_at"] = _extract_date(annos["started_at"])
-    row["classification_finished_at"] = _extract_date(annos["finished_at"])
+    row.append(NoOpField(value=_date(annos["started_at"]), label="started_at"))
+    row.append(NoOpField(value=_date(annos["finished_at"]), label="finished_at"))
 
 
 # #############################################################################
@@ -221,8 +231,8 @@ def extract_misc_data(raw_row, row):
     wanted = """ gold_standard expert
         workflow_id workflow_name workflow_version """.split()
     for key in wanted:
-        if value := raw_row.get(key) and key not in row:
-            row[key] = value
+        if value := raw_row.get(key):
+            row.append(NoOpField(value=value, label=key))
 
 
 # #############################################################################
@@ -234,7 +244,7 @@ def get_workflow_id(args, df):
     workflow_ids = df.workflow_id.unique()
 
     if len(workflow_ids) > 1:
-        error_exit(
+        utils.error_exit(
             "There are multiple workflows in this file. "
             "You must provide a workflow ID as an argument."
         )
@@ -248,11 +258,12 @@ def get_workflow_strings(workflow_csv, workflow_id):
     if not workflow_csv:
         return value_strings
 
+    # Read the workflow
     df = pd.read_csv(workflow_csv)
     df = df.loc[df.workflow_id == int(workflow_id), :]
-    row = df.iloc[-1]
+    workflow = df.iloc[-1]  # Get the most recent version
 
-    strings = json.loads(row["strings"]).items()
+    strings = json.loads(workflow["strings"]).items()
 
     instructions = {}
     label_strings = defaultdict(list)
@@ -266,23 +277,24 @@ def get_workflow_strings(workflow_csv, workflow_id):
             if key:
                 label_strings[key].append(value)
 
+    # Recursively go thru the workflow strings
     def _task_dive(node):
-        if isinstance(node, dict) and node.get("value"):
-            string = strings.get(node.get("label"))
-            if string:
-                string = string.strip()
-                label = node["label"].strip()
-                labels = [v for k, v in instructions.items() if label.startswith(k)]
-                label = labels[-1] if labels else ""
-                value_strings[node["value"]] = {string: label}
-        elif isinstance(node, dict):
-            for child in node.values():
-                _task_dive(child)
-        elif isinstance(node, list):
-            for child in node:
-                _task_dive(child)
+        match node:
+            case {"value": val, "label": label, **___}:
+                if string := strings.get(label):
+                    string = string.strip()
+                    label = label.strip()
+                    labels = [v for k, v in instructions.items() if label.startswith(k)]
+                    label = labels[-1] if labels else ""
+                    value_strings[val] = {string: label}
+            case dict():
+                for child in node.values():
+                    _task_dive(child)
+            case list():
+                for child in node:
+                    _task_dive(child)
 
-    annos = json.loads(row["tasks"])
+    annos = json.loads(workflow["tasks"])
     _task_dive(annos)
 
     return WorkflowStrings(label_strings=label_strings, value_strings=value_strings)
