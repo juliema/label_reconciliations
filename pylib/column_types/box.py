@@ -6,6 +6,7 @@ from pylib import cell
 from pylib.utils import P
 
 RAW_DATA_TYPE = "json"
+DATA_WIDTH = 4
 
 
 def reconcile(group, args=None):  # noqa pylint: disable=unused-argument
@@ -24,7 +25,7 @@ def reconcile(group, args=None):  # noqa pylint: disable=unused-argument
             f"There are no overlapping boxes in {len(raw_boxes)} "
             f"{P('record', len(raw_boxes))}"
         )
-        return cell.empty(note=note)
+        return cell.all_blank(note=note)
 
     count = len(boxes)
 

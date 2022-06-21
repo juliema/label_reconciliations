@@ -1,5 +1,6 @@
 import pandas as pd
 
+import pylib.columns
 from pylib import cell
 from pylib import utils
 
@@ -46,7 +47,8 @@ def build(args, raw_data, column_types):
 def format_data_frame(args, reconciled, column_types):
     """Sort and rename column headers and remove unwanted columns."""
     columns = [args.group_by]
-    reconciled = cell.format_data_frame(columns, reconciled, column_types)
+    reconciled = pylib.columns.sort_columns(columns, reconciled, column_types)
+    reconciled, column_types = pylib.columns.rename_columns(reconciled, column_types)
     return reconciled
 
 

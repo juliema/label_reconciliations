@@ -6,9 +6,8 @@ import textwrap
 import zipfile
 from os.path import basename
 
-from pylib import reconciled_data
-from pylib import summary
-from pylib import unreconciled_data
+from pylib import reconciled_csv
+from pylib import summary_html
 from pylib import utils
 
 VERSION = "0.5.0"
@@ -129,17 +128,6 @@ def parse_args():
 
     args = parser.parse_args()
 
-    # We may want to make these arguments in the future
-    defaults = {
-        "format": "nfn",
-        "group_by": "subject_id",
-        "key_column": "classification_id",
-        "user_column": "user_name",
-        "page_size": 20,
-    }
-    for key, value in defaults.items():
-        setattr(args, key, value)
-
     # Format the user weights: user1:weight1, user2:weight2, ...
     args.user_weights_ = {}
     if args.user_weights:
@@ -180,13 +168,15 @@ def zip_files(args):
             os.remove(args_dict[arg_file])
 
 
-def append_column_types(args, column_types):
+def get_column_types(args, unreconciled_df):
     """Update or add argument column types to the inferred column types."""
+    column_types = {}
     if args.column_types:
         for arg in args.column_types:
             for option in arg.split(","):
                 name, col_type = (x.strip() for x in option.split(":"))
                 column_types[name] = col_type
+    return column_types
 
 
 def validate_columns(args, column_types, unreconciled):
@@ -242,27 +232,25 @@ def main():
     args = parse_args()
 
     formats = utils.get_plugins("formats")
-    raw_data, column_types = formats[args.format].read(args)
+    unreconciled_df = formats["nfn"].read(args)
 
-    if raw_data.shape[0] == 0:
+    if unreconciled_df.shape[0] == 0:
         sys.exit(f"Workflow {args.workflow_id} has no data.")
 
-    append_column_types(args, column_types)
-    validate_columns(args, column_types, raw_data)
-
-    unreconciled = unreconciled_data.build(args, raw_data, column_types)
+    column_types = get_column_types(args, unreconciled_df)
+    # validate_columns(args, column_types, unreconciled_df)
 
     if args.unreconciled:
-        unreconciled.to_csv(args.unreconciled, index=False)
+        unreconciled_df.to_csv(args.unreconciled, index=False)
 
     if args.reconciled or args.summary:
-        reconciled = reconciled_data.build(args, raw_data, column_types)
+        reconciled_df = reconciled_csv.build(args, unreconciled_df, column_types)
 
         if args.reconciled:
-            reconciled_data.output_csv(args, reconciled)
+            reconciled_csv.output_csv(args, reconciled_df)
 
         if args.summary:
-            summary.report(args, unreconciled, reconciled, column_types)
+            summary_html.report(args, unreconciled_df, reconciled_df, column_types)
 
     if args.zip:
         zip_files(args)

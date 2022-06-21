@@ -16,7 +16,7 @@ def reconcile(group, args=None):  # noqa pylint: disable=unused-argument
 
     if not numbers:
         note = f"There are no numbers in {len(values)} {P('record', len(values))}"
-        return cell.empty(note=note)
+        return cell.all_blank(note=note)
 
     note = (
         f"There {P('is', len(numbers))} {len(numbers)} {P('number', len(numbers))} "

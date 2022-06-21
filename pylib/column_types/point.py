@@ -6,6 +6,7 @@ from pylib import cell
 from pylib.utils import P
 
 RAW_DATA_TYPE = "json"
+DATA_WIDTH = 2
 
 
 def reconcile(group, args=None):  # noqa pylint: disable=unused-argument
@@ -18,7 +19,7 @@ def reconcile(group, args=None):  # noqa pylint: disable=unused-argument
 
     if not count:
         note = f'There are no points in {raw_count} {P("records", raw_count)}.'
-        return cell.empty(note=note)
+        return cell.all_blank(note=note)
 
     note = (
         f'There {P("was", count)} {count} '

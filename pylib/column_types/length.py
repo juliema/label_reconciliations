@@ -9,6 +9,7 @@ from pylib import cell
 from pylib.utils import P
 
 RAW_DATA_TYPE = "json"
+DATA_WIDTH = 5
 
 SCALE_RE = re.compile(
     r"(?P<scale> [0-9.]+ ) \s* (?P<units> (mm|cm|dm|m) ) \b",
@@ -26,7 +27,7 @@ def reconcile(group, args=None):  # noqa pylint: disable=unused-argument
 
     if not count:
         note = f'There are no lines in {raw_count} {P("records", raw_count)}.'
-        return cell.empty(note=note)
+        return cell.all_blank(note=note)
 
     note = (
         f'There {P("was", count)} {count} '

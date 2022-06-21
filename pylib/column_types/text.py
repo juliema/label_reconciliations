@@ -34,12 +34,12 @@ def reconcile(group, args=None):  # noqa pylint: disable=unused-argument
                 f"{P('The', count)} {count} {P('record', count)} "
                 f"{P('is', count)} blank"
             )
-            return cell.error(note=note)
+            return cell.all_blank(note=note)
 
         # Everyone chose the same value
         case [e0] if e0.count == count:
             note = f"Exact unanimous match, {e0.count} of {count} {P('record', count)}"
-            return cell.ok(note=note, value=e0.value)
+            return cell.unanimous(note=note, value=e0.value)
 
         # It was a tie for the text chosen
         case [e0, e1, *_] if e0.count > 1 and e0.count == e1.count:
@@ -47,7 +47,7 @@ def reconcile(group, args=None):  # noqa pylint: disable=unused-argument
                 f"Exact match is a tie, {e0.count} of {count} {P('record', count)} "
                 f"with {blanks} {P('blank', blanks)}"
             )
-            return cell.ok(note=note, value=e0.value)
+            return cell.majority(note=note, value=e0.value)
 
         # We have a winner
         case [e0, *_] if e0.count > 1:
@@ -55,7 +55,7 @@ def reconcile(group, args=None):  # noqa pylint: disable=unused-argument
                 f"Exact match, {e0.count} of {count} {P('record', count)} with "
                 f"{blanks} {P('blank', blanks)}"
             )
-            return cell.ok(note=note, value=e0.value)
+            return cell.majority(note=note, value=e0.value)
 
     # Look for normalized exact matches
     filled = only_filled_values(values)
@@ -69,7 +69,7 @@ def reconcile(group, args=None):  # noqa pylint: disable=unused-argument
                 f"{P('The', count)} {count} normalized {P('record', count)} "
                 f"{P('is', count)} blank"
             )
-            return cell.error(note=note)
+            return cell.no_match(note=note)
 
         # Everyone chose the same value
         case [f0] if f0.count == count:
@@ -77,7 +77,7 @@ def reconcile(group, args=None):  # noqa pylint: disable=unused-argument
                 f"Normalized unanimous match, {f0.count} of {count} "
                 f"{P('record', count)}"
             )
-            return cell.ok(note=note, value=f0.value)
+            return cell.unanimous(note=note, value=f0.value)
 
         # It was a tie for the values chosen
         case [f0, f1, *_] if f0.count == f1.count:
@@ -89,7 +89,7 @@ def reconcile(group, args=None):  # noqa pylint: disable=unused-argument
 
         case [f0] if f0 == 1:
             note = f"Only 1 transcript in {count} {P('record', count)}"
-            return cell.warning(note=note, value=f0.value)
+            return cell.only_one(note=note, value=f0.value)
 
     # Check for simple in-place fuzzy matches
     top = top_partial_ratio(group, args.user_weights_)
@@ -99,7 +99,7 @@ def reconcile(group, args=None):  # noqa pylint: disable=unused-argument
             f"Partial ratio match on {count} {P('record', count)} with {blanks} "
             f"{P('blank', blanks)}, score={top.score}"
         )
-        return cell.ok(note=note, value=top.value)
+        return cell.fuzzy(note=note, value=top.value)
 
     # Now look for the best token match
     top = top_token_set_ratio(values)
@@ -108,14 +108,14 @@ def reconcile(group, args=None):  # noqa pylint: disable=unused-argument
             f"Token set ratio match on {count} {P('record', count)} with {blanks} "
             f"{P('blank', blanks)}, score={top.score}"
         )
-        return cell.ok(note=note, value=top.value)
+        return cell.fuzzy(note=note, value=top.value)
 
     # Nothing matches
     note = (
         f"No text match on {count} {P('record', count)} with {blanks} "
         f"{P('blank', blanks)}"
     )
-    return cell.error(note=note)
+    return cell.no_match(note=note)
 
 
 def exact_match(values):
@@ -158,14 +158,14 @@ def only_filled_values(values):
 def top_partial_ratio(group, user_weights):
     """Return the best partial ratio match from fuzzywuzzy module."""
     scores = []
-    group = group.reset_index(level=0, drop=True)
+    group = group.reset_index(level=0, drop=True).astype(str)
     for combo in combinations(zip(group, group.index), 2):
         # combo format is ((value1, username1),(value2, username2))
         score = fuzz.partial_ratio(combo[0][0], combo[1][0])
         if len(combo[0][0]) >= len(combo[1][0]):
-            value, user_name = combo[0][0], combo[0][1]
+            value, user_name = combo[0][0], str(combo[0][1])
         else:
-            value, user_name = combo[1][0], combo[1][1]
+            value, user_name = combo[1][0], str(combo[1][1])
         score = score + user_weights.get(user_name.lower(), 0)  # new weight
         score = min(max(score, 0), 100)  # enforce a ceiling and floor
         scores.append(FuzzyRatioScore(score, value))

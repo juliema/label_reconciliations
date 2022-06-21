@@ -3,14 +3,10 @@ from pylib import cell
 
 
 def reconcile(group, args=None):  # noqa pylint: disable=unused-argument
-    values = list(group)
-    count = len(values)
-
-    if count == 1:
-        return cell.ok(note="There is only one record", value=values[0])
+    values = list(group.astype(str))
 
     if all(v == values[0] for v in values):
-        return cell.ok(note=f"All {count} records are identical", value=values[0])
+        return cell.no_flag(no_label=values[0])
 
     value = ",".join(values)
-    return cell.error(note=f"All {count} records are not identical", value=value)
+    return cell.error(no_label=value)

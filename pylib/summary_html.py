@@ -1,14 +1,118 @@
-# """Render a summary of the reconciliation process."""
-# import re
 # from datetime import datetime
 # from urllib.parse import urlparse
 #
+# import pandas as pd
 # from jinja2 import Environment
 # from jinja2 import PackageLoader
 #
-# import pylib.column_types
+# import pylib.columns
+# from pylib import cell
+# from pylib import utils
 #
-# # These depend on the patterns put into explanations
+#
+# def report(args, unreconciled, reconciled, column_types):
+#     # Get the report template
+#     env = Environment(loader=PackageLoader("reconcile", "."))
+#     template = env.get_template("pylib/summary/template.html")
+#
+#     # Create the group dataset
+#     field_sets = get_field_sets(args, unreconciled, reconciled, column_types)
+#     from pprint import pp
+#
+#     pp(field_sets)
+# Create filter lists
+# filters = get_filters(args, groups, column_types)
+# Get transcriber summary data
+# transcribers = user_summary(args, unreconciled)
+# Build the summary report
+# summary = template.render(
+#     args=vars(args),
+#     groups=iter(groups.items()),
+#     filters=filters,
+#     header=header_data(args, unreconciled, reconciled, transcribers),
+#     columns=pylib.column_types.sort_columns(args, unreconciled, column_types),
+#     transcribers=transcribers,
+#     reconciled=reconciled_summary(notes, column_types),
+#     problem_pattern=PROBLEM_PATTERN,
+# )
+# Output the report
+# with open(args.summary, "w", encoding="utf-8") as out_file:
+#     out_file.write(summary)
+# def get_field_sets(args, unreconciled, reconciled, column_types):
+#     """Convert the data frames into dictionaries."""
+#     df = pd.concat([reconciled, unreconciled]).fillna("")
+#     df = df.sort_values([args.group_by, args.key_column])
+#     columns = [args.group_by, args.key_column]
+#     if args.user_column:
+#         columns += [args.user_column]
+#     df = pylib.columns.sort_columns(columns, df, column_types)
+#     print(df)
+#     print(column_types)
+#     field_set = [c.split(":")[0].strip() for c in df.columns]
+#     fields = [c.split(":")[-1].strip() for c in df.columns]
+#     fields = ["" if t == b else b for t, b in zip(field_set, fields)]
+#     df.columns = pd.MultiIndex.from_arrays([field_set, fields])
+#     df.to_csv("data/temp/junk.csv")
+# plugins = utils.get_plugins("column_types")
+# note_widths = {
+#     k: getattr(plugins[v], "NOTE_WIDTH")
+#     for k, v in column_types.items()
+#     if hasattr(plugins[v], "NOTE_WIDTH")
+# }
+#
+# groups = {}
+#
+# # Put reconciled data into the dictionary
+# for _, row in reconciled.iterrows():
+#     row = row.to_dict()
+#     group_by = row.at[args.group_by]
+#
+#     recon, notes, flags = [], [], []
+#
+#     for key, value in row.items():
+#         if key.endswith("note"):
+#             notes.append()
+# groups[key] = {"reconciled": row.to_dict()}
+# Put unreconciled data into the dictionary
+# for _, row in unreconciled.iterrows():
+#     key = str(row[args.group_by])
+#     array = groups[key].get("unreconciled", [])
+#     array.append(row.to_dict())
+#     groups[key]["unreconciled"] = array
+# return df
+# def get_filters(args, groups, column_types):
+#     """Create list of group IDs that will be used to filter group rows."""
+#     filters = {
+#         "__select__": ["Show All", "Show All Problems"],
+#         "Show All": groups.keys(),
+#         "Show All Problems": [],
+#     }
+# Get the remaining filters. They are the columns in the notes row.
+# group = next(iter(groups.values()))
+# columns = pylib.columns.sort_columns(args, group["notes"].keys(), column_types)
+# filters["__select__"] += [
+#     "Show problems with: " + c for c in columns if c in group["notes"].keys()
+# ]
+# # Initialize the filters
+# for name in filters["__select__"][2:]:
+#     filters[name] = []
+#
+# # Get the problems for each group
+# all_problems = {}
+# for group_by, group in groups.items():
+#     for column, value in group["notes"].items():
+#         if re.search(PROBLEM_PATTERN, value):
+#             key = "Show problems with: " + column
+#             all_problems[group_by] = 1
+#             filters[key].append(group_by)
+#
+# # Sort by the grouping column
+# filters["Show All Problems"] = all_problems.keys()
+# for name in filters["__select__"]:
+#     filters[name] = sorted(filters[name])
+#
+# return filters
+# # These depend on the patterns put into notes
 # NO_MATCH_PATTERN = r"No (?:select|text) match on"
 #
 # MAJORITY_MATCH_PATTERN = (
@@ -48,7 +152,7 @@
 #     template = env.get_template("pylib/summary/template.html")
 #
 #     # Create the group dataset
-#     groups = get_groups(args, unreconciled, reconciled, explanations)
+#     groups = get_groups(args, unreconciled, reconciled, notes)
 #
 #     # Create filter lists
 #     filters = get_filters(args, groups, column_types)
@@ -64,35 +168,13 @@
 #         filters=filters,
 #         columns=pylib.column_types.sort_columns(args, unreconciled, column_types),
 #         transcribers=transcribers,
-#         reconciled=reconciled_summary(explanations, column_types),
+#         reconciled=reconciled_summary(notes, column_types),
 #         problem_pattern=PROBLEM_PATTERN,
 #     )
 #
 #     # Output the report
 #     with open(args.summary, "w", encoding="utf-8") as out_file:
 #         out_file.write(summary)
-#
-#
-# def get_groups(args, unreconciled, reconciled, explanations):
-#     """Convert the data frames into dictionaries."""
-#     groups = {}
-#
-#     # Put reconciled data into the dictionary
-#     for key, row in reconciled.iterrows():
-#         groups[str(key)] = {"reconciled": row.to_dict()}
-#
-#     # Put explanations data into the dictionary
-#     for key, row in explanations.iterrows():
-#         groups[str(key)]["explanations"] = row.to_dict()
-#
-#     # Put unreconciled data into the dictionary
-#     for _, row in unreconciled.iterrows():
-#         key = str(row[args.group_by])
-#         array = groups[key].get("unreconciled", [])
-#         array.append(row.to_dict())
-#         groups[key]["unreconciled"] = array
-#
-#     return groups
 #
 #
 # def get_filters(args, groups, column_types):
@@ -103,14 +185,14 @@
 #         "Show All Problems": [],
 #     }
 #
-#     # Get the remaining filters. They are the columns in the explanations row.
+#     # Get the remaining filters. They are the columns in the notes row.
 #     group = next(iter(groups.values()))
 #     columns = pylib.column_types.sort_columns(
-#         args, group["explanations"].keys(), column_types
+#         args, group["notes"].keys(), column_types
 #     )
 #     filters["__select__"] += [
 #         "Show problems with: " + c for c in columns
-#         if c in group["explanations"].keys()
+#         if c in group["notes"].keys()
 #     ]
 #     # Initialize the filters
 #     for name in filters["__select__"][2:]:
@@ -119,7 +201,7 @@
 #     # Get the problems for each group
 #     all_problems = {}
 #     for group_by, group in groups.items():
-#         for column, value in group["explanations"].items():
+#         for column, value in group["notes"].items():
 #             if re.search(PROBLEM_PATTERN, value):
 #                 key = "Show problems with: " + column
 #                 all_problems[group_by] = 1
@@ -131,19 +213,6 @@
 #         filters[name] = sorted(filters[name])
 #
 #     return filters
-#
-#
-# def create_link(value):
-#     """Convert a link into an anchor element."""
-#     try:
-#         url = urlparse(value)
-#         if url.scheme and url.netloc and url.path:
-#             return '<a href="{value}" target="_blank">{value}</a>'.format(value=value)
-#     except (ValueError, AttributeError):
-#         pass
-#     return value
-#
-#
 # def user_summary(args, unreconciled):
 #     """Get a list of users and how many transcriptions they did."""
 #     # TODO: Delete this
@@ -174,43 +243,43 @@
 #     }
 #
 #
-# def reconciled_summary(explanations, column_types):
+# def reconciled_summary(notes, column_types):
 #     """Build a summary of how each field was reconciled."""
 #     # TODO: Delete this
 #
 #     how_reconciled = []
-#     for col in order_column_names(explanations, column_types):
+#     for col in order_column_names(notes, column_types):
 #
 #         col_type = column_types.get(col, {"type": "text"})["type"]
 #
 #         num_fuzzy_match = ""
 #         if col_type == "text":
 #             num_fuzzy_match = "{:,}".format(
-#                 explanations[explanations[col].str.contains(
+#                 notes[notes[col].str.contains(
 #                 FUZZ_MATCH_PATTERN)].shape[
 #                     0
 #                 ]
 #             )
 #
-#         num_no_match = explanations[
-#             explanations[col].str.contains(NO_MATCH_PATTERN)
+#         num_no_match = notes[
+#             notes[col].str.contains(NO_MATCH_PATTERN)
 #         ].shape[0]
 #
-#         num_onesies: object = explanations[
-#             explanations[col].str.contains(ONESIES_PATTERN)
+#         num_onesies: object = notes[
+#             notes[col].str.contains(ONESIES_PATTERN)
 #         ].shape[0]
 #
 #         num_mmr = ""
 #         if col_type in ("mmr", "mean"):
 #             num_mmr = "{:,}".format(
-#                 explanations[explanations[col].str.contains(MMR_PATTERN)].shape[0]
+#                 notes[notes[col].str.contains(MMR_PATTERN)].shape[0]
 #                 - num_onesies
 #             )
 #
 #         num_line = ""
 #         if col_type == "line":
 #             num_line = "{:,}".format(
-#                 explanations[explanations[col].str.contains(LINE_PATTERN)].shape[0]
+#                 notes[notes[col].str.contains(LINE_PATTERN)].shape[0]
 #                 - num_onesies
 #             )
 #
@@ -220,15 +289,15 @@
 #                 "col_type": col_type,
 #                 "num_no_match": num_no_match,
 #                 "num_fuzzy_match": num_fuzzy_match,
-#                 "num_reconciled": explanations.shape[0] - num_no_match,
-#                 "num_majority_match": explanations[
-#                     explanations[col].str.contains(MAJORITY_MATCH_PATTERN)
+#                 "num_reconciled": notes.shape[0] - num_no_match,
+#                 "num_majority_match": notes[
+#                     notes[col].str.contains(MAJORITY_MATCH_PATTERN)
 #                 ].shape[0],
-#                 "num_unanimous_match": explanations[
-#                     explanations[col].str.contains(UNANIMOUS_MATCH_PATTERN)
+#                 "num_unanimous_match": notes[
+#                     notes[col].str.contains(UNANIMOUS_MATCH_PATTERN)
 #                 ].shape[0],
-#                 "num_all_blank": explanations[
-#                     explanations[col].str.contains(ALL_BLANK_PATTERN)
+#                 "num_all_blank": notes[
+#                     notes[col].str.contains(ALL_BLANK_PATTERN)
 #                 ].shape[0],
 #                 "num_onesies": num_onesies,
 #                 "num_mmr": num_mmr,
@@ -250,14 +319,14 @@
 #     return columns
 #
 #
-# def problems(explanations, column_types):
+# def problems(notes, column_types):
 #     """Make a list of problems for each subject."""
 #     # TODO: Delete this
 #
 #     probs = {}
 #     opts = None
 #
-#     for group_by, cols in explanations.iterrows():
+#     for group_by, cols in notes.iterrows():
 #
 #         # Get the list of possible problems
 #         if not opts:
@@ -282,7 +351,7 @@
 #
 # import pylib.column_types
 #
-# # These depend on the patterns put into explanations
+# # These depend on the patterns put into notes
 # NO_MATCH_PATTERN = r"No (?:select|text) match on"
 #
 # MAJORITY_MATCH_PATTERN = (
@@ -322,7 +391,7 @@
 #     template = env.get_template("pylib/summary/template.html")
 #
 #     # Create the group dataset
-#     groups = get_groups(args, unreconciled, reconciled, explanations)
+#     groups = get_groups(args, unreconciled, reconciled, notes)
 #
 #     # Create filter lists
 #     filters = get_filters(args, groups, column_types)
@@ -338,7 +407,7 @@
 #         filters=filters,
 #         columns=pylib.column_types.sort_columns(args, unreconciled, column_types),
 #         transcribers=transcribers,
-#         reconciled=reconciled_summary(explanations, column_types),
+#         reconciled=reconciled_summary(notes, column_types),
 #         problem_pattern=PROBLEM_PATTERN,
 #     )
 #
@@ -347,7 +416,7 @@
 #         out_file.write(summary)
 #
 #
-# def get_groups(args, unreconciled, reconciled, explanations):
+# def get_groups(args, unreconciled, reconciled, notes):
 #     """Convert the data frames into dictionaries."""
 #     groups = {}
 #
@@ -355,9 +424,9 @@
 #     for key, row in reconciled.iterrows():
 #         groups[str(key)] = {"reconciled": row.to_dict()}
 #
-#     # Put explanations data into the dictionary
-#     for key, row in explanations.iterrows():
-#         groups[str(key)]["explanations"] = row.to_dict()
+#     # Put notes data into the dictionary
+#     for key, row in notes.iterrows():
+#         groups[str(key)]["notes"] = row.to_dict()
 #
 #     # Put unreconciled data into the dictionary
 #     for _, row in unreconciled.iterrows():
@@ -377,14 +446,14 @@
 #         "Show All Problems": [],
 #     }
 #
-#     # Get the remaining filters. They are the columns in the explanations row.
+#     # Get the remaining filters. They are the columns in the notes row.
 #     group = next(iter(groups.values()))
 #     columns = pylib.column_types.sort_columns(
-#         args, group["explanations"].keys(), column_types
+#         args, group["notes"].keys(), column_types
 #     )
 #     filters["__select__"] += [
 #         "Show problems with: " + c for c in columns if c
-#         in group["explanations"].keys()
+#         in group["notes"].keys()
 #     ]
 #     # Initialize the filters
 #     for name in filters["__select__"][2:]:
@@ -393,7 +462,7 @@
 #     # Get the problems for each group
 #     all_problems = {}
 #     for group_by, group in groups.items():
-#         for column, value in group["explanations"].items():
+#         for column, value in group["notes"].items():
 #             if re.search(PROBLEM_PATTERN, value):
 #                 key = "Show problems with: " + column
 #                 all_problems[group_by] = 1
@@ -448,43 +517,43 @@
 #     }
 #
 #
-# def reconciled_summary(explanations, column_types):
+# def reconciled_summary(notes, column_types):
 #     """Build a summary of how each field was reconciled."""
 #     # TODO: Delete this
 #
 #     how_reconciled = []
-#     for col in order_column_names(explanations, column_types):
+#     for col in order_column_names(notes, column_types):
 #
 #         col_type = column_types.get(col, {"type": "text"})["type"]
 #
 #         num_fuzzy_match = ""
 #         if col_type == "text":
 #             num_fuzzy_match = "{:,}".format(
-#                 explanations[explanations[col].str.contains(
+#                 notes[notes[col].str.contains(
 #                 FUZZ_MATCH_PATTERN)].shape[
 #                     0
 #                 ]
 #             )
 #
-#         num_no_match = explanations[
-#             explanations[col].str.contains(NO_MATCH_PATTERN)
+#         num_no_match = notes[
+#             notes[col].str.contains(NO_MATCH_PATTERN)
 #         ].shape[0]
 #
-#         num_onesies: object = explanations[
-#             explanations[col].str.contains(ONESIES_PATTERN)
+#         num_onesies: object = notes[
+#             notes[col].str.contains(ONESIES_PATTERN)
 #         ].shape[0]
 #
 #         num_mmr = ""
 #         if col_type in ("mmr", "mean"):
 #             num_mmr = "{:,}".format(
-#                 explanations[explanations[col].str.contains(MMR_PATTERN)].shape[0]
+#                 notes[notes[col].str.contains(MMR_PATTERN)].shape[0]
 #                 - num_onesies
 #             )
 #
 #         num_line = ""
 #         if col_type == "line":
 #             num_line = "{:,}".format(
-#                 explanations[explanations[col].str.contains(LINE_PATTERN)].shape[0]
+#                 notes[notes[col].str.contains(LINE_PATTERN)].shape[0]
 #                 - num_onesies
 #             )
 #
@@ -494,15 +563,15 @@
 #                 "col_type": col_type,
 #                 "num_no_match": num_no_match,
 #                 "num_fuzzy_match": num_fuzzy_match,
-#                 "num_reconciled": explanations.shape[0] - num_no_match,
-#                 "num_majority_match": explanations[
-#                     explanations[col].str.contains(MAJORITY_MATCH_PATTERN)
+#                 "num_reconciled": notes.shape[0] - num_no_match,
+#                 "num_majority_match": notes[
+#                     notes[col].str.contains(MAJORITY_MATCH_PATTERN)
 #                 ].shape[0],
-#                 "num_unanimous_match": explanations[
-#                     explanations[col].str.contains(UNANIMOUS_MATCH_PATTERN)
+#                 "num_unanimous_match": notes[
+#                     notes[col].str.contains(UNANIMOUS_MATCH_PATTERN)
 #                 ].shape[0],
-#                 "num_all_blank": explanations[
-#                     explanations[col].str.contains(ALL_BLANK_PATTERN)
+#                 "num_all_blank": notes[
+#                     notes[col].str.contains(ALL_BLANK_PATTERN)
 #                 ].shape[0],
 #                 "num_onesies": num_onesies,
 #                 "num_mmr": num_mmr,
@@ -524,14 +593,14 @@
 #     return columns
 #
 #
-# def problems(explanations, column_types):
+# def problems(notes, column_types):
 #     """Make a list of problems for each subject."""
 #     # TODO: Delete this
 #
 #     probs = {}
 #     opts = None
 #
-#     for group_by, cols in explanations.iterrows():
+#     for group_by, cols in notes.iterrows():
 #
 #         # Get the list of possible problems
 #         if not opts:
