@@ -1,14 +1,15 @@
 """Reconcile line lengths."""
 # noqa pylint: disable=invalid-name
-import json
 import math
 import re
 import statistics as stats
 from dataclasses import dataclass
 
-from pylib import cell
 from pylib.fields.base_field import BaseField
+from pylib.fields.base_field import Flag
 from pylib.utils import P
+
+PIX_LEN = "length pixels"
 
 SCALE_RE = re.compile(
     r"(?P<scale> [0-9.]+ ) \s* (?P<units> (mm|cm|dm|m) ) \b",
@@ -18,71 +19,66 @@ SCALE_RE = re.compile(
 
 @dataclass(kw_only=True)
 class LengthField(BaseField):
-    x1: float
-    y1: float
-    x2: float
-    y2: float
+    x1: float = 0.0
+    y1: float = 0.0
+    x2: float = 0.0
+    y2: float = 0.0
     pixel_length: float = 0.0
+    factor: float = 0.0
     length: float = 0.0
     units: str = ""
 
     def to_dict(self):
         dict_ = self.round("x1", "y1", "x2", "y2")
         if self.is_reconciled:
-            dict_ |= self.round("length pixels", digits=2)
-        if self.units:
+            dict_ |= self.round(PIX_LEN, digits=2)
             dict_[self.header(f"length {self.units}")] = round(self.length, 2)
         return dict_
 
+    @classmethod
+    def reconcile(cls, group, row_count, _=None):
+        if not group:
+            note = f'There are no lines in {row_count} {P("records", row_count)}.'
+            return cls(note=note, flag=Flag.ALL_BLANK)
 
-def reconcile(group, args=None):  # noqa pylint: disable=unused-argument
-    raw_lines = [json.loads(ln) for ln in group]
+        note = (
+            f'There {P("was", len(group))} {len(group)} '
+            f'{P("line", len(group))} in {row_count} {P("record", row_count)}'
+        )
 
-    lines = [ln for ln in raw_lines if ln.get("x1")]
+        x1 = round(stats.mean([ln.x1 for ln in group]))
+        y1 = round(stats.mean([ln.y1 for ln in group]))
+        x2 = round(stats.mean([ln.x2 for ln in group]))
+        y2 = round(stats.mean([ln.y2 for ln in group]))
 
-    raw_count = len(raw_lines)
-    count = len(lines)
+        pix_len = round(math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2), 2)
 
-    if not count:
-        note = f'There are no lines in {raw_count} {P("records", raw_count)}.'
-        return cell.all_blank(note=note)
+        return cls(
+            note=note,
+            flag=Flag.OK,
+            x1=x1,
+            y1=y1,
+            x2=x2,
+            y2=y2,
+            pixel_length=pix_len,
+        )
 
-    note = (
-        f'There {P("was", count)} {count} '
-        f'{P("line", raw_count)} in {raw_count} {P("record", raw_count)}'
-    )
+    @staticmethod
+    def reconcile_row(reconciled_row, args=None):
+        """Calculate lengths using units and pixel_lengths."""
+        ruler = None
 
-    x1 = round(stats.mean([ln["x1"] for ln in lines]))
-    y1 = round(stats.mean([ln["y1"] for ln in lines]))
-    x2 = round(stats.mean([ln["x2"] for ln in lines]))
-    y2 = round(stats.mean([ln["y2"] for ln in lines]))
+        for key, field in reconciled_row.items():
+            if key.find(PIX_LEN) > -1 and (match := SCALE_RE.search(key)):
+                field.units = match.group("units")
+                field.factor = float(match.group("scale")) / field.pixel_length
+                ruler = field
+                break
 
-    return cell.ok(
-        note=note,
-        x1=x1,
-        y1=y1,
-        x2=x2,
-        y2=y2,
-        length_pixels=round(math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2), 2),
-    )
+        if not ruler:
+            return
 
-
-def reconcile_row(reconciled_row, args=None):  # noqa pylint: disable=unused-argument
-    """Calculate lengths using units and pixel_lengths."""
-    units, factor = None, None
-    for field, value in reconciled_row.items():
-        if field.find("length_pixels") > -1 and (match := SCALE_RE.search(field)):
-            units = match.group("units")
-            factor = float(match.group("scale")) / value
-            break
-
-    if not units:
-        return
-
-    new_field = {}
-    for key, value in reconciled_row.items():
-        if key.find("length_pixels") > -1 and not SCALE_RE.search(key):
-            field = key.replace("pixels", units)
-            new_field[field] = round(value * factor, 2)
-
-    reconciled_row |= new_field
+        for key, field in reconciled_row.items():
+            if key.find(PIX_LEN) > -1 and not SCALE_RE.search(key):
+                field.length = round(field.pixel_length * ruler.factor, 2)
+                field.units = ruler.units

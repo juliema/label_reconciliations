@@ -9,7 +9,6 @@ from os.path import basename
 from pylib import utils
 from pylib.table import Table
 
-# from pylib import reconciled_csv
 # from pylib import summary_html
 
 VERSION = "0.5.0"
@@ -107,6 +106,9 @@ def parse_args():
 
     args = parser.parse_args()
 
+    setattr(args, "group_by", "subject_id")
+    setattr(args, "row_key", "classification_id")
+
     if args.fuzzy_ratio_threshold < 0 or args.fuzzy_ratio_threshold > 100:
         print("--fuzzy-ratio-threshold must be between 0 and 100.")
         sys.exit(1)
@@ -148,10 +150,10 @@ def main():
         sys.exit(f"Workflow {args.workflow_id} has no data.")
 
     if args.unreconciled:
-        unreconciled.to_csv(args.unreconciled)
+        unreconciled.to_unreconciled_csv(args.unreconciled)
 
     if args.reconciled or args.summary:
-        reconciled = unreconciled.reconcile(args)
+        reconciled = Table.reconcile(unreconciled, args)
 
         if args.reconciled:
             reconciled.to_csv(args.reconciled)

@@ -14,6 +14,7 @@ from pylib.fields.point_field import PointField
 from pylib.fields.same_field import SameField
 from pylib.fields.select_field import SelectField
 from pylib.fields.text_field import TextField
+from pylib.row import Row
 from pylib.table import Table
 
 
@@ -41,14 +42,14 @@ def read(args):
     # Extract the various json blobs
     table = Table()
     for raw_row in raw_records:
-        row = [
-            SameField(
-                value=raw_row["subject_ids"].split(",", maxsplit=1)[0],
-                label="subject_id",
-            ),
-            NoOpField(value=raw_row["classification_id"], label="classification_id"),
-            NoOpField(value=raw_row.get("user_name", ""), label="user_name"),
-        ]
+        row = Row()
+        row.add_field(
+            args.group_by,
+            SameField(value=raw_row["subject_ids"].split(",", maxsplit=1)[0]),
+        )
+        row.add_field(args.row_key, NoOpField(value=raw_row[args.row_key]))
+        row.add_field("user_name", NoOpField(value=raw_row.get("user_name", "")))
+
         extract_annotations(raw_row, row, workflow_strings)
         extract_subject_data(raw_row, row)
         extract_metadata(raw_row, row)
@@ -59,8 +60,8 @@ def read(args):
     return table
 
 
-# #############################################################################
-def extract_annotations(raw_row: dict, row: list, workflow_strings: WorkflowStrings):
+# ###################################################################################
+def extract_annotations(raw_row: dict, row: Row, workflow_strings: WorkflowStrings):
     """Extract annotations from the json object in the annotations column.
 
     Annotations are nested json blobs with a WTF format. Part of the WTF is that each
@@ -78,17 +79,17 @@ def flatten_annotation(anno, row, workflow_strings, anno_id=""):
         case {"value": list(), **__}:
             subtask_annotation(anno, row, workflow_strings, anno_id)
         case {"value": [str(), *__], **___}:
-            list_annotation(anno, row)
+            list_annotation(anno, row, anno_id)
         case {"select_label": _, **__}:
-            select_label_annotation(anno, row)
+            select_label_annotation(anno, row, anno_id)
         case {"task_label": _, **__}:
-            task_label_annotation(anno, row)
+            task_label_annotation(anno, row, anno_id)
         case {"tool_label": _, "width": __, **___}:
-            box_annotation(anno, row)
+            box_annotation(anno, row, anno_id)
         case {"tool_label": _, "x1": __, **___}:
-            length_annotation(anno, row)
+            length_annotation(anno, row, anno_id)
         case {"tool_label": _, "x": __, **___}:
-            point_annotation(anno, row)
+            point_annotation(anno, row, anno_id)
         case {"tool_label": _, "details": __, **___}:
             workflow_annotation(anno, row, workflow_strings, anno_id)
         case _:
@@ -102,53 +103,55 @@ def subtask_annotation(anno, row, workflow_strings, anno_id):
         flatten_annotation(subtask, row, workflow_strings, anno_id)
 
 
-def list_annotation(anno, row):
+def list_annotation(anno, row, anno_id):
     values = sorted(anno.get("value", ""))
-    row.append(TextField(value=" ".join(values), label=anno["task_label"].strip()))
+    key = get_key(anno["task_label"], anno_id)
+    row.add_field(key, TextField(value=" ".join(values)))
 
 
-def select_label_annotation(anno, row):
-    label = anno["select_label"]
+def select_label_annotation(anno, row, anno_id):
+    key = get_key(anno["select_label"], anno_id)
     option = anno.get("option")
     value = anno.get("label", "") if option else anno.get("value", "")
-    row.append(SelectField(value=value, label=label))
+    row.add_field(key, SelectField(value=value))
 
 
-def task_label_annotation(anno, row):
-    row.append(TextField(value=anno.get("value", ""), label=anno["task_label"].strip()))
+def task_label_annotation(anno, row, anno_id):
+    key = get_key(anno["task_label"], anno_id)
+    row.add_field(key, TextField(value=anno.get("value", "")))
 
 
-def box_annotation(anno, row):
-    row.append(
+def box_annotation(anno, row, anno_id):
+    row.add_field(
+        get_key(anno["tool_label"], anno_id),
         BoxField(
-            label=anno["tool_label"].strip(),
             left=round(anno["x"]),
             right=round(anno["x"] + anno["width"]),
             top=round(anno["y"]),
             bottom=round(anno["y"] + anno["height"]),
-        )
+        ),
     )
 
 
-def length_annotation(anno, row):
-    row.append(
+def length_annotation(anno, row, anno_id):
+    row.add_field(
+        get_key(anno["tool_label"], anno_id),
         LengthField(
-            label=anno["tool_label"].strip(),
             x1=round(anno["x1"]),
             y1=round(anno["y1"]),
             x2=round(anno["x2"]),
             y2=round(anno["y2"]),
-        )
+        ),
     )
 
 
-def point_annotation(anno, row):
-    row.append(
+def point_annotation(anno, row, anno_id):
+    row.add_field(
+        get_key(anno["tool_label"], anno_id),
         PointField(
-            label=anno["tool_label"].strip(),
             x=round(anno["x"]),
             y=round(anno["y"]),
-        )
+        ),
     )
 
 
@@ -162,8 +165,8 @@ def workflow_annotation(anno, row, workflow_strings, anno_id):
 
     # Get all possible strings for the annotation
     values = []
-    for key, value in workflow_strings.label_strings.items():
-        if key.startswith(anno_id) and key.endswith("details"):
+    for key_, value in workflow_strings.label_strings.items():
+        if key_.startswith(anno_id) and key_.endswith("details"):
             values.append(value)
     labels = values[-1] if values else []
 
@@ -189,13 +192,19 @@ def workflow_annotation(anno, row, workflow_strings, anno_id):
 
             value = ",".join(v for v in values if v)
             label = f"{anno['tool_label']}.{label}".strip()
-            row.append(TextField(value=value, label=label))
+            label = get_key(label, anno_id)
+            row.add_field(label, TextField(value=value))
 
         # It's a single text value
         else:
             label = labels[i] if i < len(labels) else "unknown"
             label = f"{anno['tool_label']}.{label}".strip()
-            row.append(TextField(value=outer_value, label=label))
+            label = get_key(label, anno_id)
+            row.add_field(label, TextField(value=outer_value))
+
+
+def get_key(label: str, anno_id: str):
+    return f"#{anno_id.removeprefix('T')} {label.strip()}"
 
 
 # #############################################################################
@@ -211,7 +220,7 @@ def extract_subject_data(raw_row, row):
     for val1 in annos.values():
         for key2, val2 in val1.items():
             if key2 != "retired":
-                row.append(SameField(value=val2, label=key2))
+                row[key2] = SameField(value=val2, key=key2)
 
 
 # #############################################################################
@@ -222,8 +231,12 @@ def extract_metadata(raw_row, row):
     def _date(value):
         return parse(value).strftime("%d-%b-%Y %H:%M:%S")
 
-    row.append(NoOpField(value=_date(annos["started_at"]), label="started_at"))
-    row.append(NoOpField(value=_date(annos["finished_at"]), label="finished_at"))
+    row["started_at"] = NoOpField(
+        value=_date(annos.get("started_at")), key="started_at"
+    )
+    row["finished_at"] = NoOpField(
+        value=_date(annos.get("finished_at")), key="finished_at"
+    )
 
 
 # #############################################################################
@@ -231,8 +244,8 @@ def extract_misc_data(raw_row, row):
     wanted = """ gold_standard expert
         workflow_id workflow_name workflow_version """.split()
     for key in wanted:
-        if value := raw_row.get(key):
-            row.append(NoOpField(value=value, label=key))
+        if (value := raw_row.get(key)) is not None:
+            row[key] = NoOpField(value=value, key=key)
 
 
 # #############################################################################

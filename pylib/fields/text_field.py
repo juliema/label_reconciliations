@@ -7,8 +7,8 @@ from itertools import combinations
 
 from fuzzywuzzy import fuzz  # pylint: disable=import-error
 
-from pylib import cell
 from pylib.fields.base_field import BaseField
+from pylib.fields.base_field import Flag
 from pylib.utils import P
 
 FuzzyRatioScore = namedtuple("FuzzyRatioScore", "score value")
@@ -18,114 +18,116 @@ ExactScore = namedtuple("ExactScore", "value count")
 
 @dataclass(kw_only=True)
 class TextField(BaseField):
-    value: str
+    value: str = ""
 
     def to_dict(self):
         return {self.label: self.value}
 
+    @classmethod
+    def reconcile(cls, group, row_count, args=None):
+        values = [
+            "\n".join([" ".join(ln.split()) for ln in str(g).splitlines()])
+            for g in group
+        ]
 
-def reconcile(group, args=None):  # noqa pylint: disable=unused-argument
-    group = group.astype(str)
-    values = [
-        "\n".join([" ".join(ln.split()) for ln in str(g).splitlines()]) for g in group
-    ]
+        count = len(values)
 
-    count = len(values)
+        # Look for exact matches
+        exact = exact_match(values)
+        blanks = count - sum(f.count for f in exact)
 
-    # Look for exact matches
-    exact = exact_match(values)
-    blanks = count - sum(f.count for f in exact)
+        match exact:
 
-    match exact:
+            # No matches
+            case []:
+                note = (
+                    f"{P('The', count)} {count} {P('record', count)} "
+                    f"{P('is', count)} blank"
+                )
+                return cls(note=note, flag=Flag.ALL_BLANK)
 
-        # No matches
-        case []:
+            # Everyone chose the same value
+            case [e0] if e0.count == count:
+                note = (
+                    f"Exact unanimous match, {e0.count} of {count} {P('record', count)}"
+                )
+                return cls(note=note, value=e0.value, flag=Flag.UNANIMOUS)
+
+            # It was a tie for the text chosen
+            case [e0, e1, *_] if e0.count > 1 and e0.count == e1.count:
+                note = (
+                    f"Exact match is a tie, {e0.count} of {count} {P('record', count)} "
+                    f"with {blanks} {P('blank', blanks)}"
+                )
+                return cls(note=note, value=e0.value, flag=Flag.MAJORITY)
+
+            # We have a winner
+            case [e0, *_] if e0.count > 1:
+                note = (
+                    f"Exact match, {e0.count} of {count} {P('record', count)} with "
+                    f"{blanks} {P('blank', blanks)}"
+                )
+                return cls(note=note, value=e0.value, flag=Flag.MAJORITY)
+
+        # Look for normalized exact matches
+        filled = only_filled_values(values)
+        blanks = count - sum(f.count for f in filled)
+
+        match filled:
+
+            # No matches
+            case []:
+                note = (
+                    f"{P('The', count)} {count} normalized {P('record', count)} "
+                    f"{P('is', count)} blank"
+                )
+                return cls(note=note, flag=Flag.NO_MATCH)
+
+            # Everyone chose the same value
+            case [f0] if f0.count == count:
+                note = (
+                    f"Normalized unanimous match, {f0.count} of {count} "
+                    f"{P('record', count)}"
+                )
+                return cls(note=note, value=f0.value, flag=Flag.UNANIMOUS)
+
+            # It was a tie for the values chosen
+            case [f0, f1, *_] if f0.count == f1.count:
+                note = (
+                    f"Normalized match is a tie, {f0.count} of {count} "
+                    f"{P('record', count)} with {blanks} {P('blank', blanks)}"
+                )
+                return cls(note=note, value=f0.value, flag=Flag.MAJORITY)
+
+            case [f0] if f0 == 1:
+                note = f"Only 1 transcript in {count} {P('record', count)}"
+                return cls(note=note, value=f0.value, flag=Flag.ONLY_ONE)
+
+        # Check for simple in-place fuzzy matches
+        top = top_partial_ratio(group)
+
+        if top.score >= args.fuzzy_ratio_threshold:
             note = (
-                f"{P('The', count)} {count} {P('record', count)} "
-                f"{P('is', count)} blank"
+                f"Partial ratio match on {count} {P('record', count)} with {blanks} "
+                f"{P('blank', blanks)}, score={top.score}"
             )
-            return cell.all_blank(note=note)
+            return cls(note=note, value=top.value, flag=Flag.FUZZY)
 
-        # Everyone chose the same value
-        case [e0] if e0.count == count:
-            note = f"Exact unanimous match, {e0.count} of {count} {P('record', count)}"
-            return cell.unanimous(note=note, value=e0.value)
-
-        # It was a tie for the text chosen
-        case [e0, e1, *_] if e0.count > 1 and e0.count == e1.count:
+        # Now look for the best token match
+        top = top_token_set_ratio(values)
+        if top.score >= args.fuzzy_set_threshold:
             note = (
-                f"Exact match is a tie, {e0.count} of {count} {P('record', count)} "
-                f"with {blanks} {P('blank', blanks)}"
+                f"Token set ratio match on {count} {P('record', count)} with {blanks} "
+                f"{P('blank', blanks)}, score={top.score}"
             )
-            return cell.majority(note=note, value=e0.value)
+            return cls(note=note, value=top.value, flag=Flag.FUZZY)
 
-        # We have a winner
-        case [e0, *_] if e0.count > 1:
-            note = (
-                f"Exact match, {e0.count} of {count} {P('record', count)} with "
-                f"{blanks} {P('blank', blanks)}"
-            )
-            return cell.majority(note=note, value=e0.value)
-
-    # Look for normalized exact matches
-    filled = only_filled_values(values)
-    blanks = count - sum(f.count for f in filled)
-
-    match filled:
-
-        # No matches
-        case []:
-            note = (
-                f"{P('The', count)} {count} normalized {P('record', count)} "
-                f"{P('is', count)} blank"
-            )
-            return cell.no_match(note=note)
-
-        # Everyone chose the same value
-        case [f0] if f0.count == count:
-            note = (
-                f"Normalized unanimous match, {f0.count} of {count} "
-                f"{P('record', count)}"
-            )
-            return cell.unanimous(note=note, value=f0.value)
-
-        # It was a tie for the values chosen
-        case [f0, f1, *_] if f0.count == f1.count:
-            note = (
-                f"Normalized match is a tie, {f0.count} of {count} "
-                f"{P('record', count)} with {blanks} {P('blank', blanks)}"
-            )
-            return cell.ok(note=note, value=f0.value)
-
-        case [f0] if f0 == 1:
-            note = f"Only 1 transcript in {count} {P('record', count)}"
-            return cell.only_one(note=note, value=f0.value)
-
-    # Check for simple in-place fuzzy matches
-    top = top_partial_ratio(group)
-
-    if top.score >= args.fuzzy_ratio_threshold:
+        # Nothing matches
         note = (
-            f"Partial ratio match on {count} {P('record', count)} with {blanks} "
-            f"{P('blank', blanks)}, score={top.score}"
+            f"No text match on {count} {P('record', count)} with {blanks} "
+            f"{P('blank', blanks)}"
         )
-        return cell.fuzzy(note=note, value=top.value)
-
-    # Now look for the best token match
-    top = top_token_set_ratio(values)
-    if top.score >= args.fuzzy_set_threshold:
-        note = (
-            f"Token set ratio match on {count} {P('record', count)} with {blanks} "
-            f"{P('blank', blanks)}, score={top.score}"
-        )
-        return cell.fuzzy(note=note, value=top.value)
-
-    # Nothing matches
-    note = (
-        f"No text match on {count} {P('record', count)} with {blanks} "
-        f"{P('blank', blanks)}"
-    )
-    return cell.no_match(note=note)
+        return cls(note=note, flag=Flag.NO_MATCH)
 
 
 def exact_match(values):

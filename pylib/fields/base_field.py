@@ -16,12 +16,12 @@ class Flag(Enum):
 
 
 BAD = {
-    Flag.NO_FLAG.value,
     Flag.ERROR.value,
     Flag.ALL_BLANK.value,
     Flag.ONLY_ONE.value,
     Flag.NO_MATCH.value,
 }
+
 GOOD = {
     Flag.OK.value,
     Flag.WARNING.value,
@@ -33,10 +33,14 @@ GOOD = {
 
 @dataclass(kw_only=True)
 class BaseField:
-    label: str = ""
+    key: str = ""
     note: str = ""
-    flag: int = Flag.NO_FLAG.value
+    flag: Flag = Flag.NO_FLAG
     is_reconciled: bool = False
+
+    @property
+    def label(self):
+        return self.key.split(maxsplit=1)[-1] if self.key[0] == "#" else self.key
 
     def header(self, attr):
         return f"{self.label}: {attr}"
@@ -47,6 +51,10 @@ class BaseField:
     def to_dict(self):
         raise NotImplementedError()
 
-    # @classmethod
-    # def reconcile(cls, group, args=None):
-    #     raise NotImplementedError()
+    @classmethod
+    def reconcile(cls, group, row_count, args=None):
+        raise NotImplementedError()
+
+    @staticmethod
+    def reconcile_row(reconciled_row, args=None):
+        return
