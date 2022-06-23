@@ -6,10 +6,10 @@ import textwrap
 import zipfile
 from os.path import basename
 
+from pylib import summary_html
 from pylib import utils
 from pylib.table import Table
 
-# from pylib import summary_html
 
 VERSION = "0.5.0"
 
@@ -108,6 +108,8 @@ def parse_args():
 
     setattr(args, "group_by", "subject_id")
     setattr(args, "row_key", "classification_id")
+    setattr(args, "user_column", "user_name")
+    setattr(args, "page_size", 20)
 
     if args.fuzzy_ratio_threshold < 0 or args.fuzzy_ratio_threshold > 100:
         print("--fuzzy-ratio-threshold must be between 0 and 100.")
@@ -150,7 +152,7 @@ def main():
         sys.exit(f"Workflow {args.workflow_id} has no data.")
 
     if args.unreconciled:
-        unreconciled.to_unreconciled_csv(args.unreconciled)
+        unreconciled.to_csv(args.unreconciled)
 
     if args.reconciled or args.summary:
         reconciled = Table.reconcile(unreconciled, args)
@@ -158,8 +160,8 @@ def main():
         if args.reconciled:
             reconciled.to_csv(args.reconciled)
 
-        # if args.summary:
-        #     summary_html.report(args, unreconciled, reconciled)
+        if args.summary:
+            summary_html.report(args, unreconciled, reconciled)
 
     if args.zip:
         zip_files(args)

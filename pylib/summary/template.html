@@ -65,14 +65,15 @@
         <tr>
           <th class="left">Field</th>
           <th class="left">Type</th>
+          <th class="left">OK</th>
           <th class="right">Unanimous Matches</th>
           <th class="right">Majority Matches</th>
-          <th class="right">Mean Mode Range</th>
           <th class="right">Fuzzy Matches</th>
           <th class="right">All Blank</th>
           <th class="right">One Transcript</th>
           <th class="right">Total</th>
           <th class="right">No Matches</th>
+          <th class="right">Errors</th>
         </tr>
       </thead>
       <tbody>
@@ -80,14 +81,15 @@
         <tr>
           <td class="left">{{row.name}}</td>
           <td class="left">{{row.col_type}}</td>
-          <td class="right">{{ '{:,}'.format(row.num_unanimous_match) }}</td>
-          <td class="right">{{ '{:,}'.format(row.num_majority_match) }}</td>
-          <td class="right">{{ row.num_mmr }}</td>
-          <td class="right">{{ row.num_fuzzy_match }}</td>
-          <td class="right">{{ '{:,}'.format(row.num_all_blank) }}</td>
-          <td class="right">{{ '{:,}'.format(row.num_onesies) }}</td>
-          <td class="right">{{ '{:,}'.format(row.num_reconciled) }}</td>
-          <td class="right">{{ '{:,}'.format(row.num_no_match) }}</td>
+          <td class="right">{{ row.OK }}</td>
+          <td class="right">{{ row.UNANIMOUS }}</td>
+          <td class="right">{{ row.MAJORITY }}</td>
+          <td class="right">{{ row.FUZZY }}</td>
+          <td class="right">{{ row.ALL_BLANK }}</td>
+          <td class="right">{{ row.ONLY_ONE }}</td>
+          <td class="right">{{ row.total }}</td>
+          <td class="right">{{ row.NO_MATCH }}</td>
+          <td class="right">{{ row.ERROR }}</td>
         </tr>
         {% endfor %}
       </tbody>

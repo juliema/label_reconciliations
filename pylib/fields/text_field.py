@@ -8,8 +8,10 @@ from itertools import combinations
 from fuzzywuzzy import fuzz  # pylint: disable=import-error
 
 from pylib.fields.base_field import BaseField
-from pylib.fields.base_field import Flag
+from pylib.result import Result
+from pylib.result import sort_results
 from pylib.utils import P
+
 
 FuzzyRatioScore = namedtuple("FuzzyRatioScore", "score value")
 FuzzySetScore = namedtuple("FuzzySetScore", "score value tokens")
@@ -44,14 +46,14 @@ class TextField(BaseField):
                     f"{P('The', count)} {count} {P('record', count)} "
                     f"{P('is', count)} blank"
                 )
-                return cls(note=note, flag=Flag.ALL_BLANK)
+                return cls(note=note, result=Result.ALL_BLANK)
 
             # Everyone chose the same value
             case [e0] if e0.count == count:
                 note = (
                     f"Exact unanimous match, {e0.count} of {count} {P('record', count)}"
                 )
-                return cls(note=note, value=e0.value, flag=Flag.UNANIMOUS)
+                return cls(note=note, value=e0.value, result=Result.UNANIMOUS)
 
             # It was a tie for the text chosen
             case [e0, e1, *_] if e0.count > 1 and e0.count == e1.count:
@@ -59,7 +61,7 @@ class TextField(BaseField):
                     f"Exact match is a tie, {e0.count} of {count} {P('record', count)} "
                     f"with {blanks} {P('blank', blanks)}"
                 )
-                return cls(note=note, value=e0.value, flag=Flag.MAJORITY)
+                return cls(note=note, value=e0.value, result=Result.MAJORITY)
 
             # We have a winner
             case [e0, *_] if e0.count > 1:
@@ -67,7 +69,7 @@ class TextField(BaseField):
                     f"Exact match, {e0.count} of {count} {P('record', count)} with "
                     f"{blanks} {P('blank', blanks)}"
                 )
-                return cls(note=note, value=e0.value, flag=Flag.MAJORITY)
+                return cls(note=note, value=e0.value, result=Result.MAJORITY)
 
         # Look for normalized exact matches
         filled = only_filled_values(values)
@@ -81,7 +83,7 @@ class TextField(BaseField):
                     f"{P('The', count)} {count} normalized {P('record', count)} "
                     f"{P('is', count)} blank"
                 )
-                return cls(note=note, flag=Flag.NO_MATCH)
+                return cls(note=note, result=Result.NO_MATCH)
 
             # Everyone chose the same value
             case [f0] if f0.count == count:
@@ -89,7 +91,7 @@ class TextField(BaseField):
                     f"Normalized unanimous match, {f0.count} of {count} "
                     f"{P('record', count)}"
                 )
-                return cls(note=note, value=f0.value, flag=Flag.UNANIMOUS)
+                return cls(note=note, value=f0.value, result=Result.UNANIMOUS)
 
             # It was a tie for the values chosen
             case [f0, f1, *_] if f0.count == f1.count:
@@ -97,11 +99,11 @@ class TextField(BaseField):
                     f"Normalized match is a tie, {f0.count} of {count} "
                     f"{P('record', count)} with {blanks} {P('blank', blanks)}"
                 )
-                return cls(note=note, value=f0.value, flag=Flag.MAJORITY)
+                return cls(note=note, value=f0.value, result=Result.MAJORITY)
 
             case [f0] if f0 == 1:
                 note = f"Only 1 transcript in {count} {P('record', count)}"
-                return cls(note=note, value=f0.value, flag=Flag.ONLY_ONE)
+                return cls(note=note, value=f0.value, result=Result.ONLY_ONE)
 
         # Check for simple in-place fuzzy matches
         top = top_partial_ratio(group)
@@ -111,7 +113,7 @@ class TextField(BaseField):
                 f"Partial ratio match on {count} {P('record', count)} with {blanks} "
                 f"{P('blank', blanks)}, score={top.score}"
             )
-            return cls(note=note, value=top.value, flag=Flag.FUZZY)
+            return cls(note=note, value=top.value, result=Result.FUZZY)
 
         # Now look for the best token match
         top = top_token_set_ratio(values)
@@ -120,14 +122,25 @@ class TextField(BaseField):
                 f"Token set ratio match on {count} {P('record', count)} with {blanks} "
                 f"{P('blank', blanks)}, score={top.score}"
             )
-            return cls(note=note, value=top.value, flag=Flag.FUZZY)
+            return cls(note=note, value=top.value, result=Result.FUZZY)
 
         # Nothing matches
         note = (
             f"No text match on {count} {P('record', count)} with {blanks} "
             f"{P('blank', blanks)}"
         )
-        return cls(note=note, flag=Flag.NO_MATCH)
+        return cls(note=note, result=Result.NO_MATCH)
+
+    @staticmethod
+    def results():
+        return sort_results(
+            Result.ALL_BLANK,
+            Result.UNANIMOUS,
+            Result.MAJORITY,
+            Result.ONLY_ONE,
+            Result.NO_MATCH,
+            Result.FUZZY,
+        )
 
 
 def exact_match(values):

@@ -2,7 +2,8 @@
 from dataclasses import dataclass
 
 from pylib.fields.base_field import BaseField
-from pylib.fields.base_field import Flag
+from pylib.result import Result
+from pylib.result import sort_results
 
 
 @dataclass(kw_only=True)
@@ -13,14 +14,18 @@ class SameField(BaseField):
         return {self.label: self.value}
 
     @classmethod
-    def reconcile(cls, group, args=None):  # noqa pylint: disable=unused-argument
+    def reconcile(cls, group, row_count, _=None):
         if all(g.value == group[0].value for g in group):
             value = group[0].value
-            flag = Flag.OK
+            flag = Result.OK
             note = ""
         else:
             value = ",".join(g.value for g in group)
-            flag = Flag.ERROR
+            flag = Result.ERROR
             note = f"Not all values are the same {value}"
 
-        return cls(value=value, flag=flag, note=note, is_reconciled=True)
+        return cls(value=value, result=flag, note=note, is_reconciled=True)
+
+    @staticmethod
+    def results():
+        return sort_results(Result.OK, Result.ERROR)

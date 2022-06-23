@@ -1,14 +1,33 @@
 import unittest
 
+from pylib.fields.text_field import TextField
 from pylib.formats import nfn
+from pylib.result import Result
+from pylib.row import Row
 
 
 class TestFlattenAnnotation(unittest.TestCase):
     def test_flatten_annotation_01(self):
         """It handles a list annotation."""
         workflow_strings = nfn.WorkflowStrings()
-        column_types, annos, anno_id = {}, {}, ""
-        anno = {"value": ["val1", "val2"], "task_label": "T1", "key1": 1, "key2": 2}
-        nfn.flatten_annotation(column_types, annos, anno, anno_id, workflow_strings)
-        self.assertEqual(column_types, {"T1": "text"})
-        self.assertEqual(annos, {"T1": "val1 val2"})
+        row = Row()
+        anno = {
+            "task": "T1",
+            "value": ["val1", "val2"],
+            "task_label": "testing",
+            "other1": 1,
+            "other2": 2,
+        }
+        nfn.flatten_annotation(anno, row, workflow_strings)
+        self.assertEqual(
+            row,
+            {
+                "#T1 testing": TextField(
+                    key="#T1 testing",
+                    note="",
+                    result=Result.NO_FLAG,
+                    is_reconciled=False,
+                    value="val1 val2",
+                )
+            },
+        )

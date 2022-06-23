@@ -1,46 +1,22 @@
 from dataclasses import dataclass
-from enum import Enum
 
-
-class Flag(Enum):
-    NO_FLAG = 0
-    OK = 1
-    ERROR = 2
-    WARNING = 3
-    ALL_BLANK = 4
-    UNANIMOUS = 5
-    MAJORITY = 6
-    ONLY_ONE = 7
-    NO_MATCH = 8
-    FUZZY = 9
-
-
-BAD = {
-    Flag.ERROR.value,
-    Flag.ALL_BLANK.value,
-    Flag.ONLY_ONE.value,
-    Flag.NO_MATCH.value,
-}
-
-GOOD = {
-    Flag.OK.value,
-    Flag.WARNING.value,
-    Flag.UNANIMOUS.value,
-    Flag.MAJORITY.value,
-    Flag.FUZZY.value,
-}
+from pylib.result import Result
 
 
 @dataclass(kw_only=True)
 class BaseField:
     key: str = ""
     note: str = ""
-    flag: Flag = Flag.NO_FLAG
+    result: Result = Result.NO_FLAG
     is_reconciled: bool = False
 
     @property
     def label(self):
         return self.key.split(maxsplit=1)[-1] if self.key[0] == "#" else self.key
+
+    @property
+    def base_label(self):
+        return self.label.rsplit(":", 1)[0]
 
     def header(self, attr):
         return f"{self.label}: {attr}"
@@ -53,6 +29,10 @@ class BaseField:
 
     @classmethod
     def reconcile(cls, group, row_count, args=None):
+        raise NotImplementedError()
+
+    @staticmethod
+    def results():
         raise NotImplementedError()
 
     @staticmethod

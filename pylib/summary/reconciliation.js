@@ -6,11 +6,10 @@ const False = false;
 const args = {{args | safe}};
 const columns = {{columns | safe}};
 const filters = {{filters | safe}};
-const is_problem = RegExp("{{problem_pattern}}", 'i');
 const tbody = document.querySelector('#groups tbody');
 
-// Save the group's open/close state so it will remain consistent between
-// Page and filter changes.
+// Save the group's open/close state so remains consistent between
+// page and filter changes.
 const groupState = {};
 filters['Show All'].forEach(function(id) {
   groupState[id] = 'closed';
@@ -51,10 +50,10 @@ const buildReconciledRowData = function(reconciled, explanations, groupBy) {
   };
   columns.forEach(function(col, i) {
     if (col != args.group_by) {
+      let e_obj = explanations[col] ? JSON.parse(explanations[col]) : "";
       tr.td.push({
         content: reconciled[col] || '',
-        title: explanations[col],
-        cls: is_problem.test(explanations[col]) ? 'problem' : null
+        cls: e_obj && !e_obj.good ? 'problem' : null
       });
     }
   });
@@ -71,12 +70,14 @@ const buildExplanationRowData = function(explanations, groupBy) {
     ]
   };
   columns.forEach(function(col, i) {
-    if (col != args.group_by) {
-      tr.td.push({
-        content: explanations[col] || '',
-        cls: explanations[col] ? 'filled' : null
-      });
-    }
+      if (col != args.group_by && explanations[col]) {
+        e_obj = JSON.parse(explanations[col]);
+        tr.td.push({
+            content: e_obj.note,
+            cls: e_obj.note ? 'filled' : null,
+            span: e_obj.span
+        });
+      }
   });
   return tr;
 };
@@ -87,7 +88,7 @@ const buildUnreconciledRowData = function(unreconciled, groupBy) {
     rowMetadata: { groupBy: groupBy, cls: 'unreconciled' },
     td: [  // Setup always empty row cells
       { content: '' },  // open/close row group button
-      { content: '' }   // group by cell (typically: subject_id)
+      { content: '' }   // group_by cell (typically: subject_id)
     ]
   };
   columns.forEach(function(col, i) {
@@ -121,6 +122,7 @@ const buildPage = function(rows) {
       const td = document.createElement('td');
       if (cell.cls) { td.classList.add(cell.cls); }
       if (cell.title) { td.setAttribute('title', cell.title); }
+      if (cell.span > 1) { td.setAttribute('colspan', `${cell.span}`); }
       td.innerHTML = cell.content;
       tr.appendChild(td);
     });

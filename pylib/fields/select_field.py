@@ -6,7 +6,8 @@ from collections import Counter
 from dataclasses import dataclass
 
 from pylib.fields.base_field import BaseField
-from pylib.fields.base_field import Flag
+from pylib.result import Result
+from pylib.result import sort_results
 from pylib.utils import P
 
 PLACEHOLDERS = ["placeholder"]
@@ -35,12 +36,12 @@ class SelectField(BaseField):
                     f"{P('The', count)} {count} {P('record', count)} "
                     f"{P('is', count)} blank"
                 )
-                return cls(note=note, flag=Flag.ALL_BLANK)
+                return cls(note=note, result=Result.ALL_BLANK)
 
             # Everyone chose the same value
             case [f0] if f0[1] > 1 and f0[1] == count:
                 note = f"Unanimous match, {f0[1]} of {count} {P('record', count)}"
-                return cls(note=note, flag=Flag.UNANIMOUS)
+                return cls(note=note, result=Result.UNANIMOUS)
 
             # It was a tie for the values chosen
             case [f0, f1, *_] if f0[1] > 1 and f0[1] == f1[1]:
@@ -48,7 +49,7 @@ class SelectField(BaseField):
                     f"Match is a tie, {f0[1]} of {count} {P('record', count)} with "
                     f"{blanks} {P('blank', blanks)}"
                 )
-                return cls(note=note, flag=Flag.MAJORITY)
+                return cls(note=note, result=Result.MAJORITY)
 
             # We have a winner
             case [f0, *_] if f0[1] > 1:
@@ -56,12 +57,12 @@ class SelectField(BaseField):
                     f"Match, {f0[1]} of {count} {P('record', count)} with {blanks} "
                     f"{P('blank', blanks)}"
                 )
-                return cls(note=note, flag=Flag.MAJORITY)
+                return cls(note=note, result=Result.MAJORITY)
 
             # Only one person chose a value
             case [f0] if f0[1] == 1:
                 note = "Only 1 transcript in {count} {P('record', count)}"
-                return cls(note=note, flag=Flag.ONLY_ONE)
+                return cls(note=note, result=Result.ONLY_ONE)
 
             # Everyone picked a different value
             case _:
@@ -69,4 +70,14 @@ class SelectField(BaseField):
                     f"No select match on {count} {P('record', count)} with {blanks} "
                     f"{P('blank', blanks)}"
                 )
-                return cls(note=note, flag=Flag.NO_MATCH)
+                return cls(note=note, result=Result.NO_MATCH)
+
+    @staticmethod
+    def results():
+        return sort_results(
+            Result.ALL_BLANK,
+            Result.UNANIMOUS,
+            Result.MAJORITY,
+            Result.ONLY_ONE,
+            Result.NO_MATCH,
+        )

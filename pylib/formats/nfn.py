@@ -1,4 +1,5 @@
 import json
+import re
 from collections import defaultdict
 from dataclasses import dataclass
 from dataclasses import field
@@ -31,25 +32,32 @@ def read(args):
     """Read and convert the input CSV data."""
     df = pd.read_csv(args.input_file, dtype=str)
 
-    # Get the classifications for the workflow
     args.workflow_id = get_workflow_id(args, df)
+    args.workflow_name = get_workflow_name(df)
+
     df = df.loc[df.workflow_id == str(args.workflow_id), :].fillna("")
     raw_records = df.to_dict("records")
 
     # A hack to workaround coded values returned from Zooniverse
     workflow_strings = get_workflow_strings(args.workflow_csv, args.workflow_id)
 
-    # Extract the various json blobs
     table = Table()
     for raw_row in raw_records:
         row = Row()
+
         row.add_field(
             args.group_by,
-            SameField(value=raw_row["subject_ids"].split(",", maxsplit=1)[0]),
+            SameField(value=raw_row["subject_ids"].split(",", 1)[0]),
         )
-        row.add_field(args.row_key, NoOpField(value=raw_row[args.row_key]))
-        row.add_field("user_name", NoOpField(value=raw_row.get("user_name", "")))
 
+        row.add_field(args.row_key, NoOpField(value=raw_row[args.row_key]))
+
+        if args.user_column:
+            row.add_field(
+                args.user_column, NoOpField(value=raw_row.get(args.user_column, ""))
+            )
+
+        # Extract the various json blobs
         extract_annotations(raw_row, row, workflow_strings)
         extract_subject_data(raw_row, row)
         extract_metadata(raw_row, row)
@@ -76,10 +84,10 @@ def flatten_annotation(anno, row, workflow_strings, anno_id=""):
     anno_id = anno.get("task", anno_id)
 
     match anno:
-        case {"value": list(), **__}:
-            subtask_annotation(anno, row, workflow_strings, anno_id)
         case {"value": [str(), *__], **___}:
             list_annotation(anno, row, anno_id)
+        case {"value": list(), **__}:
+            subtask_annotation(anno, row, workflow_strings, anno_id)
         case {"select_label": _, **__}:
             select_label_annotation(anno, row, anno_id)
         case {"task_label": _, **__}:
@@ -204,7 +212,7 @@ def workflow_annotation(anno, row, workflow_strings, anno_id):
 
 
 def get_key(label: str, anno_id: str):
-    return f"#{anno_id.removeprefix('T')} {label.strip()}"
+    return f"#{anno_id} {label.strip()}"
 
 
 # #############################################################################
@@ -220,7 +228,7 @@ def extract_subject_data(raw_row, row):
     for val1 in annos.values():
         for key2, val2 in val1.items():
             if key2 != "retired":
-                row[key2] = SameField(value=val2, key=key2)
+                row.add_field(key2, SameField(value=val2))
 
 
 # #############################################################################
@@ -231,21 +239,16 @@ def extract_metadata(raw_row, row):
     def _date(value):
         return parse(value).strftime("%d-%b-%Y %H:%M:%S")
 
-    row["started_at"] = NoOpField(
-        value=_date(annos.get("started_at")), key="started_at"
-    )
-    row["finished_at"] = NoOpField(
-        value=_date(annos.get("finished_at")), key="finished_at"
-    )
+    row.add_field("started_at", NoOpField(value=_date(annos.get("started_at"))))
+    row.add_field("finished_at", NoOpField(value=_date(annos.get("finished_at"))))
 
 
 # #############################################################################
 def extract_misc_data(raw_row, row):
-    wanted = """ gold_standard expert
-        workflow_id workflow_name workflow_version """.split()
+    wanted = """ gold_standard expert workflow_version """.split()
     for key in wanted:
         if (value := raw_row.get(key)) is not None:
-            row[key] = NoOpField(value=value, key=key)
+            row.add_field(key, NoOpField(value=value))
 
 
 # #############################################################################
@@ -263,6 +266,17 @@ def get_workflow_id(args, df):
         )
 
     return workflow_ids[0]
+
+
+def get_workflow_name(df):
+    """Extract and format the workflow name from the data df."""
+    workflow_name = ""
+    try:
+        workflow_name = df.workflow_name.iloc[0]
+        workflow_name = re.sub(r"^[^_]*_", "", workflow_name)
+    except KeyError:
+        utils.error_exit("Workflow name not found in classifications file.")
+    return workflow_name
 
 
 def get_workflow_strings(workflow_csv, workflow_id):

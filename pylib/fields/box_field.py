@@ -3,7 +3,8 @@ from dataclasses import dataclass
 from statistics import mean
 
 from pylib.fields.base_field import BaseField
-from pylib.fields.base_field import Flag
+from pylib.result import Result
+from pylib.result import sort_results
 from pylib.utils import P
 
 
@@ -21,7 +22,7 @@ class BoxField(BaseField):
     def reconcile(cls, group, row_count, _=None):
         if not group:
             note = f"There are no boxes in {row_count} {P('record', len(group))}"
-            return cls(note=note, flag=Flag.ALL_BLANK)
+            return cls(note=note, result=Result.ALL_BLANK)
 
         overlaps = [0] * len(group)
         for i, box1 in enumerate(group[:-1]):
@@ -36,7 +37,7 @@ class BoxField(BaseField):
                 f"There are no overlapping boxes in {len(group)} "
                 f"{P('record', len(group))}"
             )
-            return cls(note=note, flag=Flag.NO_MATCH)
+            return cls(note=note, result=Result.NO_MATCH)
 
         count = len(boxes)
 
@@ -47,12 +48,16 @@ class BoxField(BaseField):
 
         return cls(
             note=note,
-            flag=Flag.OK,
+            result=Result.OK,
             left=round(mean(b["left"] for b in boxes)),
             right=round(mean(b["right"] for b in boxes)),
             top=round(mean(b["top"] for b in boxes)),
             bottom=round(mean(b["bottom"] for b in boxes)),
         )
+
+    @staticmethod
+    def results():
+        return sort_results(Result.ALL_BLANK, Result.NO_MATCH, Result.OK)
 
 
 def overlaps_2d(box1, box2):

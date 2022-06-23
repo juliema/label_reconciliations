@@ -3,7 +3,8 @@ import statistics as stats
 from dataclasses import dataclass
 
 from pylib.fields.base_field import BaseField
-from pylib.fields.base_field import Flag
+from pylib.result import Result
+from pylib.result import sort_results
 from pylib.utils import P
 
 
@@ -19,7 +20,7 @@ class PointField(BaseField):
     def reconcile(cls, group, row_count, _=None):
         if not group:
             note = f"There are no points in {row_count} {P('record', len(group))}"
-            return cls(note=note, flag=Flag.ALL_BLANK)
+            return cls(note=note, result=Result.ALL_BLANK)
 
         count = len(group)
 
@@ -31,4 +32,8 @@ class PointField(BaseField):
         x = round(stats.mean([ln.x for ln in group]))
         y = round(stats.mean([ln.y for ln in group]))
 
-        return cls(note=note, x=x, y=y, flag=Flag.OK)
+        return cls(note=note, x=x, y=y, result=Result.OK)
+
+    @staticmethod
+    def results():
+        return sort_results(Result.ALL_BLANK, Result.OK)
