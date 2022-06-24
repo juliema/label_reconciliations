@@ -17,14 +17,14 @@ class SameField(BaseField):
     def reconcile(cls, group, row_count, _=None):
         if all(g.value == group[0].value for g in group):
             value = group[0].value
-            flag = Result.OK
+            result = Result.OK
             note = ""
         else:
             value = ",".join(g.value for g in group)
-            flag = Result.ERROR
+            result = Result.ERROR
             note = f"Not all values are the same {value}"
 
-        return cls(value=value, result=flag, note=note, is_reconciled=True)
+        return cls(value=value, result=result, note=note, is_reconciled=True)
 
     @staticmethod
     def results():

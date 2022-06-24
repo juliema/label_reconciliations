@@ -72,7 +72,7 @@ class Table:
                         {
                             "note": field_.note,
                             "span": len(keys),
-                            "flag": field_.result.value,
+                            "result": field_.result.value,
                             "good": field_.result in GOOD,
                             "base_label": field_.base_label,
                         }
