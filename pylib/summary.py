@@ -1,6 +1,7 @@
 import json
 from collections import defaultdict
 from datetime import datetime
+from urllib.parse import urlparse
 
 import pandas as pd
 from jinja2 import Environment
@@ -57,6 +58,7 @@ def get_groups(args, unreconciled, reconciled):
     df = df[keys + [c for c in df.columns if c not in keys]]
     df = df.sort_values(keys)
     df = df.drop(["__order__"], axis="columns")
+    df = df.applymap(create_link)
 
     groups = {}
     for subject_id, rows in df.groupby(args.group_by):
@@ -68,6 +70,17 @@ def get_groups(args, unreconciled, reconciled):
         }
 
     return groups, df.columns
+
+
+def create_link(value):
+    """Convert a link into an anchor element."""
+    try:
+        url = urlparse(value)
+        if url.scheme and url.netloc and url.path:
+            return '<a href="{value}" target="_blank">{value}</a>'.format(value=value)
+    except (ValueError, AttributeError):
+        pass
+    return value
 
 
 def header_data(args, unreconciled, reconciled, transcribers):

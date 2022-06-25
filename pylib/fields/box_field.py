@@ -1,4 +1,8 @@
-"""Reconcile a box annotation."""
+"""Reconcile a box annotation.
+
+Note: I am assuming that box notations are required. This may not always be the case.
+      In that case we need to edit this class.
+"""
 from dataclasses import dataclass
 from statistics import mean
 
@@ -20,24 +24,9 @@ class BoxField(BaseField):
 
     @classmethod
     def reconcile(cls, group, _=None):
-        row_count = len(group)
-        count = row_count
+        count = len(group)
 
-        note = (
-            f"There {P('is', count)} {count} {P('box', count)} "
-            f"in {row_count} {P('record', row_count)}"
-        )
-
-        print(
-            cls(
-                note=note,
-                result=Result.OK,
-                left=round(mean(b.left for b in group)),
-                right=round(mean(b.right for b in group)),
-                top=round(mean(b.top for b in group)),
-                bottom=round(mean(b.bottom for b in group)),
-            )
-        )
+        note = f"There {P('is', count)} {count} box {P('record', count)}"
 
         return cls(
             note=note,

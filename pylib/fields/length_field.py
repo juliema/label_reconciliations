@@ -1,5 +1,8 @@
-"""Reconcile line lengths."""
-# noqa pylint: disable=invalid-name
+"""Reconcile line lengths.
+
+Note: I am assuming that length notations are required. This may not always be the case.
+      In that case we need to edit this class.
+"""
 import math
 import re
 import statistics as stats
@@ -40,15 +43,9 @@ class LengthField(BaseField):
 
     @classmethod
     def reconcile(cls, group, _=None):
-        row_count = len(group)
-        if not group:
-            note = f'There are no lines in {row_count} {P("records", row_count)}.'
-            return cls(note=note, result=Result.ALL_BLANK)
+        count = len(group)
 
-        note = (
-            f'There {P("was", row_count)} {row_count} '
-            f'{P("line", row_count)} in {row_count} {P("record", row_count)}'
-        )
+        note = f'There {P("is", count)} {count} length {P("record", count)}'
 
         x1 = round(stats.mean([ln.x1 for ln in group]))
         y1 = round(stats.mean([ln.y1 for ln in group]))

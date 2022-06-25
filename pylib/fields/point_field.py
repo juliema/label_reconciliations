@@ -1,4 +1,8 @@
-"""Reconcile points."""
+"""Reconcile points.
+
+Note: I am assuming that point notations are required. This may not always be the case.
+      In that case we need to edit this class.
+"""
 import statistics as stats
 from dataclasses import dataclass
 
@@ -18,17 +22,9 @@ class PointField(BaseField):
 
     @classmethod
     def reconcile(cls, group, _=None):
-        row_count = len(group)
-        if not group:
-            note = f"There are no points in {row_count} {P('record', len(group))}"
-            return cls(note=note, result=Result.ALL_BLANK)
-
         count = len(group)
 
-        note = (
-            f'There {P("was", count)} {count} '
-            f'{P("point", row_count)} in {row_count} {P("record", row_count)}'
-        )
+        note = f'There {P("is", count)} {count} point {P("record", count)}'
 
         x = round(stats.mean([ln.x for ln in group]))
         y = round(stats.mean([ln.y for ln in group]))

@@ -116,14 +116,6 @@ class Table:
                 field_type = type(field_group[0])
                 cell = field_type.reconcile(field_group, args)
                 cell.is_reconciled = True
-                if key == "~T3~ Location":
-                    from pprint import pp
-
-                    print("=" * 80)
-                    print(field_type)
-                    pp(field_group)
-                    pp(cell)
-                    print()
                 row.add_field(key, cell)
 
             # This loop tweaks a row for fields that depend on each other
