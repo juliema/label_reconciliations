@@ -1,7 +1,7 @@
 """Reconcile a box annotation.
 
-Note: I am assuming that box notations are required. This may not always be the case.
-      In that case we need to edit this class.
+Note: I am assuming that box notations are required. If this is no longer the case you
+      will need to edit this file.
 """
 from dataclasses import dataclass
 from statistics import mean

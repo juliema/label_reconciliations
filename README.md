@@ -25,7 +25,7 @@ A typical run will look like:
 
 reconcile.py takes a group of raw Notes from Nature transcripts for each subject and reconciles them into the "best" values. The strategy and specific rules for doing this are described in [this document](https://docs.google.com/document/d/1DqhWNsy9UAEgkRnIU7VHrdQL4oQzIm2pjrPULGKK21M/edit#heading=h.967a32z3bwbb).
 
-To get an idea of what this program does let's say that we asked three volunteers to transcribe a label with a country, a species name, a location, and a collector. The country is selected from a drop-down list and the species name, location, and collector are free form text fields. If the result of the input is this:
+To get an idea of what this program does, let's say that we asked three volunteers to transcribe a label with a country, a species name, a location, and a collector. The country is selected from a drop-down list and the species name, location, and collector are free form text fields. If the result of the input is this:
 
 Volunteer | subject_id | Country | Species Name | Location | Collector
 --------- | ---------- | ------- | ------------ | -------- | ---------
@@ -41,13 +41,13 @@ subject_id | Country | Species Name | Location | Collector
 
 ### Other Program Features
 
-Many researchers will want to know how the program determined the "best" match. You can use the summary file, "--summary", option to see how the matches were chosen. It also provides an indication of all of the no matches and potentially problematic matches.
+Many researchers will want to know how the program determined the "best" match. You can use the summary file, "--summary", option to see how the matches were chosen. It also provides an indication of all the no matches and potentially problematic matches.
 
 If you use the "--unreconciled" option, you will output a CSV file of the raw unreconciled data with the data in the JSON objects extracted into columns. This is useful for performing your own analysis on the data.
 
 # Reconciliation Logic
 
-The main idea is to capture the label information verbatim and not new any interpretations of the data. E.g. we do not change change "rd." to "road". We do this for two reasons. First, the instructions for the citizen scientists is to transcribe the labels as-is and therefore the reconciled transcription should reflect that. Second, interpretations of these labels may be different from expedition to expedition. For example, "st." could be "street" or "state" depending on the context. We have attempted to make the transcription reconciliation process useful across all expeditions regardless of the museum origin or the taxonomic group covered.
+The main idea is to capture the label information verbatim and not new any interpretations of the data. E.g. we do not change "rd." to "road". We do this for two reasons. First, the instructions for the citizen scientists is to transcribe the labels as-is and therefore the reconciled transcription should reflect that. Second, interpretations of these labels may be different from expedition to expedition. For example, "st." could be "street" or "state" depending on the context. We have attempted to make the transcription reconciliation process useful across all expeditions regardless of the museum origin or the taxonomic group covered.
 
 One issue with label categories is that in some cases it is unclear which category the label data should be added to. For example, often it is unclear if data should go in the locality or the habitat field, if a label says "middle of a field", is that locality or habitat information?  Since we don’t force how expeditions are setup to capture information, we cannot solve this issue for our providers. Our approach does not move information between categories. Ultimately, it will be up to the next level of reconciliation interpretations done by providers to determine if the data are misplaced.
 
@@ -61,7 +61,7 @@ These are values from a drop-down menu select control. The reconciled value is t
 
 ### Free Text Reconciliations:
 
-These are values from a text box control. Here we also chose the most commonly selected answer but in this case what that is is more complicated. The algorithm:
+These are values from a text box control. Here we also chose the most commonly selected answer but in this case what that is more complicated. The algorithm:
 
 1. We space normalize the string. That is, we remove leading and trailing white space and compress all internal white space into single spaces. For example, "M.&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Smith&nbsp;&nbsp;&nbsp;&nbsp;" becomes "M. Smith". Now we look for the most common of these values. In the event that there is a tie we choose the longest string.
 
@@ -71,10 +71,16 @@ These are values from a text box control. Here we also chose the most commonly s
 
 1. If that fails we perform another fuzzy match called the "token set ratio match". Here we have abandoned word order and are treating the strings as sets of words. The score is based upon set intersection size and the lengths of the strings. If the best token set ratio is above a threshold we return the string with the most words but with the shortest character length. That is, we sort by score, then by the number of words, and then by the string length.
 
-  - So why do we make this seemingly odd choice for this fuzzy match? The token set ratio does not consider the word order and is not analogous to an exact match like the partial ratio match. We want to include all of the words in the transcript but it seems that in general if people do not write exactly what is on the label it is because they have expanded an abbreviation (e.g. hwy to highway) therefore we want the label with the shortest length for each word keeping all of the information but also keeping the transcript as close to the original as possible.
+  - So why do we make this seemingly odd choice for this fuzzy match? The token set ratio does not consider the word order and is not analogous to an exact match like the partial ratio match. We want to include all the words in the transcript, but it seems that in general if people do not write exactly what is on the label is because they have expanded an abbreviation (e.g. hwy to highway) therefore we want the label with the shortest length for each word keeping all the information but also keeping the transcript as close to the original as possible.
 
 ## What if you need more help?
 
-We want to make sure you can use these outputs as efficiently as possible!  We are happy to field questions, explain more to you about all the details, or otherwise make sure you get what you want.  However, we can’t necessarily customize this code in cases where you have a special need.  If you need further customizations, contact us and we can discuss options with you for this effort and how to potentially set up means to cover those costs for our developers.  Alternatively feel free to fork the code and make it your own or improve upon ours!
+We want to make sure you can use these outputs as efficiently as possible!  We are happy to field questions, explain more to you about all the details, or otherwise make sure you get what you want.  However, we can’t necessarily customize this code in cases where you have a special need.  If you need further customizations, contact us, and we can discuss options with you for this effort and how to potentially set up means to cover those costs for our developers.  Alternatively feel free to fork the code and make it your own or improve upon ours!
 
 One thing we are going to be able to help with is converting data to Darwin Core formats.  We are just beginning to build these pipelines, and we hope to have more about that process and how it will work available in Spring 2017.
+
+# Running tests
+
+```shell
+python -m unittest discover
+```

@@ -1,7 +1,7 @@
 """Reconcile line lengths.
 
-Note: I am assuming that length notations are required. This may not always be the case.
-      In that case we need to edit this class.
+Note: I am assuming that length notations are required. If this is no longer the case
+      you will need to edit this file.
 """
 import math
 import re

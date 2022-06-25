@@ -1,4 +1,4 @@
-# noqa pylint: disable=invalid-name
+"""Reconcile free for text fields."""
 import re
 from collections import Counter
 from collections import defaultdict
