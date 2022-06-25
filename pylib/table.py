@@ -32,28 +32,16 @@ class Table:
         return bool(self.rows)
 
     def to_csv(self, path):
-        if self.is_reconciled:
-            rows = self.to_reconciled_records()
-        else:
-            rows = self.to_unreconciled_records()
+        rows = self.to_records()
         df = pd.DataFrame(rows).fillna("")
         df.to_csv(path, index=False)
 
-    def to_reconciled_records(self):
-        """Exclude No Op fields from reconciled output."""
+    def to_records(self):
+        exclude = NoOpField if self.is_reconciled else type(None)
         rows = []
         for row in self.rows:
             data = {}
-            for field_ in (f for f in row.values() if not isinstance(f, NoOpField)):
-                data |= field_.to_dict()
-            rows.append(data)
-        return rows
-
-    def to_unreconciled_records(self):
-        rows = []
-        for row in self.rows:
-            data = {}
-            for field_ in row.values():
+            for field_ in (f for f in row.values() if not isinstance(f, exclude)):
                 data |= field_.to_dict()
             rows.append(data)
         return rows
@@ -86,7 +74,7 @@ class Table:
         keys = {}  # Dicts preserve order, sets do not
         for row in self.rows:
             keys |= {k: 1 for k in row.keys()}
-        return keys
+        return list(keys)
 
     def get_all_field_types(self):
         """Return a set of all field types used by the rows."""
@@ -126,8 +114,16 @@ class Table:
             for key in all_keys:
                 field_group = [g[key] for g in row_group if g[key]]
                 field_type = type(field_group[0])
-                cell = field_type.reconcile(field_group, len(row_group), args)
+                cell = field_type.reconcile(field_group, args)
                 cell.is_reconciled = True
+                if key == "~T3~ Location":
+                    from pprint import pp
+
+                    print("=" * 80)
+                    print(field_type)
+                    pp(field_group)
+                    pp(cell)
+                    print()
                 row.add_field(key, cell)
 
             # This loop tweaks a row for fields that depend on each other

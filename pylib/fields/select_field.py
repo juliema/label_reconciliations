@@ -21,7 +21,7 @@ class SelectField(BaseField):
         return {self.label: self.value}
 
     @classmethod
-    def reconcile(cls, group, row_count, _=None):
+    def reconcile(cls, group, _=None):
         values = [f.value if f.value.lower() not in PLACEHOLDERS else "" for f in group]
 
         filled = Counter([v for v in values if v.strip()]).most_common()
@@ -41,7 +41,7 @@ class SelectField(BaseField):
             # Everyone chose the same value
             case [f0] if f0[1] > 1 and f0[1] == count:
                 note = f"Unanimous match, {f0[1]} of {count} {P('record', count)}"
-                return cls(note=note, result=Result.UNANIMOUS)
+                return cls(note=note, value=f0[0], result=Result.UNANIMOUS)
 
             # It was a tie for the values chosen
             case [f0, f1, *_] if f0[1] > 1 and f0[1] == f1[1]:
@@ -49,20 +49,20 @@ class SelectField(BaseField):
                     f"Match is a tie, {f0[1]} of {count} {P('record', count)} with "
                     f"{blanks} {P('blank', blanks)}"
                 )
-                return cls(note=note, result=Result.MAJORITY)
+                return cls(note=note, value=f0[0], result=Result.MAJORITY)
 
             # We have a winner
             case [f0, *_] if f0[1] > 1:
                 note = (
-                    f"Match, {f0[1]} of {count} {P('record', count)} with {blanks} "
+                    f"Match {f0[1]} of {count} {P('record', count)} with {blanks} "
                     f"{P('blank', blanks)}"
                 )
-                return cls(note=note, result=Result.MAJORITY)
+                return cls(note=note, value=f0[0], result=Result.MAJORITY)
 
             # Only one person chose a value
             case [f0] if f0[1] == 1:
-                note = "Only 1 transcript in {count} {P('record', count)}"
-                return cls(note=note, result=Result.ONLY_ONE)
+                note = f"Only 1 transcript in {count} {P('record', count)}"
+                return cls(note=note, value=f0[0], result=Result.ONLY_ONE)
 
             # Everyone picked a different value
             case _:

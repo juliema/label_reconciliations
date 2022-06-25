@@ -12,7 +12,7 @@ class BaseField:
 
     @property
     def label(self):
-        return self.key.split(maxsplit=1)[-1] if self.key[0] == "#" else self.key
+        return self.key.split(maxsplit=1)[-1] if self.key[0] == "~" else self.key
 
     @property
     def base_label(self):
@@ -28,7 +28,7 @@ class BaseField:
         raise NotImplementedError()
 
     @classmethod
-    def reconcile(cls, group, row_count, args=None):
+    def reconcile(cls, group, args=None):
         raise NotImplementedError()
 
     @staticmethod

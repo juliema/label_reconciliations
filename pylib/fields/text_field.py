@@ -1,5 +1,6 @@
 # noqa pylint: disable=invalid-name
 import re
+from collections import Counter
 from collections import defaultdict
 from collections import namedtuple
 from dataclasses import dataclass
@@ -15,7 +16,7 @@ from pylib.utils import P
 
 FuzzyRatioScore = namedtuple("FuzzyRatioScore", "score value")
 FuzzySetScore = namedtuple("FuzzySetScore", "score value tokens")
-ExactScore = namedtuple("ExactScore", "value count")
+ExactScore = namedtuple("ExactScore", "string count")
 
 
 @dataclass(kw_only=True)
@@ -26,16 +27,12 @@ class TextField(BaseField):
         return {self.label: self.value}
 
     @classmethod
-    def reconcile(cls, group, row_count, args=None):
-        values = [
-            "\n".join([" ".join(ln.split()) for ln in str(g).splitlines()])
-            for g in group
-        ]
-
-        count = len(values)
+    def reconcile(cls, group, args=None):
+        strings = [" ".join(f.value.split()) for f in group]
+        count = len(strings)
 
         # Look for exact matches
-        exact = exact_match(values)
+        exact = exact_matches(strings)
         blanks = count - sum(f.count for f in exact)
 
         match exact:
@@ -49,11 +46,11 @@ class TextField(BaseField):
                 return cls(note=note, result=Result.ALL_BLANK)
 
             # Everyone chose the same value
-            case [e0] if e0.count == count:
+            case [e0] if e0.count == count and e0.count > 1:
                 note = (
                     f"Exact unanimous match, {e0.count} of {count} {P('record', count)}"
                 )
-                return cls(note=note, value=e0.value, result=Result.UNANIMOUS)
+                return cls(note=note, value=e0.string, result=Result.UNANIMOUS)
 
             # It was a tie for the text chosen
             case [e0, e1, *_] if e0.count > 1 and e0.count == e1.count:
@@ -61,7 +58,7 @@ class TextField(BaseField):
                     f"Exact match is a tie, {e0.count} of {count} {P('record', count)} "
                     f"with {blanks} {P('blank', blanks)}"
                 )
-                return cls(note=note, value=e0.value, result=Result.MAJORITY)
+                return cls(note=note, value=e0.string, result=Result.MAJORITY)
 
             # We have a winner
             case [e0, *_] if e0.count > 1:
@@ -69,13 +66,13 @@ class TextField(BaseField):
                     f"Exact match, {e0.count} of {count} {P('record', count)} with "
                     f"{blanks} {P('blank', blanks)}"
                 )
-                return cls(note=note, value=e0.value, result=Result.MAJORITY)
+                return cls(note=note, value=e0.string, result=Result.MAJORITY)
 
         # Look for normalized exact matches
-        filled = only_filled_values(values)
-        blanks = count - sum(f.count for f in filled)
+        norm = normalized_exact_matches(strings)
+        blanks = count - sum(f.count for f in norm)
 
-        match filled:
+        match norm:
 
             # No matches
             case []:
@@ -86,28 +83,31 @@ class TextField(BaseField):
                 return cls(note=note, result=Result.NO_MATCH)
 
             # Everyone chose the same value
-            case [f0] if f0.count == count:
+            case [n0] if n0.count == count:
                 note = (
-                    f"Normalized unanimous match, {f0.count} of {count} "
+                    f"Normalized unanimous match, {n0.count} of {count} "
                     f"{P('record', count)}"
                 )
-                return cls(note=note, value=f0.value, result=Result.UNANIMOUS)
+                return cls(note=note, value=n0.string, result=Result.UNANIMOUS)
 
-            # It was a tie for the values chosen
-            case [f0, f1, *_] if f0.count == f1.count:
+            # The winners are a tie
+            case [n0, n1, *_] if n0.count > 1 and n0.count == n1.count:
                 note = (
-                    f"Normalized match is a tie, {f0.count} of {count} "
+                    f"Normalized match is a tie, {n0.count} of {count} "
                     f"{P('record', count)} with {blanks} {P('blank', blanks)}"
                 )
-                return cls(note=note, value=f0.value, result=Result.MAJORITY)
+                return cls(note=note, value=n0.string, result=Result.MAJORITY)
 
-            case [f0] if f0 == 1:
-                note = f"Only 1 transcript in {count} {P('record', count)}"
-                return cls(note=note, value=f0.value, result=Result.ONLY_ONE)
+            # We have a winner
+            case [n0, *_] if n0.count > 1:
+                note = (
+                    f"Normalized match, {n0.count} of {count} {P('record', count)} "
+                    f"with {blanks} {P('blank', blanks)}"
+                )
+                return cls(note=note, value=n0.string, result=Result.MAJORITY)
 
         # Check for simple in-place fuzzy matches
-        top = top_partial_ratio(group)
-
+        top = top_partial_ratio(strings)
         if top.score >= args.fuzzy_ratio_threshold:
             note = (
                 f"Partial ratio match on {count} {P('record', count)} with {blanks} "
@@ -116,7 +116,7 @@ class TextField(BaseField):
             return cls(note=note, value=top.value, result=Result.FUZZY)
 
         # Now look for the best token match
-        top = top_token_set_ratio(values)
+        top = top_token_set_ratio(strings)
         if top.score >= args.fuzzy_set_threshold:
             note = (
                 f"Token set ratio match on {count} {P('record', count)} with {blanks} "
@@ -143,74 +143,66 @@ class TextField(BaseField):
         )
 
 
-def exact_match(values):
-    """Look for exact matches in the value list."""
-    filled = defaultdict(int)
-    for value in values:
-        filled[value] += 1
-
-    exact = [ExactScore(k, v) for k, v in filled.items() if k]
-    return sorted(exact, key=lambda s: (s.count, len(s.value)), reverse=True)
+def exact_matches(strings):
+    """Look for exact matches in the string list."""
+    counts = Counter(strings)
+    exact = [ExactScore(string, count) for string, count in counts.items() if string]
+    return sorted(exact, key=lambda s: (s.count, len(s.string)), reverse=True)
 
 
-def only_filled_values(values):
+def normalized_exact_matches(strings):
     """
-    Get the filled items items in the group.
+    Get normalized strings for the group items in the group.
 
     Then sort them by frequency. Normalize the text for comparison by removing
     spaces and punctuation, and setting all letters to lower case. The exemplar
     for the group is the longest pre-normalized value. So if we have three
-    values like so:
+    strings like so:
       "A test label"  "a Test Label."   "A TEST LABEL"
     They will normalize to "a test label" and the second value "a Test Label."
     will become the returned value for that group.
     """
-    all_filled = defaultdict(list)
-    for value in values:
-        value = value.strip()
-        if value:
-            squished = re.sub(r"\W+", "", value).lower()
-            all_filled[squished].append(value)
+    norms = defaultdict(list)
+    for string in strings:
+        if squished := re.sub(r"\W+", "", string).lower():
+            norms[squished].append(string)
 
-    only_filled = []
-    for _, vals in all_filled.items():
-        longest = sorted(vals, key=len, reverse=True)[0]
-        only_filled.append(ExactScore(longest, len(vals)))
+    normalized = []
+    for same in norms.values():
+        longest = sorted(same, key=len, reverse=True)[0]
+        normalized.append(ExactScore(longest, len(same)))
 
-    return sorted(only_filled, key=lambda s: s.count, reverse=True)
+    return sorted(normalized, key=lambda s: s.count, reverse=True)
 
 
-def top_partial_ratio(group):
+def top_partial_ratio(strings):
     """Return the best partial ratio match from fuzzywuzzy module."""
     scores = []
-    group = group.reset_index(level=0, drop=True).astype(str)
-    for combo in combinations(zip(group, group.index), 2):
-        score = fuzz.partial_ratio(combo[0][0], combo[1][0])
-        value = combo[0][0] if len(combo[0][0]) >= len(combo[1][0]) else combo[1][0]
+    for c0, c1 in combinations(strings, 2):
+        score = fuzz.partial_ratio(c0, c1)
+        value = c0 if len(c0) >= len(c1) else c1
         scores.append(FuzzyRatioScore(score, value))
 
-    scores = sorted(scores, reverse=True, key=lambda s: (s.score, len(s.value)))
+    scores = sorted(scores, reverse=True, key=lambda s: (s.score, len(s)))
     return scores[0]
 
 
-def top_token_set_ratio(values):
+def top_token_set_ratio(strings):
     """Return the best token set ratio match from fuzzywuzzy module."""
     scores = []
-    for combo in combinations(values, 2):
-        score = fuzz.token_set_ratio(combo[0], combo[1])
-        tokens_0 = len(combo[0].split())
-        tokens_1 = len(combo[1].split())
+    for c0, c1 in combinations(strings, 2):
+        score = fuzz.token_set_ratio(c0, c1)
+        tokens_0 = len(c0.split())
+        tokens_1 = len(c1.split())
         if tokens_0 > tokens_1:
-            value = combo[0]
+            value = c0
             tokens = tokens_0
         elif tokens_0 < tokens_1:
-            value = combo[1]
+            value = c1
             tokens = tokens_1
         else:
+            value = c0 if len(c0) <= len(c1) else c1
             tokens = tokens_0
-            value = combo[1]
-            if len(combo[0]) <= len(combo[1]):
-                value = combo[0]
         scores.append(FuzzySetScore(score, value, tokens))
 
     ordered = sorted(

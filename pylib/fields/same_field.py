@@ -14,7 +14,7 @@ class SameField(BaseField):
         return {self.label: self.value}
 
     @classmethod
-    def reconcile(cls, group, row_count, _=None):
+    def reconcile(cls, group, _=None):
         if all(g.value == group[0].value for g in group):
             value = group[0].value
             result = Result.OK

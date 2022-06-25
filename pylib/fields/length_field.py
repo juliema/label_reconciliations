@@ -39,14 +39,15 @@ class LengthField(BaseField):
         return dict_
 
     @classmethod
-    def reconcile(cls, group, row_count, _=None):
+    def reconcile(cls, group, _=None):
+        row_count = len(group)
         if not group:
             note = f'There are no lines in {row_count} {P("records", row_count)}.'
             return cls(note=note, result=Result.ALL_BLANK)
 
         note = (
-            f'There {P("was", len(group))} {len(group)} '
-            f'{P("line", len(group))} in {row_count} {P("record", row_count)}'
+            f'There {P("was", row_count)} {row_count} '
+            f'{P("line", row_count)} in {row_count} {P("record", row_count)}'
         )
 
         x1 = round(stats.mean([ln.x1 for ln in group]))

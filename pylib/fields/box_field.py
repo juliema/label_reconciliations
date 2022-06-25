@@ -19,40 +19,33 @@ class BoxField(BaseField):
         return self.round("left", "right", "top", "bottom")
 
     @classmethod
-    def reconcile(cls, group, row_count, _=None):
-        if not group:
-            note = f"There are no boxes in {row_count} {P('record', len(group))}"
-            return cls(note=note, result=Result.ALL_BLANK)
-
-        overlaps = [0] * len(group)
-        for i, box1 in enumerate(group[:-1]):
-            for j, box2 in enumerate(group[1:], 1):
-                if overlaps_2d(box1, box2):
-                    overlaps[i] = 1
-                    overlaps[j] = 1
-        boxes = [b for i, b in enumerate(group) if overlaps[i]]
-
-        if not boxes:
-            note = (
-                f"There are no overlapping boxes in {len(group)} "
-                f"{P('record', len(group))}"
-            )
-            return cls(note=note, result=Result.NO_MATCH)
-
-        count = len(boxes)
+    def reconcile(cls, group, _=None):
+        row_count = len(group)
+        count = row_count
 
         note = (
-            f"There {P('was', count)} {count} overlapping {P('box', count)} "
-            f"in {len(group)} {P('record', len(group))}"
+            f"There {P('is', count)} {count} {P('box', count)} "
+            f"in {row_count} {P('record', row_count)}"
+        )
+
+        print(
+            cls(
+                note=note,
+                result=Result.OK,
+                left=round(mean(b.left for b in group)),
+                right=round(mean(b.right for b in group)),
+                top=round(mean(b.top for b in group)),
+                bottom=round(mean(b.bottom for b in group)),
+            )
         )
 
         return cls(
             note=note,
             result=Result.OK,
-            left=round(mean(b["left"] for b in boxes)),
-            right=round(mean(b["right"] for b in boxes)),
-            top=round(mean(b["top"] for b in boxes)),
-            bottom=round(mean(b["bottom"] for b in boxes)),
+            left=round(mean(b.left for b in group)),
+            right=round(mean(b.right for b in group)),
+            top=round(mean(b.top for b in group)),
+            bottom=round(mean(b.bottom for b in group)),
         )
 
     @staticmethod
@@ -62,11 +55,6 @@ class BoxField(BaseField):
 
 def overlaps_2d(box1, box2):
     """Check if the boxes overlap."""
-    return overlaps_1d(box1.left, box1.right, box2.left, box2.right) and overlaps_1d(
-        box1.top, box1.bottom, box2.top, box2.bottom
-    )
-
-
-def overlaps_1d(seg1_lo, seg1_hi, seg2_lo, seg2_hi):
-    """Check if the line segments overlap."""
-    return seg1_lo <= seg2_hi and seg2_lo <= seg1_hi
+    horiz = box1.right >= box2.left and box2.right >= box1.left
+    vert = box1.bottom >= box2.top and box2.bottom >= box1.top
+    return horiz and vert

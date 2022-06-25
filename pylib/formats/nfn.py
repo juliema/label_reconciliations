@@ -212,7 +212,7 @@ def workflow_annotation(anno, row, workflow_strings, anno_id):
 
 
 def get_key(label: str, anno_id: str):
-    return f"#{anno_id} {label.strip()}"
+    return f"~{anno_id}~ {label.strip()}"
 
 
 # #############################################################################

@@ -17,7 +17,8 @@ class PointField(BaseField):
         return self.round("x", "y")
 
     @classmethod
-    def reconcile(cls, group, row_count, _=None):
+    def reconcile(cls, group, _=None):
+        row_count = len(group)
         if not group:
             note = f"There are no points in {row_count} {P('record', len(group))}"
             return cls(note=note, result=Result.ALL_BLANK)

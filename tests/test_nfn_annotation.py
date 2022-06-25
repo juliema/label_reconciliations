@@ -22,8 +22,8 @@ class TestFlattenAnnotation(unittest.TestCase):
         self.assertEqual(
             row,
             {
-                "#T1 testing": TextField(
-                    key="#T1 testing",
+                "~T1~ testing": TextField(
+                    key="~T1~ testing",
                     note="",
                     result=Result.NO_FLAG,
                     is_reconciled=False,

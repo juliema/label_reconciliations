@@ -6,12 +6,12 @@ import textwrap
 import zipfile
 from os.path import basename
 
-from pylib import summary_html
+from pylib import summary
 from pylib import utils
 from pylib.table import Table
 
 
-VERSION = "0.5.0"
+VERSION = "0.5.1"
 
 
 def parse_args():
@@ -161,7 +161,7 @@ def main():
             reconciled.to_csv(args.reconciled)
 
         if args.summary:
-            summary_html.report(args, unreconciled, reconciled)
+            summary.report(args, unreconciled, reconciled)
 
     if args.zip:
         zip_files(args)

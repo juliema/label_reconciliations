@@ -44,13 +44,13 @@ def get_groups(args, unreconciled, reconciled):
     keys = [args.group_by, "__order__", args.row_key]
     keys += [args.user_column] if args.user_column else []
 
-    df1 = pd.DataFrame(reconciled.to_reconciled_records())
+    df1 = pd.DataFrame(reconciled.to_records())
     df1["__order__"] = 1
 
     df2 = pd.DataFrame(reconciled.to_explanations(args.group_by))
     df2["__order__"] = 2
 
-    df3 = pd.DataFrame(unreconciled.to_unreconciled_records())
+    df3 = pd.DataFrame(unreconciled.to_records())
     df2["__order__"] = 3
 
     df = pd.concat([df1, df2, df3]).fillna("")
@@ -101,8 +101,8 @@ def get_filters(groups, result_counts):
         filters[name] = subject_ids
 
     all_problems = set()
-    for subject_ids in problems:
-        all_problems |= subject_ids
+    for subject_ids in problems.values():
+        all_problems |= set(subject_ids)
     filters["Show All Problems"] = list(all_problems)
 
     return filters

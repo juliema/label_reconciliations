@@ -12,7 +12,7 @@ class NoOpField(BaseField):
         return {self.label: value}
 
     @classmethod
-    def reconcile(cls, group, row_count, _=None):
+    def reconcile(cls, group, _=None):
         return cls()
 
     @staticmethod
