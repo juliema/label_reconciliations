@@ -8,9 +8,9 @@ import re
 import statistics as stats
 from dataclasses import dataclass
 
+from pylib import result
 from pylib.fields.base_field import BaseField
 from pylib.result import Result
-from pylib.result import sort_results
 from pylib.utils import P
 
 PIX_LEN = "length pixels"
@@ -79,21 +79,27 @@ class LengthField(BaseField):
     @staticmethod
     def reconcile_row(reconciled_row, args=None):
         """Calculate lengths using units and pixel_lengths."""
-        ruler = None
-
-        for key, field in reconciled_row.items():
-            if isinstance(field, LengthField) and field.is_scale:
-                ruler = field
-                break
+        ruler = LengthField.find_ruler(reconciled_row)
 
         if not ruler:
             return
 
-        for key, field in reconciled_row.items():
+        LengthField.calculate_lengths(reconciled_row, ruler)
+
+    @staticmethod
+    def calculate_lengths(reconciled_row, ruler):
+        for field in reconciled_row.values():
             if isinstance(field, LengthField) and not field.is_scale:
                 field.length = round(field.pixel_length * ruler.factor, 2)
                 field.units = ruler.units
 
     @staticmethod
+    def find_ruler(reconciled_row):
+        return next(
+            (f for f in reconciled_row.values() if getattr(f, "is_scale", False)),
+            None,
+        )
+
+    @staticmethod
     def results():
-        return sort_results(Result.ALL_BLANK, Result.OK)
+        return result.sort_results(Result.ALL_BLANK, Result.OK)

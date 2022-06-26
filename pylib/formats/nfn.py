@@ -79,59 +79,59 @@ def extract_annotations(raw_row: dict, row: Row, workflow_strings: WorkflowStrin
         flatten_annotation(anno, row, workflow_strings)
 
 
-def flatten_annotation(anno, row, workflow_strings, anno_id=""):
+def flatten_annotation(anno, row, workflow_strings, task_id=""):
     """Flatten one annotation recursively."""
-    anno_id = anno.get("task", anno_id)
+    task_id = anno.get("task", task_id)
 
     match anno:
         case {"value": [str(), *__], **___}:
-            list_annotation(anno, row, anno_id)
+            list_annotation(anno, row, task_id)
         case {"value": list(), **__}:
-            subtask_annotation(anno, row, workflow_strings, anno_id)
+            subtask_annotation(anno, row, workflow_strings, task_id)
         case {"select_label": _, **__}:
-            select_label_annotation(anno, row, anno_id)
+            select_label_annotation(anno, row, task_id)
         case {"task_label": _, **__}:
-            task_label_annotation(anno, row, anno_id)
+            task_label_annotation(anno, row, task_id)
         case {"tool_label": _, "width": __, **___}:
-            box_annotation(anno, row, anno_id)
+            box_annotation(anno, row, task_id)
         case {"tool_label": _, "x1": __, **___}:
-            length_annotation(anno, row, anno_id)
+            length_annotation(anno, row, task_id)
         case {"tool_label": _, "x": __, **___}:
-            point_annotation(anno, row, anno_id)
+            point_annotation(anno, row, task_id)
         case {"tool_label": _, "details": __, **___}:
-            workflow_annotation(anno, row, workflow_strings, anno_id)
+            workflow_annotation(anno, row, workflow_strings, task_id)
         case _:
             print(f"Annotation type not found: {anno}")
 
 
-def subtask_annotation(anno, row, workflow_strings, anno_id):
+def subtask_annotation(anno, row, workflow_strings, task_id):
     """Handle an annotation with subtasks."""
-    anno_id = anno.get("task", anno_id)
+    task_id = anno.get("task", task_id)
     for subtask in anno["value"]:
-        flatten_annotation(subtask, row, workflow_strings, anno_id)
+        flatten_annotation(subtask, row, workflow_strings, task_id)
 
 
-def list_annotation(anno, row, anno_id):
+def list_annotation(anno, row, task_id):
     values = sorted(anno.get("value", ""))
-    key = get_key(anno["task_label"], anno_id)
+    key = get_key(anno["task_label"], task_id)
     row.add_field(key, TextField(value=" ".join(values)))
 
 
-def select_label_annotation(anno, row, anno_id):
-    key = get_key(anno["select_label"], anno_id)
+def select_label_annotation(anno, row, task_id):
+    key = get_key(anno["select_label"], task_id)
     option = anno.get("option")
     value = anno.get("label", "") if option else anno.get("value", "")
     row.add_field(key, SelectField(value=value))
 
 
-def task_label_annotation(anno, row, anno_id):
-    key = get_key(anno["task_label"], anno_id)
+def task_label_annotation(anno, row, task_id):
+    key = get_key(anno["task_label"], task_id)
     row.add_field(key, TextField(value=anno.get("value", "")))
 
 
-def box_annotation(anno, row, anno_id):
+def box_annotation(anno, row, task_id):
     row.add_field(
-        get_key(anno["tool_label"], anno_id),
+        get_key(anno["tool_label"], task_id),
         BoxField(
             left=round(anno["x"]),
             right=round(anno["x"] + anno["width"]),
@@ -141,9 +141,9 @@ def box_annotation(anno, row, anno_id):
     )
 
 
-def length_annotation(anno, row, anno_id):
+def length_annotation(anno, row, task_id):
     row.add_field(
-        get_key(anno["tool_label"], anno_id),
+        get_key(anno["tool_label"], task_id),
         LengthField(
             x1=round(anno["x1"]),
             y1=round(anno["y1"]),
@@ -153,9 +153,9 @@ def length_annotation(anno, row, anno_id):
     )
 
 
-def point_annotation(anno, row, anno_id):
+def point_annotation(anno, row, task_id):
     row.add_field(
-        get_key(anno["tool_label"], anno_id),
+        get_key(anno["tool_label"], task_id),
         PointField(
             x=round(anno["x"]),
             y=round(anno["y"]),
@@ -163,7 +163,7 @@ def point_annotation(anno, row, anno_id):
     )
 
 
-def workflow_annotation(anno, row, workflow_strings, anno_id):
+def workflow_annotation(anno, row, workflow_strings, task_id):
     """Get the value of an annotation from workflow data.
 
     We are trying to match a coded value (UUID-like) with strings in the workflow
@@ -174,7 +174,7 @@ def workflow_annotation(anno, row, workflow_strings, anno_id):
     # Get all possible strings for the annotation
     values = []
     for key_, value in workflow_strings.label_strings.items():
-        if key_.startswith(anno_id) and key_.endswith("details"):
+        if key_.startswith(task_id) and key_.endswith("details"):
             values.append(value)
     labels = values[-1] if values else []
 
@@ -200,19 +200,19 @@ def workflow_annotation(anno, row, workflow_strings, anno_id):
 
             value = ",".join(v for v in values if v)
             label = f"{anno['tool_label']}.{label}".strip()
-            label = get_key(label, anno_id)
+            label = get_key(label, task_id)
             row.add_field(label, TextField(value=value))
 
         # It's a single text value
         else:
             label = labels[i] if i < len(labels) else "unknown"
             label = f"{anno['tool_label']}.{label}".strip()
-            label = get_key(label, anno_id)
+            label = get_key(label, task_id)
             row.add_field(label, TextField(value=outer_value))
 
 
-def get_key(label: str, anno_id: str):
-    return f"~{anno_id}~ {label.strip()}"
+def get_key(label: str, task_id: str):
+    return f"~{task_id}~ {label.strip()}"
 
 
 # #############################################################################
