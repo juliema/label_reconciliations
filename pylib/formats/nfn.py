@@ -126,7 +126,9 @@ def select_label_annotation(anno, row, task_id):
 
 def task_label_annotation(anno, row, task_id):
     key = get_key(anno["task_label"], task_id)
-    row.add_field(key, TextField(value=anno.get("value", "")))
+    value = anno.get("value", "")
+    value = value if value else ""
+    row.add_field(key, TextField(value=value))
 
 
 def box_annotation(anno, row, task_id):
