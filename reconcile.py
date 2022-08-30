@@ -11,7 +11,7 @@ from pylib import utils
 from pylib.table import Table
 
 
-VERSION = "0.5.1"
+VERSION = "0.5.2"
 
 
 def parse_args():
