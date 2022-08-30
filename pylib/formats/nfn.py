@@ -209,7 +209,8 @@ def workflow_task(task, row, workflow_strings, task_id):
 
 
 def get_key(label: str, task_id: str):
-    return f"~{task_id}~ {label.strip()}"
+    label = label if label else ""
+    return f"{task_id}~{label.strip()}"
 
 
 # #############################################################################

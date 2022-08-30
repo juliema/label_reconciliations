@@ -106,13 +106,15 @@ class Table:
         all_keys = unreconciled.get_all_keys()
         all_field_types = unreconciled.get_all_field_types()
 
-        for subject_id, row_group in groups:
+        for _, row_group in groups:
             row = Row()
             row_group = list(row_group)
 
             # This loop builds a reconciled row
             for key in all_keys:
-                field_group = [g[key] for g in row_group if g[key]]
+                field_group = [g[key] for g in row_group if g.get(key)]
+                if not field_group:
+                    continue
                 field_type = type(field_group[0])
                 cell = field_type.reconcile(field_group, args)
                 cell.is_reconciled = True
