@@ -108,19 +108,19 @@ def subtask_task(task, row, workflow_strings, task_id):
 
 def list_task(task, row, task_id):
     values = sorted(task.get("value", ""))
-    key = get_key(task["task_label"], task_id)
+    key = get_key(task["task_label"], task_id, row)
     row.add_field(key, TextField(value=" ".join(values)))
 
 
 def select_label_task(task, row, task_id):
-    key = get_key(task["select_label"], task_id)
+    key = get_key(task["select_label"], task_id, row)
     option = task.get("option")
     value = task.get("label", "") if option else task.get("value", "")
     row.add_field(key, SelectField(value=value))
 
 
 def task_label_task(task, row, task_id):
-    key = get_key(task["task_label"], task_id)
+    key = get_key(task["task_label"], task_id, row)
     value = task.get("value", "")
     value = value if value else ""
     row.add_field(key, TextField(value=value))
@@ -128,7 +128,7 @@ def task_label_task(task, row, task_id):
 
 def box_task(task, row, task_id):
     row.add_field(
-        get_key(task["tool_label"], task_id),
+        get_key(task["tool_label"], task_id, row),
         BoxField(
             left=round(task["x"]),
             right=round(task["x"] + task["width"]),
@@ -140,7 +140,7 @@ def box_task(task, row, task_id):
 
 def length_task(task, row, task_id):
     row.add_field(
-        get_key(task["tool_label"], task_id),
+        get_key(task["tool_label"], task_id, row),
         LengthField(
             x1=round(task["x1"]),
             y1=round(task["y1"]),
@@ -152,7 +152,7 @@ def length_task(task, row, task_id):
 
 def point_task(task, row, task_id):
     row.add_field(
-        get_key(task["tool_label"], task_id),
+        get_key(task["tool_label"], task_id, row),
         PointField(
             x=round(task["x"]),
             y=round(task["y"]),
@@ -197,20 +197,27 @@ def workflow_task(task, row, workflow_strings, task_id):
 
             value = ",".join(v for v in values if v)
             label = f"{task['tool_label']}.{label}".strip()
-            label = get_key(label, task_id)
+            label = get_key(label, task_id, row)
             row.add_field(label, TextField(value=value))
 
         # It's a single text value
         else:
             label = labels[i] if i < len(labels) else "unknown"
             label = f"{task['tool_label']}.{label}".strip()
-            label = get_key(label, task_id)
+            label = get_key(label, task_id, row)
             row.add_field(label, TextField(value=outer_value))
 
 
-def get_key(label: str, task_id: str):
-    label = label if label else ""
-    return f"{task_id}~{label.strip()}"
+def get_key(label: str, task_id: str, row):
+    label = label.strip() if label else ""
+
+    i = 1
+    key = f"{task_id}_{i} {label}"
+    while key in row:
+        i += 1
+        key = f"{task_id}_{i} {label}"
+
+    return key
 
 
 # #############################################################################
