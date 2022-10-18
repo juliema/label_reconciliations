@@ -232,7 +232,7 @@ def extract_subject_data(raw_row, row):
 
     for val1 in annos.values():
         for key2, val2 in val1.items():
-            if key2 != "retired":
+            if key2 and key2 != "retired":
                 row.add_field(key2, SameField(value=val2))
 
 
