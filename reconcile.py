@@ -43,7 +43,7 @@ def parse_args():
                     calibrated length relative to the scale. Required length format:
                     {"x1": <int>, "y1": <int>, "x2": <int>, "y2": <int>}
                     To get actual lengths (vs. pixel) you will need a scale length
-                    header with a numeber and column with units. Ex: "scale 0.5 mm".
+                    header with a number and column with units. Ex: "scale 0.5 mm".
             """
         ),
     )
