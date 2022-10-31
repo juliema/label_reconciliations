@@ -66,7 +66,7 @@ def process_csv(args):
         if len(values) == 1 and not values[0]:
             empty_columns.append(column)
 
-    df = df.drop(empty_columns, axis=1).sort_values([args.group_by, args.key_column])
+    df = df.drop(empty_columns, axis=1).sort_values([args.group_by, args.row_key])
 
     csv_name = args.output_prefix + ".csv"
     df.to_csv(csv_name, index=False)
@@ -82,7 +82,7 @@ def write_args(args, df):
         args_file.write(f"--title={args.output_prefix.split(os.sep)[-1]}\n")
         args_file.write("--format=csv\n")
         args_file.write(f"--group-by={args.group_by}\n")
-        args_file.write(f"--key-column={args.key_column}\n")
+        args_file.write(f"--key-column={args.row_key}\n")
         args_file.write(
             "--unreconciled={}\n".format(args.output_prefix + "_unreconciled.csv")
         )
@@ -91,7 +91,7 @@ def write_args(args, df):
         )
         args_file.write("--summary={}\n".format(args.output_prefix + "_summary.html"))
         args_file.write("--zip={}\n".format(args.output_prefix + ".zip"))
-        skip_columns = [args.group_by, args.key_column]
+        skip_columns = [args.group_by, args.row_key]
         for column in [c for c in df.columns if c not in skip_columns]:
             args_file.write(f"--column-types={column}:text\n")
 

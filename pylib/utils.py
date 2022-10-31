@@ -15,7 +15,9 @@ def get_plugins(subdir):
 
     plugins = {}
 
-    for path in [p for p in dir_.glob("*.py") if p.stem != "__init__"]:
+    exclude = ["__init__", "common"]
+
+    for path in [p for p in dir_.glob("*.py") if p.stem not in exclude]:
         module_name = f"pylib.{subdir}.{path.name}"
         spec = i_util.spec_from_file_location(module_name, str(path))
         module = i_util.module_from_spec(spec)
@@ -26,8 +28,9 @@ def get_plugins(subdir):
 
 
 def error_exit(msgs):
-    """Handle error exits."""
     msgs = msgs if isinstance(msgs, list) else [msgs]
     for msg in msgs:
-        print(msg)
+        print(msg, file=sys.stderr)
     sys.exit(1)
+
+

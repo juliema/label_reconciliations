@@ -26,7 +26,7 @@ class SelectField(BaseField):
             f.value 
             if f.value and f.value.lower() not in PLACEHOLDERS else ""
             for f in group
-            ]
+        ]
 
         filled = Counter([v for v in values if v.strip()]).most_common()
 

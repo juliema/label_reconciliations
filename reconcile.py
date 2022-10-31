@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 import argparse
 import os
-import sys
 import textwrap
+import warnings
 import zipfile
 from os.path import basename
 
@@ -11,7 +11,7 @@ from pylib import utils
 from pylib.table import Table
 
 
-VERSION = "0.5.3"
+VERSION = "0.5.4"
 
 
 def parse_args():
@@ -32,12 +32,19 @@ def parse_args():
             select: Reconcile a fixed list of options.
             text:   Reconcile free text entries.
             same:   Check that all items in a group are the same.
-            mean:   Calculate the mean of each group.
             box:    Reconcile drawn bounding boxes, the mean of the corners.
-            point:  Calculate the mean of a point.
+                    Required box format:
+                    {"x": <int>, "y": <int>, "width": <int>, "height": <int>}
+            point:  Calculate the mean of a point. Required point format:
+                    {"x": <int>, "y": <int>}
+            noop:   Do nothing with this field.
             length: Calculate the length of a drawn line. It first calculates the
                     mean of the end points and then uses a scale to get the
-                    calibrated length relative to the scale."""
+                    calibrated length relative to the scale. Required length format:
+                    {"x1": <int>, "y1": <int>, "x2": <int>, "y2": <int>}
+                    To get actual lengths (vs. pixel) you will need a scale length
+                    header with a numeber and column with units. Ex: "scale 0.5 mm".
+            """
         ),
     )
 
@@ -101,23 +108,60 @@ def parse_args():
     )
 
     parser.add_argument(
+        "-f",
+        "--format",
+        choices=["nfn", "csv", "json"],
+        default="nfn",
+        help="""The unreconciled data is in what type of file? nfn=A Zooniverse
+            classification data dump. csv=A flat CSV file. json=A JSON file. When the
+            format is "csv" or "json" we require the --column-types. If the type is
+            "nfn" we can guess the --column-types but the --column-types option will
+            still override our guesses. (default: %(default)s)""",
+    )
+
+    parser.add_argument(
+        "-c",
+        "--column-types",
+        action="append",
+        help="""We need do identify what the column types are for CSV or JSON files.
+            This is a string with information on how to reconcile each column in the
+            input file. The format is --column-types "foo:select,bar:text,baz:text".
+            The list is comma separated with the column label going before the colon
+            and the reconciliation type after the colon. You may want to use this
+            argument multiple times. The default field type is a NoOp (Do nothing).""",
+    )
+    parser.add_argument(
+        "--group-by",
+        default="subject_id",
+        help="""Group CSV & JSON the rows by this column (Default=subject_id).""",
+    )
+
+    parser.add_argument(
+        "--page-size",
+        default=20,
+        type=int,
+        help="""Page size for the summary report's detail section.
+            (default: %(default)s)""",
+    )
+
+    parser.add_argument(
         "-V", "--version", action="version", version=f"%(prog)s {VERSION}"
     )
 
     args = parser.parse_args()
 
-    setattr(args, "group_by", "subject_id")
     setattr(args, "row_key", "classification_id")
     setattr(args, "user_column", "user_name")
-    setattr(args, "page_size", 20)
 
     if args.fuzzy_ratio_threshold < 0 or args.fuzzy_ratio_threshold > 100:
-        print("--fuzzy-ratio-threshold must be between 0 and 100.")
-        sys.exit(1)
+        utils.error_exit("--fuzzy-ratio-threshold must be between 0 and 100.")
 
     if args.fuzzy_set_threshold < 0 or args.fuzzy_set_threshold > 100:
-        print("--fuzzy-set-threshold must be between 0 and 100.")
-        sys.exit(1)
+        utils.error_exit("--fuzzy-set-threshold must be between 0 and 100.")
+
+    if args.format == "nfn" and args.column_types:
+        warnings.warn("Column types are ignored for 'nfn' format.")
+        return
 
     return args
 
@@ -146,10 +190,10 @@ def main():
     args = parse_args()
 
     formats = utils.get_plugins("formats")
-    unreconciled: Table = formats["nfn"].read(args)
+    unreconciled: Table = formats[args.format].read(args)
 
     if not unreconciled.has_rows:
-        sys.exit(f"Workflow {args.workflow_id} has no data.")
+        utils.error_exit(f"Workflow {args.workflow_id} has no data.")
 
     if args.unreconciled:
         unreconciled.to_csv(args.unreconciled)
