@@ -85,9 +85,12 @@ def create_link(value):
 
 def header_data(args, unreconciled, reconciled, transcribers):
     """Get data that goes into the report header."""
+    title = f"Summary of '{args.workflow_csv}'"
+    if args.workflow_name and args.workflow_id:
+        title = f"Summary of '{args.workflow_name}' ({args.workflow_id})"
     return {
         "date": datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M"),
-        "title": f"Summary of '{args.workflow_name}' ({args.workflow_id})",
+        "title": title,
         "ratio": len(unreconciled) / len(reconciled),
         "subjects": len(reconciled),
         "transcripts": len(unreconciled),
