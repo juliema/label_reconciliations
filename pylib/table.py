@@ -31,17 +31,25 @@ class Table:
     def has_rows(self):
         return bool(self.rows)
 
-    def to_csv(self, args):
+    @staticmethod
+    def get_notes(obj):
+        try:
+            notes = json.loads(obj)["note"]
+        except TypeError:
+            notes = ""
+        return notes
+
+    def to_csv(self, args, path):
         keys = [args.group_by, "__order__"]
 
         df1 = pd.DataFrame(self.to_records())
         df1["__order__"] = 1
 
         dfs = [df1]
-        if args.explanations:
+        if args.explanations and self.is_reconciled:
             df2 = pd.DataFrame(self.to_explanations(args.group_by))
             columns = [c for c in df2.columns if c != args.group_by]
-            df2[columns] = df2[columns].applymap(lambda obj: json.loads(obj)["note"])
+            df2[columns] = df2[columns].applymap(self.get_notes)
             df2["__order__"] = 2
             df2 = df2[df1.columns]
             dfs.append(df2)
@@ -49,7 +57,7 @@ class Table:
         df = pd.concat(dfs).fillna("")
         df = df.sort_values(keys)
         df = df.drop(["__order__"], axis="columns")
-        df.to_csv(args.reconciled, index=False)
+        df.to_csv(path, index=False)
 
     def to_records(self):
         exclude = NoOpField if self.is_reconciled else type(None)

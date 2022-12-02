@@ -204,13 +204,13 @@ def main():
         utils.error_exit(f"Workflow {args.workflow_id} has no data.")
 
     if args.unreconciled:
-        unreconciled.to_csv(args.unreconciled)
+        unreconciled.to_csv(args, args.unreconciled)
 
     if args.reconciled or args.summary:
         reconciled = Table.reconcile(unreconciled, args)
 
         if args.reconciled:
-            reconciled.to_csv(args)
+            reconciled.to_csv(args, args.reconciled)
 
         if args.summary:
             summary.report(args, unreconciled, reconciled)
