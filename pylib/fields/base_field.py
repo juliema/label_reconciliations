@@ -12,7 +12,8 @@ class BaseField:
 
     @property
     def label(self):
-        return self.key.split(maxsplit=1)[-1] if self.key[0] == "~" else self.key
+        splits = self.key.split(maxsplit=1)
+        return splits[-1] if splits and self.key and self.key[0] == "~" else self.key
 
     @property
     def base_label(self):

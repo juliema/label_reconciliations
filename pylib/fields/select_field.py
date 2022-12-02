@@ -22,7 +22,11 @@ class SelectField(BaseField):
 
     @classmethod
     def reconcile(cls, group, _=None):
-        values = [f.value if f.value.lower() not in PLACEHOLDERS else "" for f in group]
+        values = [
+            f.value 
+            if f.value and f.value.lower() not in PLACEHOLDERS else ""
+            for f in group
+        ]
 
         filled = Counter([v for v in values if v.strip()]).most_common()
 

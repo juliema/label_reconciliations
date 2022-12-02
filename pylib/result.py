@@ -21,5 +21,9 @@ def sort_results(*args):
     return sorted(args, key=lambda f: f.value)
 
 
+def get_digits(string):
+    return "".join(filter(lambda c: c.isdigit(), string))
+
+
 def result_dict():
-    return {r.value: str(r).split(".", 1)[1] for r in Result if r > Result.NO_FLAG}
+    return {r.value: get_digits(str(r)) for r in Result if r > Result.NO_FLAG}

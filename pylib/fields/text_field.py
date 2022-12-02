@@ -28,7 +28,7 @@ class TextField(BaseField):
 
     @classmethod
     def reconcile(cls, group, args=None):
-        strings = [" ".join(f.value.split()) for f in group]
+        strings = [" ".join(f.value.split()) if f.value else "" for f in group]
         count = len(strings)
 
         # Look for exact matches
