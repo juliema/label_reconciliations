@@ -33,7 +33,7 @@ def read(args):
     df = pd.read_csv(args.input_file, dtype=str)
 
     args.workflow_id = get_workflow_id(args, df)
-    args.workflow_name = get_workflow_name(df)
+    args.workflow_name = get_workflow_name(args, df)
 
     df = df.loc[df.workflow_id == str(args.workflow_id), :].fillna("")
     raw_records = df.to_dict("records")
@@ -273,8 +273,11 @@ def get_workflow_id(args, df):
     return workflow_ids[0]
 
 
-def get_workflow_name(df):
+def get_workflow_name(args, df):
     """Extract and format the workflow name from the data df."""
+    if args.workflow_name:
+        return args.workflow_name
+
     workflow_name = ""
     try:
         workflow_name = df.workflow_name.iloc[0]

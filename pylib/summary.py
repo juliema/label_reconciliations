@@ -85,9 +85,11 @@ def create_link(value):
 
 def header_data(args, unreconciled, reconciled, transcribers):
     """Get data that goes into the report header."""
-    title = f"Summary of '{args.workflow_csv}'"
-    if hasattr(args, "workflow_name") and hasattr(args, "workflow_id"):
-        title = f"Summary of '{args.workflow_name}' ({args.workflow_id})"
+    name = args.workflow_name if args.workflow_name else args.workflow_csv
+    title = f"Summary of '{name}'"
+    if args.workflow_id:
+        title += f" ({args.workflow_id})"
+
     return {
         "date": datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M"),
         "title": title,

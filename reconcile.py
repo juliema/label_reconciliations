@@ -83,6 +83,12 @@ def parse_args():
     )
 
     parser.add_argument(
+        "-n",
+        "--workflow-name",
+        help="""The name of the workflow. NfN extracts can find a default.""",
+    )
+
+    parser.add_argument(
         "-w",
         "--workflow-id",
         type=int,
