@@ -11,7 +11,7 @@ from pylib import utils
 from pylib.table import Table
 
 
-VERSION = "0.5.5"
+VERSION = "0.5.6"
 
 
 def parse_args():
@@ -66,6 +66,14 @@ def parse_args():
         "-s",
         "--summary",
         help="""Write a summary of the reconciliation to this HTML file.""",
+    )
+
+    parser.add_argument(
+        "-e",
+        "--explanations",
+        action="store_true",
+        help="""Output the reconciled explanations with the reconciled classifications
+            CSV file.""",
     )
 
     parser.add_argument(
@@ -202,7 +210,7 @@ def main():
         reconciled = Table.reconcile(unreconciled, args)
 
         if args.reconciled:
-            reconciled.to_csv(args.reconciled)
+            reconciled.to_csv(args)
 
         if args.summary:
             summary.report(args, unreconciled, reconciled)
