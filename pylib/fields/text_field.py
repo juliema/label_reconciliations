@@ -131,6 +131,12 @@ class TextField(BaseField):
         )
         return cls(note=note, result=Result.NO_MATCH)
 
+    @classmethod
+    def pad_group(cls, group, length):
+        while len(group) < length:
+            group.append(cls())
+        return group
+
     @staticmethod
     def results():
         return sort_results(

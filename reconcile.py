@@ -11,7 +11,7 @@ from pylib import utils
 from pylib.table import Table
 
 
-VERSION = "0.5.6"
+VERSION = "0.5.7"
 
 
 def parse_args():
@@ -216,7 +216,7 @@ def main():
         reconciled = Table.reconcile(unreconciled, args)
 
         if args.reconciled:
-            reconciled.to_csv(args, args.reconciled)
+            reconciled.to_csv(args, args.reconciled, unreconciled)
 
         if args.summary:
             summary.report(args, unreconciled, reconciled)

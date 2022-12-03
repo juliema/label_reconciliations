@@ -15,6 +15,12 @@ class NoOpField(BaseField):
     def reconcile(cls, group, _=None):
         return cls()
 
+    @classmethod
+    def pad_group(cls, group, length):
+        while len(group) < length:
+            group.append(cls())
+        return group
+
     @staticmethod
     def results():
         return []

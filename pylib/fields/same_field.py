@@ -26,6 +26,12 @@ class SameField(BaseField):
 
         return cls(value=value, result=result, note=note, is_reconciled=True)
 
+    @classmethod
+    def pad_group(cls, group, length):
+        while len(group) < length:
+            group.append(cls())
+        return group
+
     @staticmethod
     def results():
         return sort_results(Result.OK, Result.ERROR)

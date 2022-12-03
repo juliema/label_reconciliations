@@ -59,6 +59,7 @@ def get_groups(args, unreconciled, reconciled):
     df = df.sort_values(keys)
     df = df.drop(["__order__"], axis="columns")
     df = df.applymap(create_link)
+    df = Table.sort_columns(args, df)
 
     groups = {}
     for subject_id, rows in df.groupby(args.group_by):

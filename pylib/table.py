@@ -1,5 +1,6 @@
 """A table of reconciled or unreconciled data."""
 import json
+import re
 from dataclasses import dataclass
 from dataclasses import field
 from itertools import groupby
@@ -39,19 +40,62 @@ class Table:
             notes = ""
         return notes
 
-    def to_csv(self, args, path):
+    def to_csv(self, args, path, unreconciled=None):
         df = pd.DataFrame(self.to_records())
+        df = df.set_index(args.group_by, drop=False)
 
         if args.explanations and self.is_reconciled:
             df2 = pd.DataFrame(self.to_explanations(args.group_by))
+            df2 = df2.set_index(args.group_by, drop=False)
             columns = [c for c in df2.columns if c != args.group_by]
             df2[columns] = df2[columns].applymap(self.get_notes)
             column_types = self.get_column_types()
             df2 = df2[list(column_types.keys())]
+            self.fix_empty_explanations(args, column_types, df2, unreconciled)
             df = df.join(df2, rsuffix=" Explanation")
 
+        df = self.sort_columns(args, df)
         df = df.fillna("")
         df.to_csv(path, index=False)
+
+    @staticmethod
+    def fix_empty_explanations(args, column_types, df, unreconciled):
+        """A hack to workaround Zooniverse missing data."""
+        df3 = pd.DataFrame(
+            [
+                {args.group_by: r[args.group_by], 'n': 1}
+                for r in unreconciled.to_records()
+             ]
+        )
+        counts = df3.groupby(args.group_by).count()
+        for idx, row in df.iterrows():
+            replace = f"All {counts.at[idx, 'n']} records are blank"
+            row.replace(r"^\s*$", replace, regex=True, inplace=True)
+
+    @staticmethod
+    def sort_columns(args, df):
+        """A hack to workaround Zooniverse quasi-random column ordering."""
+        order = [(0, 0, args.group_by)]
+        skips = [args.group_by]
+        if hasattr(args, "row_key") and args.row_key and args.row_key in df.columns:
+            order.append((0, 1, args.row_key))
+            skips.append(args.row_key)
+        if (hasattr(args, "user_column") and args.user_column
+                and args.user_column in df.columns):
+            order.append((0, 2, args.user_column))
+            skips.append(args.user_column)
+
+        for i, col in enumerate(df.columns):
+            if col in skips:
+                continue
+            if match := re.match(r"[Tt](\d+)", col):
+                task_no = int(match.group(1))
+                order.append((1, task_no, col))
+            else:
+                order.append((2, i, col))
+        order = [o[2] for o in sorted(order)]
+        df = df[order]
+        return df
 
     def to_records(self):
         exclude = NoOpField if self.is_reconciled else type(None)
@@ -133,6 +177,7 @@ class Table:
                 if not field_group:
                     continue
                 field_type = type(field_group[0])
+                field_group = field_type.pad_group(field_group, len(row_group))
                 cell = field_type.reconcile(field_group, args)
                 cell.is_reconciled = True
                 row.add_field(key, cell)

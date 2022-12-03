@@ -18,12 +18,12 @@ class TestFlattenAnnotation(unittest.TestCase):
             "other1": 1,
             "other2": 2,
         }
-        nfn.flatten_annotation(anno, row, workflow_strings)
+        nfn.flatten_task(anno, row, workflow_strings)
         self.assertEqual(
             row,
             {
-                "~T1~ testing": TextField(
-                    key="~T1~ testing",
+                "T1_1 testing": TextField(
+                    key="T1_1 testing",
                     note="",
                     result=Result.NO_FLAG,
                     is_reconciled=False,

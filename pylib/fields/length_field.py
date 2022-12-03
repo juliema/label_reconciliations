@@ -32,6 +32,7 @@ class LengthField(BaseField):
     factor: float = 0.0
     units: str = ""
     is_scale: bool = False
+    use: bool = True
 
     def to_dict(self):
         dict_ = self.round("x1", "y1", "x2", "y2")
@@ -44,17 +45,18 @@ class LengthField(BaseField):
     @classmethod
     def reconcile(cls, group, _=None):
         count = len(group)
+        use = [g for g in group if g.use]
 
         note = f'There {P("is", count)} {count} length {P("record", count)}'
 
-        x1 = round(stats.mean([ln.x1 for ln in group]))
-        y1 = round(stats.mean([ln.y1 for ln in group]))
-        x2 = round(stats.mean([ln.x2 for ln in group]))
-        y2 = round(stats.mean([ln.y2 for ln in group]))
+        x1 = round(stats.mean([ln.x1 for ln in use]))
+        y1 = round(stats.mean([ln.y1 for ln in use]))
+        x2 = round(stats.mean([ln.x2 for ln in use]))
+        y2 = round(stats.mean([ln.y2 for ln in use]))
 
         pix_len = round(math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2), 2)
 
-        if match := SCALE_RE.search(group[0].key):
+        if match := SCALE_RE.search(use[0].key):
             units = match.group("units")
             factor = float(match.group("scale")) / pix_len
             is_scale = True
@@ -75,6 +77,12 @@ class LengthField(BaseField):
             units=units,
             is_scale=is_scale,
         )
+
+    @classmethod
+    def pad_group(cls, group, length):
+        while len(group) < length:
+            group.append(cls(use=False))
+        return group
 
     @staticmethod
     def reconcile_row(reconciled_row, args=None):

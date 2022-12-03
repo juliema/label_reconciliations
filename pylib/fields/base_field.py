@@ -32,6 +32,10 @@ class BaseField:
     def reconcile(cls, group, args=None):
         raise NotImplementedError()
 
+    @classmethod
+    def pad_group(cls, group, length):
+        raise NotImplementedError()
+
     @staticmethod
     def results():
         raise NotImplementedError()

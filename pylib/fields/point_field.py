@@ -16,6 +16,7 @@ from pylib.utils import P
 class PointField(BaseField):
     x: float = 0.0
     y: float = 0.0
+    use: bool = True
 
     def to_dict(self):
         return self.round("x", "y")
@@ -30,6 +31,12 @@ class PointField(BaseField):
         y = round(stats.mean([ln.y for ln in group]))
 
         return cls(note=note, x=x, y=y, result=Result.OK)
+
+    @classmethod
+    def pad_group(cls, group, length):
+        while len(group) < length:
+            group.append(cls(use=False))
+        return group
 
     @staticmethod
     def results():
