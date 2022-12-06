@@ -1,14 +1,10 @@
 // Python vs Javascript. Only needed by the args variable so far
-const None = null;
-const True = true;
-const False = false;
-
 const args = {{args | safe}};
 const columns = {{columns | safe}};
 const filters = {{filters | safe}};
 const tbody = document.querySelector('#groups tbody');
 
-// Save the group's open/close state so remains consistent between
+// Save the group's open/close state so it remains consistent between
 // page and filter changes.
 const groupState = {};
 filters['Show All'].forEach(function(id) {
@@ -50,7 +46,7 @@ const buildReconciledRowData = function(reconciled, explanations, groupBy) {
   };
   columns.forEach(function(col, i) {
     if (col != args.group_by) {
-      let e_obj = explanations[col] ? JSON.parse(explanations[col]) : "";
+      let e_obj = explanations[col];
       tr.td.push({
         content: reconciled[col] || '',
         cls: e_obj && !e_obj.good ? 'problem' : null
@@ -66,12 +62,12 @@ const buildExplanationRowData = function(explanations, groupBy) {
     rowMetadata: { groupBy: groupBy, cls: 'explanations' },
     td: [  // Setup always empty row cells
       { content: '' },  // open/close row group button
-      { content: '' }   // group by cell (typically: subject_id)
+      { content: '', span: 3 }   // group by, etc
     ]
   };
   columns.forEach(function(col, i) {
       if (col != args.group_by && explanations[col]) {
-        e_obj = JSON.parse(explanations[col]);
+        e_obj = explanations[col];
         tr.td.push({
             content: e_obj.note,
             cls: e_obj.note ? 'filled' : null,

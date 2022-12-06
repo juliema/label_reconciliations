@@ -10,7 +10,7 @@ import pandas as pd
 from pylib.fields.base_field import BaseField
 from pylib.fields.noop_field import NoOpField
 from pylib.fields.same_field import SameField
-from pylib.result import GOOD
+from pylib.result import GOOD, Result
 from pylib.row import Row
 
 
@@ -33,48 +33,73 @@ class Table:
         return bool(self.rows)
 
     @staticmethod
-    def get_notes(obj):
+    def get_note(obj):
         try:
             notes = json.loads(obj)["note"]
         except TypeError:
             notes = ""
         return notes
 
-    def to_csv(self, args, path, unreconciled=None):
+    @staticmethod
+    def get_result(obj):
+        try:
+            return json.loads(obj)["result"]
+        except TypeError:
+            return Result.ALL_BLANK.value
+
+    def to_df(self, args):
         df = pd.DataFrame(self.to_records())
         df = df.set_index(args.group_by, drop=False)
-
-        if args.explanations and self.is_reconciled:
-            df2 = pd.DataFrame(self.to_explanations(args.group_by))
-            df2 = df2.set_index(args.group_by, drop=False)
-            columns = [c for c in df2.columns if c != args.group_by]
-            df2[columns] = df2[columns].applymap(self.get_notes)
-            column_types = self.get_column_types()
-            df2 = df2[list(column_types.keys())]
-            self.fix_empty_explanations(args, column_types, df2, unreconciled)
-            df = df.join(df2, rsuffix=" Explanation")
-
         df = self.sort_columns(args, df)
         df = df.fillna("")
+        return df
+
+    def explanation_df(self, args, unreconciled=None):
+        df = pd.DataFrame(self.to_explanations(args.group_by))
+        df = df.set_index(args.group_by, drop=False)
+        columns = [c for c in df.columns if c != args.group_by]
+        df[columns] = df[columns].applymap(self.get_note)
+        self.fix_empty_explanations(args, df, unreconciled)
+        df = self.sort_columns(args, df)
+        return df
+
+    def problem_df(self, args):
+        df = pd.DataFrame(self.to_explanations(args.group_by))
+        df = df.set_index(args.group_by, drop=False)
+        columns = [c for c in df.columns if c != args.group_by]
+        df[columns] = df[columns].applymap(self.get_result)
+        df = self.sort_columns(args, df)
+        return df
+
+    def to_csv(self, args, path, unreconciled=None):
+        df = self.to_df(args)
+
+        if args.explanations and self.is_reconciled:
+            df2 = self.explanation_df(args, unreconciled)
+            df = df.join(df2, rsuffix=" Explanation")
+            df = self.sort_columns(args, df)
+            df = df.fillna("")
+
         df.to_csv(path, index=False)
 
-    @staticmethod
-    def fix_empty_explanations(args, column_types, df, unreconciled):
+    def fix_empty_explanations(self, args, df, unreconciled):
         """A hack to workaround Zooniverse missing data."""
         df3 = pd.DataFrame(
             [
                 {args.group_by: r[args.group_by], 'n': 1}
                 for r in unreconciled.to_records()
-             ]
+            ]
         )
         counts = df3.groupby(args.group_by).count()
-        for idx, row in df.iterrows():
-            replace = f"All {counts.at[idx, 'n']} records are blank"
-            row.replace(r"^\s*$", replace, regex=True, inplace=True)
+        e = list(self.get_column_types().keys())
+        for n in counts.n.unique():
+            idx = counts.loc[counts.n == n].index
+            replace = f"All {n} records are blank"
+            df.update(df.loc[idx, e].replace(r"^\s*$", replace, regex=True))
 
     @staticmethod
     def sort_columns(args, df):
-        """A hack to workaround Zooniverse quasi-random column ordering."""
+        """A hack to workaround Zooniverse random-ish column ordering."""
         order = [(0, 0, args.group_by)]
         skips = [args.group_by]
         if hasattr(args, "row_key") and args.row_key and args.row_key in df.columns:
