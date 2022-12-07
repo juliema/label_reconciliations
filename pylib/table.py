@@ -122,6 +122,20 @@ class Table:
         df = df[order]
         return df
 
+    @staticmethod
+    def natural_column_sort(df, order=None):
+        """A hack to workaround Zooniverse random-ish column ordering."""
+        order = order if order else []
+        for i, col in enumerate(df.columns):
+            if match := re.match(r"[Tt](\d+)", col):
+                task_no = int(match.group(1))
+                order.append((1, task_no, col))
+            else:
+                order.append((2, i, col))
+        order = [o[2] for o in sorted(order)]
+        df = df[order]
+        return df
+
     def to_records(self):
         exclude = NoOpField if self.is_reconciled else type(None)
         rows = []

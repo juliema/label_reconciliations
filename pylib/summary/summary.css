@@ -1,0 +1,67 @@
+
+html {
+  font-family: "Bitstream Vera Serif Bold";
+}
+
+header h1 {
+  text-align: center;
+}
+
+header div {
+  font-size: 16px;
+  width: 360px;
+  margin-bottom: 4px;
+}
+
+header div label {
+  text-align: right;
+  display: inline-block;
+  width: 200px;
+}
+
+header div span {
+  float: right;
+}
+
+tbody td {
+  border-bottom: 1px solid #ddd;
+}
+
+section {
+  margin-top: 2em;
+  margin-bottom: 1em;
+}
+
+th {
+  padding: 2px 4px;
+  vertical-align: bottom;
+}
+
+#users .users-container {
+  display: inline-block;
+  overflow-y: scroll;
+  height: 280px;
+  min-height: 280px;
+  padding-right: 8px;
+  margin-bottom: 12px;
+  transition: height 300ms ease;
+}
+
+#users .users-container.expanded {
+  height: 100%;
+  min-height: 100%;
+  transition: height 300ms ease;
+}
+
+#users button {
+  display: block;
+  margin: 12px 0;
+}
+
+#users button:before {
+  content: 'Show All';
+}
+
+#users button.expanded:before {
+  content: 'Show Fewer';
+}

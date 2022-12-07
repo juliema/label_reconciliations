@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8"/>
+    <title>{{title}}</title>
+    <style>
+{% include 'pylib/summary/summary.css' -%}
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>{{header.title}}</h1>
+    <div><label>Date:</label><span>{{header.date}}</span></div>
+    <div><label>Number of Subjects:</label><span>{{header.subjects}}</span></div>
+    <div><label>Number of Transcripts:</label><span>{{header.transcripts}}</span></div>
+    <div><label>Transcripts per Subject:</label><span>{{header.ratio}}</span></div>
+    <div><label>Transcriber Count:</label><span>{{header.transcribers}}</span></div>
+</header>
+
+<section id="users">
+    <h2>Transcriber Summary</h2>
+    <button title="Expand or collapse the top transcribers table"></button>
+    <div class="users-container">
+        {{ transcribers }}
+    </div>
+</section>
+
+<section>
+    <h2>Transcriptions per Transcriber</h2>
+    {{ chart | safe }}
+</section>
+
+<section>
+    <h2>Reconciliation Summary</h2>
+    {{ results }}
+</section>
+
+<section id="reconciliation">
+    <h2>Reconciliation Detail</h2>
+    {{ reconciliations | safe }}
+</section>
+
+</body>
+
+<script>
+{% include 'pylib/summary/summary.js' -%}
+</script>
+
+</html>

@@ -4,5 +4,6 @@ Jinja2
 MarkupSafe
 numpy
 pandas
+plotly
 python-dateutil
 python-Levenshtein

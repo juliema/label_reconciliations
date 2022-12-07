@@ -13,6 +13,8 @@ class Result(IntEnum):
     ERROR = 8
 
 
+RESULT_END = Result.ERROR + 1
+FLAG = {Result.ERROR, Result.ONLY_ONE, Result.NO_MATCH}
 BAD = {Result.ERROR, Result.ALL_BLANK, Result.ONLY_ONE, Result.NO_MATCH}
 GOOD = {Result.NO_FLAG, Result.OK, Result.UNANIMOUS, Result.MAJORITY, Result.FUZZY}
 
@@ -21,9 +23,14 @@ def sort_results(*args):
     return sorted(args, key=lambda f: f.value)
 
 
-def get_digits(string):
-    return "".join(filter(lambda c: c.isdigit(), string))
-
-
-def result_dict():
-    return {r.value: get_digits(str(r)) for r in Result if r > Result.NO_FLAG}
+def result_labels():
+    return {
+        Result.OK.value: "OK",
+        Result.UNANIMOUS.value: "Unanimous Matches",
+        Result.MAJORITY.value: "Majority Matches",
+        Result.FUZZY.value: "Fuzzy Matches",
+        Result.ALL_BLANK.value: "All Blank",
+        Result.ONLY_ONE.value: "One Transcript",
+        Result.NO_MATCH.value: "No Matches",
+        Result.ERROR.value: "Errors",
+    }
