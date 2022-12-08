@@ -262,6 +262,9 @@ def get_workflow_id(args, df):
     if args.workflow_id:
         return args.workflow_id
 
+    if "workflow_id" not in df.columns:
+        utils.error_exit("This is not a Notes from Nature CSV.")
+
     workflow_ids = df.workflow_id.unique()
 
     if len(workflow_ids) > 1:

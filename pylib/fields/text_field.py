@@ -45,6 +45,11 @@ class TextField(BaseField):
                 )
                 return cls(note=note, result=Result.ALL_BLANK)
 
+            # Only one selected
+            case [e0] if e0.count == 1:
+                note = f"Only 1 transcript in {count} {P('record', count)}"
+                return cls(note=note, value=e0.string, result=Result.ONLY_ONE)
+
             # Everyone chose the same value
             case [e0] if e0.count == count and e0.count > 1:
                 note = (
@@ -83,7 +88,7 @@ class TextField(BaseField):
                 return cls(note=note, result=Result.NO_MATCH)
 
             # Everyone chose the same value
-            case [n0] if n0.count == count:
+            case [n0] if n0.count == count and n0.count > 1:
                 note = (
                     f"Normalized unanimous match, {n0.count} of {count} "
                     f"{P('record', count)}"
@@ -190,7 +195,7 @@ def top_partial_ratio(strings):
         scores.append(FuzzyRatioScore(score, value))
 
     scores = sorted(scores, reverse=True, key=lambda s: (s.score, len(s)))
-    return scores[0]
+    return scores[0] if scores else None
 
 
 def top_token_set_ratio(strings):

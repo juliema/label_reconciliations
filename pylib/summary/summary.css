@@ -65,3 +65,19 @@ th {
 #users button.expanded:before {
   content: 'Show Fewer';
 }
+
+.unrec {
+    background: #e7f0f0;
+}
+
+.explain {
+    background: #eee;
+}
+
+.problem {
+    background: #f8cbcb;
+}
+
+tbody .hide {
+    display: none;
+}

@@ -14,7 +14,7 @@ class Result(IntEnum):
 
 
 RESULT_END = Result.ERROR + 1
-FLAG = {Result.ERROR, Result.ONLY_ONE, Result.NO_MATCH}
+PROBLEM = {Result.ERROR, Result.ALL_BLANK, Result.ONLY_ONE, Result.NO_MATCH}
 BAD = {Result.ERROR, Result.ALL_BLANK, Result.ONLY_ONE, Result.NO_MATCH}
 GOOD = {Result.NO_FLAG, Result.OK, Result.UNANIMOUS, Result.MAJORITY, Result.FUZZY}
 

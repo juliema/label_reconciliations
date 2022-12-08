@@ -4,9 +4,9 @@
 <head>
     <meta charset="utf-8"/>
     <title>{{title}}</title>
-    <style>
+<style>
 {% include 'pylib/summary/summary.css' -%}
-    </style>
+</style>
 </head>
 <body>
 
@@ -29,6 +29,7 @@
 
 <section>
     <h2>Transcriptions per Transcriber</h2>
+    <span>Note: 50 includes all transcribers with 50 or more transcriptions.</span>
     {{ chart | safe }}
 </section>
 
@@ -39,7 +40,22 @@
 
 <section id="reconciliation">
     <h2>Reconciliation Detail</h2>
+    <label>Filter Rows:</label>
+    <select class="filter">
+      {% for val in filters.__select__ %}
+        <option {% if loop.first %} selected="selected" {% endif %}>{{val}}</option>
+      {% endfor %}
+    </select>
     {{ reconciliations | safe }}
+    <div class="pager-container">
+        <button class="first-page" title="First page">&lt;&lt;</button>
+        <button class="previous-page" title="Previous page">&lt;</button>
+        <label>Page:</label>
+        <input class="pager" type="number" min="1" step="1" value="1"/>
+        <label class="max-page"></label>
+        <button class="next-page" title="Next page">&gt;</button>
+        <button class="last-page" title="Last page">&gt;&gt;</button>
+    </div>
 </section>
 
 </body>

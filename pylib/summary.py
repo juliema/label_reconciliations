@@ -1,3 +1,4 @@
+import re
 from datetime import datetime
 from urllib.parse import urlparse
 
@@ -5,6 +6,7 @@ import pandas as pd
 import plotly.express as px
 from jinja2 import Environment
 from jinja2 import PackageLoader
+from pandas.io.formats.style import Styler
 
 from pylib import result
 from pylib.table import Table
@@ -33,11 +35,20 @@ def report(args, unreconciled: Table, reconciled: Table):
         transcribers=transcribers,
         chart=chart,
         results=get_results(reconciled, problems),
+        filters=get_filters(problems),
     )
 
     with open(args.summary, "w", encoding="utf-8") as out_file:
         out_file.write(summary)
 
+
+def get_filters(problems):
+    filters = {
+        "__select__": ["Show All", "Show All Problems"],
+        "Show All": list(problems.index),
+        "Show All Problems": [],
+    }
+    return filters
 
 def get_reconciliations(args, unreconciled, reconciled, explanations, problems):
     # Get the dataframe parts for the reconciled, explanations, & unreconciled data
@@ -62,17 +73,19 @@ def get_reconciliations(args, unreconciled, reconciled, explanations, problems):
     df = df.reset_index(drop=True)
 
     # Add an open/close button for the subjects
-    btn = '<button title="Open or close all subjects">+</button>'
+    btn = '<button class="hide" title="Open or close all subjects">+</button>'
     df.insert(0, btn, "")
     idx = df.loc[df["__order__"] == 1].index
     df.iloc[idx, 0] = df.iloc[idx].apply(set_button, args=(args,), axis="columns")
 
     # Clear the button column for explanations and unreconciled
-    df.loc[df["__order__"] == 2, args.group_by] = ""
-    df.loc[df["__order__"] == 3, args.group_by] = ""
+    idx = df[df["__order__"].isin([2, 3])].index
+    df.iloc[idx, 0] = df.iloc[idx].apply(set_group_by, args=(args,), axis="columns")
+    df.iloc[idx, 1] = ""
 
     # Basic styles for the table
-    style = df.style.set_table_styles(
+    style = Styler(df, cell_ids=False)
+    style = style.set_table_styles(
         [
             {
                 "selector": "table",
@@ -92,50 +105,47 @@ def get_reconciliations(args, unreconciled, reconciled, explanations, problems):
         ]
     ).hide(axis="index").hide(axis="columns", subset=["__order__"])
 
-    # Highlight unreconciled columns
+    # Add classes to columns
+    class_df = pd.DataFrame(columns=df.columns, index=df.index)
+
     columns = [c for c in df.columns if c not in [btn, args.group_by]]
-    style = style.apply(
-        set_background, subset=columns, axis=1, color='#e7f0f0', order=3
+    class_df.loc[df["__order__"] == 3, columns] = "unrec"
+
+    columns = list(reconciled.get_column_types().keys())
+    class_df.loc[df["__order__"] == 2, columns] = "explain"
+
+    for col in columns:
+        sid = problems[problems[col].isin(result.PROBLEM)].index
+        ids = df.loc[df["__order__"] == 1 & df[args.group_by].isin(sid)].index
+        class_df.loc[ids, col] = "problem"
+
+    style = style.set_td_classes(class_df)
+
+    # Format table directly because some things are not possible with pandas.style
+    html = style.to_html()
+
+    html = re.sub(r"data row\d+ col\d+\s?", "", html)
+    html = re.sub(r"col_heading level\d+ col\d+\s?", "", html)
+    html = re.sub(r' class=""\s?', "", html)
+
+    html = re.sub(
+        r"<tr>(\s*)<td><span hidden>(\d+)",
+        r'<tr class="hide sub" data-group-by="\2">\1<td><span hidden>\2',
+        html,
     )
 
-    # Highlight explanations columns
-    columns = list(reconciled.get_column_types().keys()) + ["__order__"]
-    style = style.apply(
-        set_background, subset=columns, axis="columns", color='lightgray', order=2
-    )
-
-    # Highlight problem table cells
-    for col in [c for c in columns if c != "__order__"]:
-        cols = [col, "__order__"]
-        sid = problems[problems[col].isin(result.FLAG)].index
-        ids = df.loc[df[args.group_by].isin(sid)].index
-        style = style.apply(
-            set_background, subset=(ids, cols), axis=1, color='#f8cbcb', order=1
-        )
-
-    return style.to_html()
+    return html
 
 
-def set_background(row, color, order):
-    if row["__order__"] == order:
-        return [f"background-color: {color}"] * len(row)
-    return [""] * len(row)
-
-
-def get_digits(string):
-    return "".join(filter(lambda c: c.isdigit(), string))
-
-
-def result_dict():
-    return {
-        r.value: get_digits(str(r)) for r in result.Result if r > result.Result.NO_FLAG
-    }
+def set_group_by(row, args):
+    sid = row[args.group_by]
+    return f"""<span hidden>{sid}</span>"""
 
 
 def set_button(row, args):
     sid = row[args.group_by]
     title = "Open or close this subject"
-    return f'<button data-group-by="{sid}" title="{title}">+</button>'
+    return f"""<button data-group-by="{sid}" title="{title}">+</button>"""
 
 
 def create_link(value):
@@ -152,6 +162,9 @@ def create_link(value):
 def get_chart(transcribers_df):
     df = transcribers_df.groupby("Count").count()
     df["Transcriptions"] = df.index
+    lump = df[df["Transcriptions"] >= 50].sum()
+    df = df[df["Transcriptions"] < 50]
+    df.loc["50+"] = [lump["Transcriber"], 50]
     fig = px.bar(
         df,
         x="Transcriptions",
@@ -206,7 +219,7 @@ def get_transcribers(transcribers_df):
 def header_data(args, unreconciled, reconciled, transcribers):
     name = args.workflow_name if args.workflow_name else args.workflow_csv
     title = f"Summary of '{name}'"
-    if args.workflow_id:
+    if hasattr(args, "workflow_id") and args.workflow_id:
         title += f" ({args.workflow_id})"
     # Number of transcribers = number of rows minus the header
     trans_count = sum(1 for ln in transcribers.splitlines() if ln.find("<tr>") > -1) - 1
