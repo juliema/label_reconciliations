@@ -15,10 +15,6 @@ class BaseField:
         splits = self.key.split(maxsplit=1)
         return splits[-1] if splits and self.key and self.key[0] == "~" else self.key
 
-    @property
-    def base_label(self):
-        return self.label.rsplit(":", 1)[0]
-
     def header(self, attr):
         return f"{self.label}: {attr}"
 

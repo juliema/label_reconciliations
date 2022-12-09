@@ -159,10 +159,8 @@ class Table:
                     value = json.dumps(
                         {
                             "note": field_.note,
-                            "span": len(keys),
                             "result": field_.result.value,
                             "good": field_.result in GOOD,
-                            "base_label": field_.base_label,
                         }
                     )
                     data[keys[0]] = value
@@ -190,7 +188,7 @@ class Table:
             for cell in row.values():
                 field_type = type(cell)
                 if field_type not in [NoOpField, SameField]:
-                    column_types[cell.base_label] = field_type
+                    column_types[cell.label] = field_type
         return column_types
 
     @classmethod
