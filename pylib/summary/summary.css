@@ -67,17 +67,34 @@ th {
 }
 
 .unrec {
-    background: #e7f0f0;
+  background: #e7f0f0;
 }
 
 .explain {
-    background: #eee;
+    background: #dbdbdb;
 }
 
 .problem {
-    background: #f8cbcb;
+  background: #f8cbcb;
 }
 
-tbody .hide {
-    display: none;
+.sub.hide {
+  display: none;
+}
+
+.pager-container {
+  margin: 3rem 0;
+}
+
+.pager {
+  min-width: 5rem;
+  text-align: center;
+}
+
+tr button:before {
+  content: '-';
+}
+
+tr button.hide:before {
+  content: '+';
 }

@@ -11,44 +11,65 @@ from pandas.io.formats.style import Styler
 from pylib import result
 from pylib.table import Table
 
+THRESHOLD = 50
+PAGE_SIZE = 20
+
 
 def report(args, unreconciled: Table, reconciled: Table):
-    explanations = reconciled.explanation_df(args, unreconciled)
-    problems = reconciled.problem_df(args)
+    pd.options.styler.render.max_elements = 999_999_999
+    pd.options.styler.render.max_rows = 999_999
 
-    reconciliations = get_reconciliations(
-        args, unreconciled, reconciled, explanations, problems
-    )
+    problems = reconciled.problem_df(args)
 
     transcribers_df = get_transcribers_df(args, unreconciled)
     transcribers = get_transcribers(transcribers_df)
 
     env = Environment(loader=PackageLoader("reconcile", "."))
     template = env.get_template("pylib/summary/summary.html")
-
-    chart = get_chart(transcribers_df)
+    
+    skeleton, groups = get_reconciliations(
+        args,
+        unreconciled,
+        reconciled,
+        reconciled.explanation_df(args, unreconciled), 
+        problems,
+    )
 
     summary = template.render(
         date=datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M"),
         header=header_data(args, unreconciled, reconciled, transcribers),
-        reconciliations=reconciliations,
         transcribers=transcribers,
-        chart=chart,
+        chart=get_chart(transcribers_df),
         results=get_results(reconciled, problems),
-        filters=get_filters(problems),
+        filters=get_filters(reconciled, problems),
+        threshold=THRESHOLD,
+        pageSize=PAGE_SIZE,
+        groups=groups,
+        skeleton=skeleton,
     )
 
     with open(args.summary, "w", encoding="utf-8") as out_file:
         out_file.write(summary)
 
 
-def get_filters(problems):
+def get_filters(reconciled, problems):
+    columns = list(reconciled.get_column_types().keys())
     filters = {
-        "__select__": ["Show All", "Show All Problems"],
         "Show All": list(problems.index),
         "Show All Problems": [],
     }
+
+    all_problems = set()
+    for col in columns:
+        subject_ids = problems[problems[col].isin(result.PROBLEM)].index
+        name = f"Show problems with: {col}"
+        filters[name] = list(subject_ids)
+        all_problems |= set(subject_ids)
+
+    filters["Show All Problems"] = list(all_problems)
+
     return filters
+
 
 def get_reconciliations(args, unreconciled, reconciled, explanations, problems):
     # Get the dataframe parts for the reconciled, explanations, & unreconciled data
@@ -73,7 +94,7 @@ def get_reconciliations(args, unreconciled, reconciled, explanations, problems):
     df = df.reset_index(drop=True)
 
     # Add an open/close button for the subjects
-    btn = '<button class="hide" title="Open or close all subjects">+</button>'
+    btn = '<button class="hide" title="Open or close all subjects"></button>'
     df.insert(0, btn, "")
     idx = df.loc[df["__order__"] == 1].index
     df.iloc[idx, 0] = df.iloc[idx].apply(set_button, args=(args,), axis="columns")
@@ -83,29 +104,7 @@ def get_reconciliations(args, unreconciled, reconciled, explanations, problems):
     df.iloc[idx, 0] = df.iloc[idx].apply(set_group_by, args=(args,), axis="columns")
     df.iloc[idx, 1] = ""
 
-    # Basic styles for the table
-    style = Styler(df, cell_ids=False)
-    style = style.set_table_styles(
-        [
-            {
-                "selector": "table",
-                'props': [("font-family", "Bitstream Vera Serif Bold")],
-            },
-            {
-                "selector": "th",
-                'props': [
-                    ("padding", "2px 4px"),
-                    ("vertical-align", "bottom"),
-                ],
-            },
-            {
-                "selector": "tbody td",
-                'props': [("border-bottom", "1px solid lightgray")],
-            },
-        ]
-    ).hide(axis="index").hide(axis="columns", subset=["__order__"])
-
-    # Add classes to columns
+    # Classes for table cells
     class_df = pd.DataFrame(columns=df.columns, index=df.index)
 
     columns = [c for c in df.columns if c not in [btn, args.group_by]]
@@ -119,22 +118,38 @@ def get_reconciliations(args, unreconciled, reconciled, explanations, problems):
         ids = df.loc[df["__order__"] == 1 & df[args.group_by].isin(sid)].index
         class_df.loc[ids, col] = "problem"
 
+    # Basic styles for the table
+    style = Styler(df, cell_ids=False)
+    style = style.hide(axis="index").hide(axis="columns", subset=["__order__"])
     style = style.set_td_classes(class_df)
 
     # Format table directly because some things are not possible with pandas.style
     html = style.to_html()
-
-    html = re.sub(r"data row\d+ col\d+\s?", "", html)
-    html = re.sub(r"col_heading level\d+ col\d+\s?", "", html)
+    html = re.sub(r'data row\d+ col\d+\s?', "", html)
+    html = re.sub(r'col_heading level\d+ col\d+\s?', "", html)
     html = re.sub(r' class=""\s?', "", html)
+    html = re.sub(r'" >', '">', html)
 
     html = re.sub(
-        r"<tr>(\s*)<td><span hidden>(\d+)",
-        r'<tr class="hide sub" data-group-by="\2">\1<td><span hidden>\2',
+        r'<tr>(\s*)<td><span hidden>(\d+)',
+        r'<tr class="sub" data-group-by="\2">\1<td><span hidden>\2',
         html,
     )
 
-    return html
+    # Now split the table into a header, footer, and rows
+    head1, head2, rows, foot1, foot2 = re.split(r"(\s*</?tbody>)", html)
+    skeleton = head1, head2, foot1, foot2
+    skeleton = "".join(skeleton)
+
+    groups = {}
+    rows = re.split(r'(\s*<tr>\s*<td><button)', rows)[1:]
+    it = iter(rows)
+    for part1 in it:
+        part2 = next(it)
+        match = re.search(r'data-group-by="(\d+)"', part2)
+        groups[match.group(1)] = "".join([part1, part2])
+
+    return skeleton, groups
 
 
 def set_group_by(row, args):
@@ -145,7 +160,7 @@ def set_group_by(row, args):
 def set_button(row, args):
     sid = row[args.group_by]
     title = "Open or close this subject"
-    return f"""<button data-group-by="{sid}" title="{title}">+</button>"""
+    return f"""<button data-group-by="{sid}" title="{title}"></button>"""
 
 
 def create_link(value):
@@ -162,9 +177,9 @@ def create_link(value):
 def get_chart(transcribers_df):
     df = transcribers_df.groupby("Count").count()
     df["Transcriptions"] = df.index
-    lump = df[df["Transcriptions"] >= 50].sum()
-    df = df[df["Transcriptions"] < 50]
-    df.loc["50+"] = [lump["Transcriber"], 50]
+    lump = df[df["Transcriptions"] >= THRESHOLD].sum()
+    df = df[df["Transcriptions"] < THRESHOLD]
+    df.loc[f"{THRESHOLD}+"] = [lump["Transcriber"], THRESHOLD]
     fig = px.bar(
         df,
         x="Transcriptions",
