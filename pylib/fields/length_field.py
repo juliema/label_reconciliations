@@ -37,7 +37,7 @@ class LengthField(BaseField):
     def to_dict(self):
         dict_ = self.round("x1", "y1", "x2", "y2")
         if self.is_reconciled:
-            dict_ |= self.round("pixel_length", digits=2)
+            dict_ = self.round("pixel_length", digits=2)
             if not self.is_scale:
                 dict_[self.header(f"length {self.units}")] = round(self.length, 2)
         return dict_
@@ -58,7 +58,7 @@ class LengthField(BaseField):
 
         if match := SCALE_RE.search(use[0].key):
             units = match.group("units")
-            factor = float(match.group("scale")) / pix_len
+            factor = float(match.group("scale")) / pix
             is_scale = True
         else:
             units = ""
@@ -68,11 +68,7 @@ class LengthField(BaseField):
         return cls(
             note=note,
             result=Result.OK,
-            x1=x1,
-            y1=y1,
-            x2=x2,
-            y2=y2,
-            pixel_length=pix_len,
+            pixel_length=pix,
             factor=factor,
             units=units,
             is_scale=is_scale,
