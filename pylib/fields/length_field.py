@@ -47,7 +47,10 @@ class LengthField(BaseField):
         count = len(group)
         use = [g for g in group if g.use]
 
-        note = f'There {P("is", count)} {count} length {P("record", count)}'
+        note = (
+            f'There {P("is", count)} {count} of {len(use)} '
+            f'length {P("record", count)}'
+        )
 
         x1 = round(stats.mean([ln.x1 for ln in use]))
         y1 = round(stats.mean([ln.y1 for ln in use]))

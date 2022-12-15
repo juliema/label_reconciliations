@@ -18,7 +18,7 @@ class SelectField(BaseField):
     value: str = ""
 
     def to_dict(self):
-        return {self.label: self.value}
+        return {self.key: self.value}
 
     @classmethod
     def reconcile(cls, group, _=None):

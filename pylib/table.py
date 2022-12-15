@@ -9,7 +9,6 @@ import pandas as pd
 
 from pylib.fields.base_field import BaseField
 from pylib.fields.noop_field import NoOpField
-from pylib.fields.same_field import SameField
 from pylib.result import GOOD, Result
 from pylib.row import Row
 
@@ -58,6 +57,7 @@ class Table:
         df = pd.DataFrame(self.to_explanations(args.group_by))
         df = df.set_index(args.group_by, drop=False)
         columns = [c for c in df.columns if c != args.group_by]
+        df = df.fillna("")
         df[columns] = df[columns].applymap(self.get_note)
         self.fix_empty_explanations(args, df, unreconciled)
         df = self.sort_columns(args, df)
@@ -82,7 +82,8 @@ class Table:
 
         df.to_csv(path, index=False)
 
-    def fix_empty_explanations(self, args, df, unreconciled):
+    @staticmethod
+    def fix_empty_explanations(args, df, unreconciled):
         """A hack to workaround Zooniverse missing data."""
         df3 = pd.DataFrame(
             [
@@ -91,7 +92,7 @@ class Table:
             ]
         )
         counts = df3.groupby(args.group_by).count()
-        e = list(self.get_column_types().keys())
+        e = df.columns
         for n in counts.n.unique():
             idx = counts.loc[counts.n == n].index
             replace = f"All {n} records are blank"
@@ -124,7 +125,7 @@ class Table:
 
     @staticmethod
     def natural_column_sort(df, order=None):
-        """A hack to workaround Zooniverse random-ish column ordering."""
+        """A hack to workaround Zooniverse's random-ish column ordering."""
         order = order if order else []
         for i, col in enumerate(df.columns):
             if match := re.match(r"[Tt](\d+)", col):
@@ -147,12 +148,11 @@ class Table:
         return rows
 
     def to_explanations(self, group_by):
-        """Convert field notes into a row of data that holds data about the field."""
         rows = []
         for row in self.rows:
             data = {}
             for field_ in (f for f in row.values()):
-                if field_.label == group_by:
+                if field_.key == group_by:
                     data[group_by] = field_.value
                 else:
                     keys = list(field_.to_dict())
@@ -163,7 +163,8 @@ class Table:
                             "good": field_.result in GOOD,
                         }
                     )
-                    data[keys[0]] = value
+                    for key in keys:
+                        data[key] = value
             rows.append(data)
         return rows
 
@@ -181,15 +182,6 @@ class Table:
             for cell in row.values():
                 field_types.add(type(cell))
         return field_types
-
-    def get_column_types(self) -> dict:
-        column_types = {}
-        for row in self.rows:
-            for cell in row.values():
-                field_type = type(cell)
-                if field_type not in [NoOpField, SameField]:
-                    column_types[cell.label] = field_type
-        return column_types
 
     @classmethod
     def reconcile(cls, unreconciled: "Table", args):

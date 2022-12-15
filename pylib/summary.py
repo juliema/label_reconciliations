@@ -19,9 +19,12 @@ def report(args, unreconciled: Table, reconciled: Table):
     pd.options.styler.render.max_elements = 999_999_999
     pd.options.styler.render.max_rows = 999_999
 
-    problems = reconciled.problem_df(args)
+    reconciled_df = reconciled.to_df(args)
+    unreconciled_df = unreconciled.to_df(args)
 
-    transcribers_df = get_transcribers_df(args, unreconciled)
+    problem_df = reconciled.problem_df(args)
+
+    transcribers_df = get_transcribers_df(args, unreconciled_df)
     transcribers = get_transcribers(transcribers_df)
 
     env = Environment(loader=PackageLoader("reconcile", "."))
@@ -29,10 +32,10 @@ def report(args, unreconciled: Table, reconciled: Table):
     
     skeleton, groups = get_reconciliations(
         args,
-        unreconciled,
-        reconciled,
+        unreconciled_df,
+        reconciled_df,
         reconciled.explanation_df(args, unreconciled), 
-        problems,
+        problem_df,
     )
 
     summary = template.render(
@@ -40,8 +43,8 @@ def report(args, unreconciled: Table, reconciled: Table):
         header=header_data(args, unreconciled, reconciled, transcribers),
         transcribers=transcribers,
         chart=get_chart(transcribers_df),
-        results=get_results(reconciled, problems),
-        filters=get_filters(reconciled, problems),
+        results=get_results(reconciled_df, problem_df),
+        filters=get_filters(reconciled_df, problem_df),
         threshold=THRESHOLD,
         pageSize=PAGE_SIZE,
         groups=groups,
@@ -53,14 +56,13 @@ def report(args, unreconciled: Table, reconciled: Table):
 
 
 def get_filters(reconciled, problems):
-    columns = list(reconciled.get_column_types().keys())
     filters = {
         "Show All": list(problems.index),
         "Show All Problems": [],
     }
 
     all_problems = set()
-    for col in columns:
+    for col in reconciled.columns:
         subject_ids = problems[problems[col].isin(result.PROBLEM)].index
         name = f"Show problems with: {col}"
         filters[name] = list(subject_ids)
@@ -71,21 +73,23 @@ def get_filters(reconciled, problems):
     return filters
 
 
-def get_reconciliations(args, unreconciled, reconciled, explanations, problems):
+def get_reconciliations(
+        args, unreconciled_df, reconciled_df, explanation_df, problem_df
+):
     # Get the dataframe parts for the reconciled, explanations, & unreconciled data
-    df1 = reconciled.to_df(args)
+    df1 = reconciled_df.copy()
     df1["__order__"] = 1
 
-    explanations["__order__"] = 2
+    explanation_df["__order__"] = 2
 
-    df3 = unreconciled.to_df(args)
+    df3 = unreconciled_df.copy()
     df3["__order__"] = 3
 
     # Combine the dataframe parts into a single dataframe
     keys = [args.group_by, "__order__", args.row_key]
     keys += [args.user_column] if args.user_column else []
 
-    df = pd.concat([df1, explanations, df3]).fillna("")
+    df = pd.concat([df1, explanation_df, df3]).fillna("")
     df = df.reset_index(drop=True)
     df = df[keys + [c for c in df.columns if c not in keys]]
     df = df.sort_values(keys)
@@ -110,11 +114,11 @@ def get_reconciliations(args, unreconciled, reconciled, explanations, problems):
     columns = [c for c in df.columns if c not in [btn, args.group_by]]
     class_df.loc[df["__order__"] == 3, columns] = "unrec"
 
-    columns = list(reconciled.get_column_types().keys())
+    columns = reconciled_df.columns
     class_df.loc[df["__order__"] == 2, columns] = "explain"
 
     for col in columns:
-        sid = problems[problems[col].isin(result.PROBLEM)].index
+        sid = problem_df[problem_df[col].isin(result.PROBLEM)].index
         ids = df.loc[df["__order__"] == 1 & df[args.group_by].isin(sid)].index
         class_df.loc[ids, col] = "problem"
 
@@ -192,12 +196,11 @@ def get_chart(transcribers_df):
     return fig.to_html()
 
 
-def get_transcribers_df(args, unreconciled):
+def get_transcribers_df(args, unreconciled_df):
     if not args.user_column:
         return pd.DataFrame(columns=["Transcriber", "Count"])
 
-    df = unreconciled.to_df(args)
-    df = df.sort_values(args.user_column)
+    df = unreconciled_df.sort_values(args.user_column)
     df = df.groupby(args.user_column)[[args.user_column]].count()
     df = df.rename(columns={args.user_column: "Count"})
     df["Transcriber"] = df.index
@@ -249,11 +252,10 @@ def header_data(args, unreconciled, reconciled, transcribers):
     }
 
 
-def get_results(reconciled, problems):
+def get_results(reconciled_df, problem_df):
     data = []
-    columns = list(reconciled.get_column_types().keys())
-    for col in columns:
-        datum = problems[col].value_counts()
+    for col in reconciled_df.columns:
+        datum = problem_df[col].value_counts()
         data.append(datum)
     df = pd.concat(data, axis=1)
 

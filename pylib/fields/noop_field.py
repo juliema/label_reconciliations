@@ -9,7 +9,7 @@ class NoOpField(BaseField):
 
     def to_dict(self):
         value = "" if self.is_reconciled else self.value
-        return {self.label: value}
+        return {self.key: value}
 
     @classmethod
     def reconcile(cls, group, _=None):
