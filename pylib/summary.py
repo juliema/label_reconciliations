@@ -1,5 +1,6 @@
 import re
 from datetime import datetime
+from pathlib import Path
 from urllib.parse import urlparse
 
 import pandas as pd
@@ -26,15 +27,18 @@ def report(args, unreconciled: Table, reconciled: Table):
 
     problem_df = reconciled.problem_df(args)
 
+    has_users = 1 if args.user_column in unreconciled_df.columns else 0
     transcribers_df = get_transcribers_df(args, unreconciled_df)
     transcribers = get_transcribers(transcribers_df)
+    chart = get_chart(transcribers_df)
 
     env = Environment(loader=PackageLoader("reconcile", "."))
     template = env.get_template("pylib/summary/summary.html")
 
     skeleton, groups = None, []
     filters = {}
-    if not args.no_summary_detail:
+    print_detail = 0 if args.no_summary_detail else 1
+    if print_detail:
         filters = get_filters(reconcilable, problem_df)
         skeleton, groups = get_reconciliations(
             args,
@@ -49,14 +53,15 @@ def report(args, unreconciled: Table, reconciled: Table):
         date=datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M"),
         header=header_data(args, unreconciled, reconciled, transcribers),
         transcribers=transcribers,
-        chart=get_chart(transcribers_df),
+        chart=chart,
         results=get_results(reconcilable, problem_df),
         filters=filters,
         threshold=THRESHOLD,
         pageSize=args.page_size,
         groups=groups,
         skeleton=skeleton,
-        print_detail=0 if args.no_summary_detail else 1,
+        print_detail=print_detail,
+        has_users=has_users,
     )
 
     with open(args.summary, "w", encoding="utf-8") as out_file:
@@ -66,6 +71,94 @@ def report(args, unreconciled: Table, reconciled: Table):
 def get_reconciliations(
         args, unreconciled_df, reconciled_df, explanation_df, problem_df, reconcilable
 ):
+    df = merge_dataframes(args, explanation_df, reconciled_df, unreconciled_df)
+
+    btn = add_buttons(args, df)
+
+    class_df = get_classes(args, btn, df, problem_df, reconcilable)
+
+    style = get_styler(class_df, df)
+
+    html = edit_table(style)
+
+    rows, skeleton = split_table(html)
+
+    groups = add_group_by_to_rows(rows)
+
+    return skeleton, groups
+
+
+def add_group_by_to_rows(rows):
+    groups = {}
+    rows = re.split(r'(\s*<tr>\s*<td><button)', rows)[1:]
+    it = iter(rows)
+    for part1 in it:
+        part2 = next(it)
+        match = re.search(r'data-group-by="([^<\"]+)"', part2)
+        groups[match.group(1)] = "".join([part1, part2])
+    return groups
+
+
+def split_table(html):
+    # Now split the table into a header, footer, and rows
+    head1, head2, rows, foot1, foot2 = re.split(r"(\s*</?tbody>)", html)
+    skeleton = head1, head2, foot1, foot2
+    skeleton = "".join(skeleton)
+    return rows, skeleton
+
+
+def edit_table(style):
+    # Format table directly because some things are not possible with pandas.style
+    html = style.to_html()
+    html = re.sub(r'data row\d+ col\d+\s?', "", html)
+    html = re.sub(r'col_heading level\d+ col\d+\s?', "", html)
+    html = re.sub(r' class=""\s?', "", html)
+    html = re.sub(r'" >', '">', html)
+    html = re.sub(
+        r'<tr>(\s*)<td><span hidden>([^<"]+)',
+        r'<tr class="sub" data-group-by="\2">\1<td><span hidden>\2',
+        html,
+    )
+    return html
+
+
+def get_styler(class_df, df):
+    # Basic styles for the table
+    style = Styler(df, cell_ids=False)
+    style = style.hide(axis="index").hide(axis="columns", subset=["__order__"])
+    style = style.set_td_classes(class_df)
+    style = style.format(precision=2)
+    return style
+
+
+def get_classes(args, btn, df, problem_df, reconcilable):
+    # Classes for table cells
+    class_df = pd.DataFrame(columns=df.columns, index=df.index)
+    columns = [c for c in df.columns if c not in [btn, args.group_by]]
+    class_df.loc[df["__order__"] == 3, columns] = "unrec"
+    columns = reconcilable
+    class_df.loc[df["__order__"] == 2, columns] = "explain"
+    for col in reconcilable:
+        sid = problem_df[problem_df[col].isin(result.PROBLEM)].index
+        ids = df.loc[df["__order__"] == 1 & df[args.group_by].isin(sid)].index
+        class_df.loc[ids, col] = "problem"
+    return class_df
+
+
+def add_buttons(args, df):
+    # Add an open/close button for the subjects
+    btn = '<button class="hide" title="Open or close all subjects"></button>'
+    df.insert(0, btn, "")
+    idx = df.loc[df["__order__"] == 1].index
+    df.iloc[idx, 0] = df.iloc[idx].apply(set_button, args=(args,), axis="columns")
+    # Clear the button column for explanations and unreconciled
+    idx = df[df["__order__"].isin([2, 3])].index
+    df.iloc[idx, 0] = df.iloc[idx].apply(set_group_by, args=(args,), axis="columns")
+    df.iloc[idx, 1] = ""
+    return btn
+
+
+def merge_dataframes(args, explanation_df, reconciled_df, unreconciled_df):
     # Get the dataframe parts for the reconciled, explanations, & unreconciled data
     df1 = reconciled_df.copy()
     df1["__order__"] = 1
@@ -76,8 +169,9 @@ def get_reconciliations(
     df3["__order__"] = 3
 
     # Combine the dataframe parts into a single dataframe
-    keys = [args.group_by, "__order__", args.row_key]
-    keys += [args.user_column] if args.user_column else []
+    keys = [args.group_by, "__order__"]
+    keys += [args.row_key] if args.row_key in df3.columns else []
+    keys += [args.user_column] if args.user_column in df3.columns else []
 
     df = pd.concat([df1, explanation_df, df3]).fillna("")
     df = df.reset_index(drop=True)
@@ -87,64 +181,7 @@ def get_reconciliations(
     df = Table.sort_columns(args, df)
     df = df.reset_index(drop=True)
 
-    # Add an open/close button for the subjects
-    btn = '<button class="hide" title="Open or close all subjects"></button>'
-    df.insert(0, btn, "")
-    idx = df.loc[df["__order__"] == 1].index
-    df.iloc[idx, 0] = df.iloc[idx].apply(set_button, args=(args,), axis="columns")
-
-    # Clear the button column for explanations and unreconciled
-    idx = df[df["__order__"].isin([2, 3])].index
-    df.iloc[idx, 0] = df.iloc[idx].apply(set_group_by, args=(args,), axis="columns")
-    df.iloc[idx, 1] = ""
-
-    # Classes for table cells
-    class_df = pd.DataFrame(columns=df.columns, index=df.index)
-
-    columns = [c for c in df.columns if c not in [btn, args.group_by]]
-    class_df.loc[df["__order__"] == 3, columns] = "unrec"
-
-    columns = reconcilable
-    class_df.loc[df["__order__"] == 2, columns] = "explain"
-
-    for col in reconcilable:
-        sid = problem_df[problem_df[col].isin(result.PROBLEM)].index
-        ids = df.loc[df["__order__"] == 1 & df[args.group_by].isin(sid)].index
-        class_df.loc[ids, col] = "problem"
-
-    # Basic styles for the table
-    style = Styler(df, cell_ids=False)
-    style = style.hide(axis="index").hide(axis="columns", subset=["__order__"])
-    style = style.set_td_classes(class_df)
-    style = style.format(precision=2)
-
-    # Format table directly because some things are not possible with pandas.style
-    html = style.to_html()
-    html = re.sub(r'data row\d+ col\d+\s?', "", html)
-    html = re.sub(r'col_heading level\d+ col\d+\s?', "", html)
-    html = re.sub(r' class=""\s?', "", html)
-    html = re.sub(r'" >', '">', html)
-
-    html = re.sub(
-        r'<tr>(\s*)<td><span hidden>(\d+)',
-        r'<tr class="sub" data-group-by="\2">\1<td><span hidden>\2',
-        html,
-    )
-
-    # Now split the table into a header, footer, and rows
-    head1, head2, rows, foot1, foot2 = re.split(r"(\s*</?tbody>)", html)
-    skeleton = head1, head2, foot1, foot2
-    skeleton = "".join(skeleton)
-
-    groups = {}
-    rows = re.split(r'(\s*<tr>\s*<td><button)', rows)[1:]
-    it = iter(rows)
-    for part1 in it:
-        part2 = next(it)
-        match = re.search(r'data-group-by="(\d+)"', part2)
-        groups[match.group(1)] = "".join([part1, part2])
-
-    return skeleton, groups
+    return df
 
 
 def set_group_by(row, args):
@@ -188,7 +225,7 @@ def get_chart(transcribers_df):
 
 
 def get_transcribers_df(args, unreconciled_df):
-    if not args.user_column:
+    if args.user_column not in unreconciled_df.columns:
         return pd.DataFrame(columns=["Transcriber", "Count"])
 
     df = unreconciled_df.sort_values(args.user_column)
@@ -226,7 +263,7 @@ def get_transcribers(transcribers_df):
 
 
 def header_data(args, unreconciled, reconciled, transcribers):
-    name = args.workflow_name if args.workflow_name else args.workflow_csv
+    name = args.workflow_name if args.workflow_name else Path(args.input_file).stem
     title = f"Summary of '{name}'"
     if hasattr(args, "workflow_id") and args.workflow_id:
         title += f" ({args.workflow_id})"

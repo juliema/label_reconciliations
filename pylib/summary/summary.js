@@ -3,7 +3,8 @@ const allFilters = {{filters | safe}};
 const pageSize = {{ pageSize }};
 const allGroups = {{ groups | safe }};
 const tbody = document.querySelector('#reconciliation tbody');
-const print_detail = {{ print_detail }}
+const printDetail = {{ print_detail }}
+const hasUsers = {{ has_users }}
 
 let hidden = {};
 let maxPage = 0;
@@ -63,10 +64,10 @@ const changePage = () => {
         const btn = document.querySelector('button[data-group-by="' + k + '"]');
         if (hidden[k]) {
             rows.forEach(r => { r.classList.add('hide'); });
-            btn.classList.add('hide');
+            if (btn) { btn.classList.add('hide'); }
         } else {
             rows.forEach(r => { r.classList.remove('hide'); });
-            btn.classList.remove('hide');
+            if (btn) { btn.classList.remove('hide'); }
         }
     });
 }
@@ -81,9 +82,11 @@ const changeFilter = () => {
     changePage();
 }
 
-users.addEventListener('click', toggleUsers);
+if (hasUsers) {
+    users.addEventListener('click', toggleUsers);
+}
 
-if (print_detail) {
+if (printDetail) {
     document.querySelector('#reconciliation tbody')
         .addEventListener('click', toggleHide);
 
@@ -126,7 +129,7 @@ if (print_detail) {
 }
 
 window.addEventListener('load', (event) => {
-    if (print_detail) {
+    if (printDetail) {
         Object.keys(allGroups).forEach(k => { hidden[k] = true; });
         changeFilter();
     }

@@ -54,6 +54,18 @@ class Table:
         df = df.fillna("")
         return df
 
+    def to_csv(self, args, path, unreconciled=None):
+        df = self.to_df(args)
+
+        if args.explanations and self.is_reconciled:
+            df2 = self.explanation_df(args, unreconciled)
+            df2 = df2[self.get_reconcilable_keys()]
+            df = df.join(df2, rsuffix=" Explanation")
+            df = self.sort_columns(args, df)
+            df = df.fillna("")
+
+        df.to_csv(path, index=False)
+
     def explanation_df(self, args, unreconciled=None):
         df = pd.DataFrame(self.to_explanations(args.group_by))
         df = df.set_index(args.group_by, drop=False)
@@ -71,17 +83,6 @@ class Table:
         df[columns] = df[columns].applymap(self.get_result)
         df = self.sort_columns(args, df)
         return df
-
-    def to_csv(self, args, path, unreconciled=None):
-        df = self.to_df(args)
-
-        if args.explanations and self.is_reconciled:
-            df2 = self.explanation_df(args, unreconciled)
-            df = df.join(df2, rsuffix=" Explanation")
-            df = self.sort_columns(args, df)
-            df = df.fillna("")
-
-        df.to_csv(path, index=False)
 
     def fix_empty_explanations(self, args, df, unreconciled):
         """A hack to workaround Zooniverse missing data."""
@@ -194,10 +195,7 @@ class Table:
     @classmethod
     def reconcile(cls, unreconciled: "Table", args):
         """Reconcile a data frame and return a new one."""
-        rows = sorted(
-            unreconciled.rows,
-            key=lambda r: (r[args.group_by].value, r[args.row_key].value),
-        )
+        rows = sorted(unreconciled.rows, key=lambda r: r[args.group_by].value)
         groups = groupby(rows, key=lambda r: r[args.group_by].value)
         reconciled = cls(is_reconciled=True)
 
