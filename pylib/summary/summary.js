@@ -60,7 +60,6 @@ const changePage = () => {
     keys.forEach(k => {
         const rows = document.querySelectorAll('#reconciliation tr[data-group-by="' + k + '"]');
         const btn = document.querySelector('button[data-group-by="' + k + '"]');
-        console.log(hidden[k])
         if (hidden[k]) {
             rows.forEach(r => { r.classList.add('hide'); });
             btn.classList.add('hide');

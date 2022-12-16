@@ -36,7 +36,7 @@ class Table:
     def get_note(obj):
         try:
             notes = json.loads(obj)["note"]
-        except TypeError:
+        except (TypeError, json.decoder.JSONDecodeError):
             notes = ""
         return notes
 
@@ -44,7 +44,7 @@ class Table:
     def get_result(obj):
         try:
             return json.loads(obj)["result"]
-        except TypeError:
+        except (TypeError, json.decoder.JSONDecodeError):
             return Result.ALL_BLANK.value
 
     def to_df(self, args):

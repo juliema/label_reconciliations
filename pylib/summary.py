@@ -59,24 +59,6 @@ def report(args, unreconciled: Table, reconciled: Table):
         out_file.write(summary)
 
 
-def get_filters(reconcilable, problems):
-    filters = {
-        "Show All": list(problems.index),
-        "Show All Problems": [],
-    }
-
-    all_problems = set()
-    for col in reconcilable:
-        subject_ids = problems[problems[col].isin(result.PROBLEM)].index
-        name = f"Show problems with: {col}"
-        filters[name] = list(subject_ids)
-        all_problems |= set(subject_ids)
-
-    filters["Show All Problems"] = list(all_problems)
-
-    return filters
-
-
 def get_reconciliations(
         args, unreconciled_df, reconciled_df, explanation_df, problem_df, reconcilable
 ):
@@ -299,6 +281,27 @@ def get_results(reconcilable, problem_df):
     style = style.applymap_index(align_headers, axis=1)
 
     return style.to_html()
+
+
+def get_filters(reconcilable, problems):
+    filters = {
+        "Show All": list(problems.index),
+        "Show All Problems": [],
+    }
+
+    all_problems = set()
+    problem_filters = {}
+    for col in reconcilable:
+        subject_ids = problems[problems[col].isin(result.PROBLEM)].index
+        name = f"Show problems with: {col}"
+        problem_filters[name] = list(subject_ids)
+        all_problems |= set(subject_ids)
+
+    filters["Show All Problems"] = list(all_problems)
+
+    filters |= {" ".join(k.split()): v for k, v in problem_filters.items()}
+
+    return filters
 
 
 def align(column):

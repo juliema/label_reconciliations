@@ -47,7 +47,7 @@
         <label>Filter Rows:</label>
         <select class="filter">
             {% for key, val in filters.items() %}
-            <option {% if loop.first %} selected="selected" {% endif %}>{{key}}</option>
+            <option {% if loop.first %} selected="selected" {% endif %}>{{key | safe}}</option>
             {% endfor %}
         </select>
         {{ skeleton | safe }}
