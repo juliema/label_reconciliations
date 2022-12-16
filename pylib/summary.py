@@ -18,6 +18,7 @@ PAGE_SIZE = 20
 def report(args, unreconciled: Table, reconciled: Table):
     pd.options.styler.render.max_elements = 999_999_999
     pd.options.styler.render.max_rows = 999_999
+    pd.options.display.float_format = '{:.2f}'.format
 
     reconcilable = reconciled.get_reconcilable_keys()
 
@@ -129,6 +130,7 @@ def get_reconciliations(
     style = Styler(df, cell_ids=False)
     style = style.hide(axis="index").hide(axis="columns", subset=["__order__"])
     style = style.set_td_classes(class_df)
+    style = style.format(precision=2)
 
     # Format table directly because some things are not possible with pandas.style
     html = style.to_html()
