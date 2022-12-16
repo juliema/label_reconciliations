@@ -9,6 +9,7 @@ import pandas as pd
 
 from pylib.fields.base_field import BaseField
 from pylib.fields.noop_field import NoOpField
+from pylib.fields.same_field import SameField
 from pylib.result import GOOD, Result
 from pylib.row import Row
 
@@ -82,8 +83,7 @@ class Table:
 
         df.to_csv(path, index=False)
 
-    @staticmethod
-    def fix_empty_explanations(args, df, unreconciled):
+    def fix_empty_explanations(self, args, df, unreconciled):
         """A hack to workaround Zooniverse missing data."""
         df3 = pd.DataFrame(
             [
@@ -92,7 +92,7 @@ class Table:
             ]
         )
         counts = df3.groupby(args.group_by).count()
-        e = df.columns
+        e = self.get_reconcilable_keys()
         for n in counts.n.unique():
             idx = counts.loc[counts.n == n].index
             replace = f"All {n} records are blank"
@@ -182,6 +182,14 @@ class Table:
             for cell in row.values():
                 field_types.add(type(cell))
         return field_types
+
+    def get_reconcilable_keys(self):
+        reconcilable = set()
+        for row in self.rows:
+            for cell in row.values():
+                if not isinstance(cell, (NoOpField, SameField)):
+                    reconcilable |= cell.to_dict().keys()
+        return sorted(reconcilable)
 
     @classmethod
     def reconcile(cls, unreconciled: "Table", args):

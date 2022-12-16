@@ -19,6 +19,8 @@ def report(args, unreconciled: Table, reconciled: Table):
     pd.options.styler.render.max_elements = 999_999_999
     pd.options.styler.render.max_rows = 999_999
 
+    reconcilable = reconciled.get_reconcilable_keys()
+
     reconciled_df = reconciled.to_df(args)
     unreconciled_df = unreconciled.to_df(args)
 
@@ -36,6 +38,7 @@ def report(args, unreconciled: Table, reconciled: Table):
         reconciled_df,
         reconciled.explanation_df(args, unreconciled), 
         problem_df,
+        reconcilable,
     )
 
     summary = template.render(
@@ -43,8 +46,8 @@ def report(args, unreconciled: Table, reconciled: Table):
         header=header_data(args, unreconciled, reconciled, transcribers),
         transcribers=transcribers,
         chart=get_chart(transcribers_df),
-        results=get_results(reconciled_df, problem_df),
-        filters=get_filters(reconciled_df, problem_df),
+        results=get_results(reconcilable, problem_df),
+        filters=get_filters(reconcilable, problem_df),
         threshold=THRESHOLD,
         pageSize=PAGE_SIZE,
         groups=groups,
@@ -55,14 +58,14 @@ def report(args, unreconciled: Table, reconciled: Table):
         out_file.write(summary)
 
 
-def get_filters(reconciled, problems):
+def get_filters(reconcilable, problems):
     filters = {
         "Show All": list(problems.index),
         "Show All Problems": [],
     }
 
     all_problems = set()
-    for col in reconciled.columns:
+    for col in reconcilable:
         subject_ids = problems[problems[col].isin(result.PROBLEM)].index
         name = f"Show problems with: {col}"
         filters[name] = list(subject_ids)
@@ -74,7 +77,7 @@ def get_filters(reconciled, problems):
 
 
 def get_reconciliations(
-        args, unreconciled_df, reconciled_df, explanation_df, problem_df
+        args, unreconciled_df, reconciled_df, explanation_df, problem_df, reconcilable
 ):
     # Get the dataframe parts for the reconciled, explanations, & unreconciled data
     df1 = reconciled_df.copy()
@@ -114,10 +117,10 @@ def get_reconciliations(
     columns = [c for c in df.columns if c not in [btn, args.group_by]]
     class_df.loc[df["__order__"] == 3, columns] = "unrec"
 
-    columns = reconciled_df.columns
+    columns = reconcilable
     class_df.loc[df["__order__"] == 2, columns] = "explain"
 
-    for col in columns:
+    for col in reconcilable:
         sid = problem_df[problem_df[col].isin(result.PROBLEM)].index
         ids = df.loc[df["__order__"] == 1 & df[args.group_by].isin(sid)].index
         class_df.loc[ids, col] = "problem"
@@ -252,9 +255,9 @@ def header_data(args, unreconciled, reconciled, transcribers):
     }
 
 
-def get_results(reconciled_df, problem_df):
+def get_results(reconcilable, problem_df):
     data = []
-    for col in reconciled_df.columns:
+    for col in reconcilable:
         datum = problem_df[col].value_counts()
         data.append(datum)
     df = pd.concat(data, axis=1)
