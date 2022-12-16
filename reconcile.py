@@ -11,7 +11,7 @@ from pylib import utils
 from pylib.table import Table
 
 
-VERSION = "0.6.2"
+VERSION = "0.6.3"
 
 
 def parse_args():
@@ -144,6 +144,7 @@ def parse_args():
             and the reconciliation type after the colon. You may want to use this
             argument multiple times. The default field type is a NoOp (Do nothing).""",
     )
+
     parser.add_argument(
         "--group-by",
         default="subject_id",
@@ -156,6 +157,12 @@ def parse_args():
         type=int,
         help="""Page size for the summary report's detail section.
             (default: %(default)s)""",
+    )
+
+    parser.add_argument(
+        "--no-summary-detail",
+        action="store_true",
+        help="""Skip the Reconciliation Detail section in the summary report.""",
     )
 
     parser.add_argument(

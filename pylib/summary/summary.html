@@ -42,6 +42,7 @@
         {{ results }}
     </section>
 
+    {% if print_detail %}
     <section id="reconciliation">
         <h2>Reconciliation Detail</h2>
         <label>Filter Rows:</label>
@@ -61,6 +62,7 @@
             <button class="last-page" title="Last page">&gt;&gt;</button>
         </div>
     </section>
+    {% endif %}
 
 </body>
 

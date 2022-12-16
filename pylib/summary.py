@@ -12,7 +12,6 @@ from pylib import result
 from pylib.table import Table
 
 THRESHOLD = 50
-PAGE_SIZE = 20
 
 
 def report(args, unreconciled: Table, reconciled: Table):
@@ -32,15 +31,19 @@ def report(args, unreconciled: Table, reconciled: Table):
 
     env = Environment(loader=PackageLoader("reconcile", "."))
     template = env.get_template("pylib/summary/summary.html")
-    
-    skeleton, groups = get_reconciliations(
-        args,
-        unreconciled_df,
-        reconciled_df,
-        reconciled.explanation_df(args, unreconciled), 
-        problem_df,
-        reconcilable,
-    )
+
+    skeleton, groups = None, []
+    filters = {}
+    if not args.no_summary_detail:
+        filters = get_filters(reconcilable, problem_df)
+        skeleton, groups = get_reconciliations(
+            args,
+            unreconciled_df,
+            reconciled_df,
+            reconciled.explanation_df(args, unreconciled),
+            problem_df,
+            reconcilable,
+        )
 
     summary = template.render(
         date=datetime.strftime(datetime.now(), "%Y-%m-%d %H:%M"),
@@ -48,11 +51,12 @@ def report(args, unreconciled: Table, reconciled: Table):
         transcribers=transcribers,
         chart=get_chart(transcribers_df),
         results=get_results(reconcilable, problem_df),
-        filters=get_filters(reconcilable, problem_df),
+        filters=filters,
         threshold=THRESHOLD,
-        pageSize=PAGE_SIZE,
+        pageSize=args.page_size,
         groups=groups,
         skeleton=skeleton,
+        print_detail=0 if args.no_summary_detail else 1,
     )
 
     with open(args.summary, "w", encoding="utf-8") as out_file:

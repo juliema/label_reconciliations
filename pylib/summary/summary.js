@@ -3,6 +3,7 @@ const allFilters = {{filters | safe}};
 const pageSize = {{ pageSize }};
 const allGroups = {{ groups | safe }};
 const tbody = document.querySelector('#reconciliation tbody');
+const print_detail = {{ print_detail }}
 
 let hidden = {};
 let maxPage = 0;
@@ -82,48 +83,51 @@ const changeFilter = () => {
 
 users.addEventListener('click', toggleUsers);
 
-document.querySelector('#reconciliation tbody')
-    .addEventListener('click', toggleHide);
+if (print_detail) {
+    document.querySelector('#reconciliation tbody')
+        .addEventListener('click', toggleHide);
 
-document.querySelector('#reconciliation thead button')
-    .addEventListener('click', toggleHideAll);
+    document.querySelector('#reconciliation thead button')
+        .addEventListener('click', toggleHideAll);
 
-document.querySelector('#reconciliation .pager')
-    .addEventListener('change', changePage);
+    document.querySelector('#reconciliation .pager')
+        .addEventListener('change', changePage);
 
-document.querySelector('#reconciliation .filter')
-    .addEventListener('change', changeFilter);
+    document.querySelector('#reconciliation .filter')
+        .addEventListener('change', changeFilter);
 
-document.querySelector('#reconciliation .first-page')
-    .addEventListener('click', () => {
-        const pager = document.querySelector('#reconciliation .pager');
-        pager.value = 1;
-        changePage();
-});
+    document.querySelector('#reconciliation .first-page')
+        .addEventListener('click', () => {
+            const pager = document.querySelector('#reconciliation .pager');
+            pager.value = 1;
+            changePage();
+    });
 
-document.querySelector('#reconciliation .previous-page')
-    .addEventListener('click', () => {
-        const pager = document.querySelector('#reconciliation .pager');
-        pager.value = +pager.value - 1;
-        changePage();
-});
+    document.querySelector('#reconciliation .previous-page')
+        .addEventListener('click', () => {
+            const pager = document.querySelector('#reconciliation .pager');
+            pager.value = +pager.value - 1;
+            changePage();
+    });
 
-document.querySelector('#reconciliation .next-page')
-    .addEventListener('click', () => {
-        const pager = document.querySelector('#reconciliation .pager');
-        pager.value = +pager.value + 1;
-        changePage();
-});
+    document.querySelector('#reconciliation .next-page')
+        .addEventListener('click', () => {
+            const pager = document.querySelector('#reconciliation .pager');
+            pager.value = +pager.value + 1;
+            changePage();
+    });
 
-document.querySelector('#reconciliation .last-page')
-    .addEventListener('click', () => {
-        const pager = document.querySelector('#reconciliation .pager');
-        pager.value = maxPage;
-        changePage();
-});
+    document.querySelector('#reconciliation .last-page')
+        .addEventListener('click', () => {
+            const pager = document.querySelector('#reconciliation .pager');
+            pager.value = maxPage;
+            changePage();
+    });
+}
 
 window.addEventListener('load', (event) => {
-    Object.keys(allGroups).forEach(k => { hidden[k] = true; });
-
-    changeFilter();
+    if (print_detail) {
+        Object.keys(allGroups).forEach(k => { hidden[k] = true; });
+        changeFilter();
+    }
 });
