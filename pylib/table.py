@@ -1,238 +1,114 @@
 """A table of reconciled or unreconciled data."""
-import json
 import re
-from dataclasses import dataclass
-from dataclasses import field
+import dataclasses
+from argparse import Namespace
 from itertools import groupby
 
 import pandas as pd
 
-from pylib.fields.base_field import BaseField
-from pylib.fields.noop_field import NoOpField
-from pylib.fields.same_field import SameField
-from pylib.flag import GOOD, Flag
+from pylib import utils
+from pylib.flag import Flag
 from pylib.row import Row
+from pylib.fields.field_types import FIELD_TYPES
 
 
-@dataclass
+@dataclasses.dataclass
 class Table:
-    headers: dict[str, BaseField] = field(default_factory=dict)
-    rows: list[Row] = field(default_factory=list)
+    headers: dict[str, FIELD_TYPES] = dataclasses.field(default_factory=dict)
+    rows: list[Row] = dataclasses.field(default_factory=list)
+    reconciled: bool = False
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.rows)
 
-    def append(self, row):
+    def append_row(self, row: Row) -> None:
+        for name, field in row.fields.items():
+            if name not in self.headers:
+                self.headers[name] = field
+            else:
+                old_type = type(self.headers[name])
+                if not isinstance(field, old_type):
+                    utils.error_exit(
+                        f"Field type {name} changed from {old_type} to {type(field)}"
+                    )
         self.rows.append(row)
 
+    def to_csv(self, args: Namespace, path, add_note=False) -> None:
+        df = self.to_df(args, add_note)
+        df.to_csv(path, index=False)
 
-# @dataclass
-# class OldTable:
-#     rows: list[Row[BaseField]] = field(default_factory=list)
-#     is_reconciled: bool = False
-#
-#     def __iter__(self):
-#         return iter(self.rows)
-#
-#     def __len__(self):
-#         return len(self.rows)
-#
-#     def append(self, row):
-#         self.rows.append(row)
-#
-#     @property
-#     def has_rows(self):
-#         return bool(self.rows)
-#
-#     @staticmethod
-#     def get_note(obj):
-#         try:
-#             notes = json.loads(obj)["note"]
-#         except (TypeError, json.decoder.JSONDecodeError):
-#             notes = ""
-#         return notes
-#
-#     @staticmethod
-#     def get_result(obj):
-#         try:
-#             return json.loads(obj)["result"]
-#         except (TypeError, json.decoder.JSONDecodeError):
-#             return Flag.ALL_BLANK.value
-#
-#     def to_df(self, args):
-#         df = pd.DataFrame(self.to_records())
-#         df = df.set_index(args.group_by, drop=False)
-#         df = self.sort_columns(args, df)
-#         df = df.fillna("")
-#         return df
-#
-#     def to_csv(self, args, path, unreconciled=None):
-#         df = self.to_df(args)
-#
-#         if args.explanations and self.is_reconciled:
-#             df2 = self.explanation_df(args, unreconciled)
-#             df2 = df2[self.get_reconcilable_keys()]
-#             df = df.join(df2, rsuffix=" Explanation")
-#             df = self.sort_columns(args, df)
-#             df = df.fillna("")
-#
-#         df.to_csv(path, index=False)
-#
-#     def explanation_df(self, args, unreconciled=None):
-#         df = pd.DataFrame(self.to_explanations(args.group_by))
-#         df = df.set_index(args.group_by, drop=False)
-#         columns = [c for c in df.columns if c != args.group_by]
-#         df = df.fillna("")
-#         df[columns] = df[columns].applymap(self.get_note)
-#         self.fix_empty_explanations(args, df, unreconciled)
-#         df = self.sort_columns(args, df)
-#         return df
-#
-#     def problem_df(self, args):
-#         df = pd.DataFrame(self.to_explanations(args.group_by))
-#         df = df.set_index(args.group_by, drop=False)
-#         columns = [c for c in df.columns if c != args.group_by]
-#         df[columns] = df[columns].applymap(self.get_result)
-#         df = self.sort_columns(args, df)
-#         return df
-#
-#     def fix_empty_explanations(self, args, df, unreconciled):
-#         """A hack to workaround Zooniverse missing data."""
-#         df3 = pd.DataFrame(
-#             [
-#                 {args.group_by: r[args.group_by], 'n': 1}
-#                 for r in unreconciled.to_records()
-#             ]
-#         )
-#         counts = df3.groupby(args.group_by).count()
-#         e = self.get_reconcilable_keys()
-#         for n in counts.n.unique():
-#             idx = counts.loc[counts.n == n].index
-#             replace = f"All {n} records are blank"
-#             df.update(df.loc[idx, e].replace(r"^\s*$", replace, regex=True))
-#
-#     @staticmethod
-#     def sort_columns(args, df):
-#         """A hack to workaround Zooniverse random-ish column ordering."""
-#         order: [int, int, str] = [(0, 0, args.group_by)]
-#         skips = [args.group_by]
-#         if hasattr(args, "row_key") and args.row_key and args.row_key in df.columns:
-#             order.append((0, 1, args.row_key))
-#             skips.append(args.row_key)
-#         if (hasattr(args, "user_column") and args.user_column
-#                 and args.user_column in df.columns):
-#             order.append((0, 2, args.user_column))
-#             skips.append(args.user_column)
-#
-#         for i, col in enumerate(df.columns):
-#             if col in skips:
-#                 continue
-#             if match := re.match(r"[Tt](\d+)", col):
-#                 task_no = int(match.group(1))
-#                 order.append((1, task_no, col))
-#             else:
-#                 order.append((2, i, col))
-#         order = [o[2] for o in sorted(order)]
-#         df = df[order]
-#         return df
-#
-#     @staticmethod
-#     def natural_column_sort(df, order=None):
-#         """A hack to workaround Zooniverse's random-ish column ordering."""
-#         order = order if order else []
-#         for i, col in enumerate(df.columns):
-#             if match := re.match(r"[Tt](\d+)", col):
-#                 task_no = int(match.group(1))
-#                 order.append((1, task_no, col))
-#             else:
-#                 order.append((2, i, col))
-#         order = [o[2] for o in sorted(order)]
-#         df = df[order]
-#         return df
-#
-#     def to_records(self):
-#         exclude = NoOpField if self.is_reconciled else type(None)
-#         rows = []
-#         for row in self.rows:
-#             data = {}
-#             for field_ in (f for f in row.values() if not isinstance(f, exclude)):
-#                 data |= field_.to_dict()
-#             rows.append(data)
-#         return rows
-#
-#     def to_explanations(self, group_by):
-#         rows = []
-#         for row in self.rows:
-#             data = {}
-#             for field_ in (f for f in row.values()):
-#                 if field_.key == group_by:
-#                     data[group_by] = field_.value
-#                 else:
-#                     keys = list(field_.to_dict())
-#                     value = json.dumps(
-#                         {
-#                             "note": field_.note,
-#                             "result": field_.flag.value,
-#                             "good": field_.flag in GOOD,
-#                         }
-#                     )
-#                     for key in keys:
-#                         data[key] = value
-#             rows.append(data)
-#         return rows
-#
-#     def get_all_keys(self):
-#         """Return a list of all keys in a possibly ragged group of rows."""
-#         keys = {}  # Dicts preserve order, sets do not
-#         for row in self.rows:
-#             keys |= {k: 1 for k in row.keys()}
-#         return list(keys)
-#
-#     def get_all_field_types(self):
-#         """Return a set of all field types used by the rows."""
-#         field_types = set()
-#         for row in self.rows:
-#             for cell in row.values():
-#                 field_types.add(type(cell))
-#         return field_types
-#
-#     def get_reconcilable_keys(self):
-#         reconcilable = set()
-#         for row in self.rows:
-#             for cell in row.values():
-#                 if not isinstance(cell, (NoOpField, SameField)):
-#                     reconcilable |= cell.to_dict().keys()
-#         return sorted(reconcilable)
-#
-#     @classmethod
-#     def reconcile(cls, unreconciled: "Table", args):
-#         """Reconcile a data frame and return a new one."""
-#         rows = sorted(unreconciled.rows, key=lambda r: r[args.group_by].value)
-#         groups = groupby(rows, key=lambda r: r[args.group_by].value)
-#         reconciled = cls(is_reconciled=True)
-#
-#         all_keys = unreconciled.get_all_keys()
-#         all_field_types = unreconciled.get_all_field_types()
-#
-#         for _, row_group in groups:
-#             row = Row()
-#             row_group = list(row_group)
-#
-#             # This loop builds a reconciled row
-#             for key in all_keys:
-#                 field_group = [g[key] for g in row_group if g.get(key)]
-#                 if not field_group:
-#                     continue
-#                 field_type = type(field_group[0])
-#                 field_group = field_type.pad_group(field_group, len(row_group))
-#                 cell = field_type.reconcile(field_group, args)
-#                 cell.is_reconciled = True
-#                 row.add_field(key, cell)
-#
-#             # This loop tweaks a row for fields that depend on each other
-#             for field_type in all_field_types:
-#                 field_type.reconcile_row(row, args)
-#
-#             reconciled.append(row)
-#
-#         return reconciled
+    def to_df(self, args: Namespace, add_note=False) -> pd.DataFrame:
+        records = self.to_records(add_note)
+        self.headers = self.sort_headers(args)
+        df = pd.DataFrame(records)
+        headers = []
+        for h in self.headers:
+            headers += [c for c in df.columns if c.startswith(h)]
+        df = df[headers]
+        return df
+
+    def to_records(self, add_note=False) -> list[dict]:
+        records = []
+        for row in self.rows:
+            rec = {}
+            for header, field in row.fields.items():
+                if self.reconciled:
+                    rec |= row[header].to_reconciled_dict(add_note)
+                else:
+                    rec |= row[header].to_unreconciled_dict()
+            records.append(rec)
+        return records
+
+    def reconcile(self, args) -> "Table":
+        rows = sorted(self.rows, key=lambda r: r[args.group_by].value)
+        groups = groupby(rows, key=lambda r: r[args.group_by].value)
+        reconciled = Table(reconciled=True)
+
+        for _, row_group in groups:
+            row = Row()
+            row_group = list(row_group)
+
+            for header, field in self.headers.items():  # In sorted order
+                cls = type(field)
+
+                field_group = [g[header] for g in row_group if header in g]
+                field_group = cls.pad_group(field_group, len(row_group))
+
+                if all(f.is_padding for f in field_group):
+                    n = len(row_group)
+                    field = cls(note=f"All {n} records are blank", flag=Flag.ALL_BLANK)
+                else:
+                    field = cls.reconcile(field_group, args)
+
+                row.add_field(header, field)
+
+            # This loop tweaks a row for fields that depend on each other
+            for field in self.headers.values():
+                field.reconcile_row(row, args)
+
+            reconciled.append_row(row)
+
+        return reconciled
+
+    def sort_headers(self, args):
+        """A hack to workaround Zooniverse random-ish column ordering."""
+        first = [args.group_by, args.row_key, args.user_column]
+
+        order: [int, int, str] = [(0, 0, args.group_by)]
+
+        if args.row_key in self.headers:
+            order.append((0, 1, args.row_key))
+
+        if args.user_column in self.headers:
+            order.append((0, 2, args.user_column))
+
+        for i, header in enumerate(self.headers.keys()):
+            if header in first:
+                continue
+            if match := re.match(r"[Tt](\d+)", header):
+                task_no = int(match.group(1))
+                order.append((1, task_no, header))
+            else:
+                order.append((2, i, header))
+        order = [o[2] for o in sorted(order)]
+        return {o: self.headers[o] for o in order}

@@ -64,7 +64,7 @@ def read(args):
         extract_metadata(raw_row, row)
         extract_misc_data(raw_row, row)
 
-        table.append(row)
+        table.append_row(row)
 
     return table
 

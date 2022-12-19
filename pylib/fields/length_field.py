@@ -8,8 +8,6 @@ from pylib.fields.base_field import BaseField
 from pylib.flag import Flag
 from pylib.utils import P
 
-PIX_LEN = "length pixels"
-
 SCALE_RE = re.compile(
     r"(?P<scale> [0-9.]+ ) \s* (?P<units> (mm|cm|dm|m) ) \b",
     flags=re.VERBOSE | re.IGNORECASE,
@@ -28,7 +26,7 @@ class LengthField(BaseField):
     units: str = ""
     is_scale: bool = False
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_unreconciled_dict(self) -> dict[str, Any]:
         return {
             self.header("x1"): round(self.x1),
             self.header("y1"): round(self.y1),
@@ -36,11 +34,8 @@ class LengthField(BaseField):
             self.header("y2"): round(self.y2),
         }
 
-    def to_unreconciled_dict(self) -> dict[str, Any]:
-        return self.to_dict()
-
     def to_reconciled_dict(self, add_note=False) -> dict[str, Any]:
-        as_dict = self.to_dict()
+        as_dict = self.to_unreconciled_dict()
         as_dict[self.header("pixel_length")] = round(self.pixel_length, 2)
         if not self.is_scale:
             name = self.header(f"length {self.units}")

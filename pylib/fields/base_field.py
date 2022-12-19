@@ -26,14 +26,14 @@ class BaseField:
         return as_dict
 
     @classmethod
-    def pad_group(cls, group, length) -> "BaseField":
-        while len(group) < length:
-            group.append(cls(is_padding=False))
-        return group
-
-    @classmethod
     def reconcile(cls, group, args=None):
         raise NotImplementedError()
+
+    @classmethod
+    def pad_group(cls, group, length):
+        while len(group) < length:
+            group.append(cls(is_padding=True))
+        return group
 
     @staticmethod
     def reconcile_row(reconciled_row, args=None):

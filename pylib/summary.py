@@ -178,7 +178,7 @@ def merge_dataframes(args, explanation_df, reconciled_df, unreconciled_df):
     df = df[keys + [c for c in df.columns if c not in keys]]
     df = df.sort_values(keys)
     df = df.applymap(create_link)
-    df = Table.sort_columns(args, df)
+    df = Table.sort_headers(args, df)
     df = df.reset_index(drop=True)
 
     return df

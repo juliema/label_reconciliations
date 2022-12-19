@@ -1,14 +1,17 @@
 import dataclasses
 
-from pylib.fields.base_field import BaseField
+from pylib.fields.field_types import FIELD_TYPES
 
 
 @dataclasses.dataclass
 class Row:
-    fields: dict[str, BaseField] = dataclasses.field(default_factory=dict)
+    fields: dict[str, FIELD_TYPES] = dataclasses.field(default_factory=dict)
 
     def __getitem__(self, key):
         return self.fields[key]
+
+    def __contains__(self, key):
+        return key in self.fields
 
     def add_field(self, name, field, task_id: str = ""):
         name = self.rename(name.strip(), task_id)

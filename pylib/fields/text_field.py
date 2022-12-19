@@ -23,14 +23,11 @@ ExactScore = namedtuple("ExactScore", "string count")
 class TextField(BaseField):
     value: str = ""
 
-    def to_dict(self):
+    def to_unreconciled_dict(self) -> dict[str, Any]:
         return {self.name: self.value}
 
-    def to_unreconciled_dict(self) -> dict[str, Any]:
-        return self.to_dict()
-
     def to_reconciled_dict(self, add_note=False) -> dict[str, Any]:
-        as_dict = self.to_dict()
+        as_dict = self.to_unreconciled_dict()
         return self.add_note(as_dict, add_note)
 
     @classmethod

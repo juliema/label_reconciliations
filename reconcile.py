@@ -219,10 +219,10 @@ def main():
         unreconciled.to_csv(args, args.unreconciled)
 
     if args.reconciled or args.summary:
-        reconciled = Table.reconcile(unreconciled, args)
+        reconciled = unreconciled.reconcile(args)
 
         if args.reconciled:
-            reconciled.to_csv(args, args.reconciled, unreconciled)
+            reconciled.to_csv(args, args.reconciled, args.explanations)
 
         if args.summary:
             summary.report(args, unreconciled, reconciled)

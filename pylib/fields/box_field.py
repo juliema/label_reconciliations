@@ -14,7 +14,7 @@ class BoxField(BaseField):
     top: float = 0.0
     bottom: float = 0.0
 
-    def to_dict(self) -> dict[str, Any]:
+    def to_unreconciled_dict(self) -> dict[str, Any]:
         return {
             self.header("left"): round(self.left, 0),
             self.header("right"): round(self.right, 0),
@@ -22,11 +22,8 @@ class BoxField(BaseField):
             self.header("bottom"): round(self.bottom, 0),
         }
 
-    def to_unreconciled_dict(self) -> dict[str, Any]:
-        return self.to_dict()
-
     def to_reconciled_dict(self, add_note=False) -> dict[str, Any]:
-        as_dict = self.to_dict()
+        as_dict = self.to_unreconciled_dict()
         return self.add_note(as_dict, add_note)
 
     @classmethod

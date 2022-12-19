@@ -12,7 +12,7 @@ class NoOpField(BaseField):
         return {self.name: self.value}
 
     def to_reconciled_dict(self, add_note=False) -> dict[str, Any]:
-        return {self.name: ""}
+        return {}
 
     @classmethod
     def reconcile(cls, group, args=None):
