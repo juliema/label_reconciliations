@@ -6,13 +6,13 @@ from pylib.flag import Flag
 
 @dataclass(kw_only=True)
 class BaseField:
-    header: str = ""
+    name: str = ""
     note: str = ""
     flag: Flag = Flag.NO_FLAG
     is_padding: bool = False
 
-    def name(self, attr: str) -> str:
-        return f"{self.header}: {attr}"
+    def header(self, attr: str) -> str:
+        return f"{self.name}: {attr}"
 
     def to_unreconciled_dict(self) -> dict[str, Any]:
         raise NotImplementedError()
@@ -22,7 +22,7 @@ class BaseField:
 
     def add_note(self, as_dict: dict[str, Any], add_note: bool) -> dict[str, Any]:
         if add_note:
-            as_dict[f"{self.header}: Explanation"] = self.note
+            as_dict[f"{self.name}: Explanation"] = self.note
         return as_dict
 
     @classmethod

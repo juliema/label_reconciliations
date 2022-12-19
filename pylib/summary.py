@@ -346,7 +346,7 @@ def get_filters(reconcilable, problems):
 
 
 def align(column):
-    if column.name == "Field":
+    if column.header == "Field":
         return ["text-align: left;"] * len(column)
     return ["text-align: center;"] * len(column)
 

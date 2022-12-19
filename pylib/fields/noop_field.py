@@ -9,10 +9,10 @@ class NoOpField(BaseField):
     value: str = ""
 
     def to_unreconciled_dict(self) -> dict[str, Any]:
-        return {self.header: self.value}
+        return {self.name: self.value}
 
     def to_reconciled_dict(self, add_note=False) -> dict[str, Any]:
-        return {self.header: ""}
+        return {self.name: ""}
 
     @classmethod
     def reconcile(cls, group, args=None):

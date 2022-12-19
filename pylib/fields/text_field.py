@@ -24,7 +24,7 @@ class TextField(BaseField):
     value: str = ""
 
     def to_dict(self):
-        return {self.header: self.value}
+        return {self.name: self.value}
 
     def to_unreconciled_dict(self) -> dict[str, Any]:
         return self.to_dict()

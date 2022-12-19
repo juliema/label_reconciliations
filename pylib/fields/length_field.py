@@ -30,10 +30,10 @@ class LengthField(BaseField):
 
     def to_dict(self) -> dict[str, Any]:
         return {
-            self.name("x1"): round(self.x1),
-            self.name("y1"): round(self.y1),
-            self.name("x2"): round(self.x2),
-            self.name("y2"): round(self.y2),
+            self.header("x1"): round(self.x1),
+            self.header("y1"): round(self.y1),
+            self.header("x2"): round(self.x2),
+            self.header("y2"): round(self.y2),
         }
 
     def to_unreconciled_dict(self) -> dict[str, Any]:
@@ -41,9 +41,9 @@ class LengthField(BaseField):
 
     def to_reconciled_dict(self, add_note=False) -> dict[str, Any]:
         as_dict = self.to_dict()
-        as_dict[self.name("pixel_length")] = round(self.pixel_length, 2)
+        as_dict[self.header("pixel_length")] = round(self.pixel_length, 2)
         if not self.is_scale:
-            name = self.name(f"length {self.units}")
+            name = self.header(f"length {self.units}")
             as_dict[name] = round(self.length, 2)
         return self.add_note(as_dict, add_note)
 
@@ -53,7 +53,7 @@ class LengthField(BaseField):
         use = [g for g in group if not g.is_padding]
 
         note = (
-            f'There {P("is", len(use))} {len(use)} of {count}'
+            f'There {P("is", len(use))} {len(use)} of {count} '
             f'length {P("record", count)}'
         )
 
@@ -64,7 +64,7 @@ class LengthField(BaseField):
 
         pix_len = round(math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2), 2)
 
-        if match := SCALE_RE.search(use[0].key):
+        if match := SCALE_RE.search(use[0].name):
             units = match.group("units")
             factor = float(match.group("scale")) / pix_len
             is_scale = True
@@ -90,10 +90,8 @@ class LengthField(BaseField):
     def reconcile_row(reconciled_row, args=None):
         """Calculate lengths using units and pixel_lengths."""
         ruler = LengthField.find_ruler(reconciled_row)
-
         if not ruler:
             return
-
         LengthField.calculate_lengths(reconciled_row, ruler)
 
     @staticmethod
@@ -104,8 +102,8 @@ class LengthField(BaseField):
                 field.units = ruler.units
 
     @staticmethod
-    def find_ruler(reconciled_row):
+    def find_ruler(row):
         return next(
-            (f for f in reconciled_row.values() if getattr(f, "is_scale", False)),
+            (f for f in row.values() if hasattr(f, "is_scale") and f.is_scale),
             None,
         )

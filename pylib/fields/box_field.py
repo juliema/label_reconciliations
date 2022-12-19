@@ -16,10 +16,10 @@ class BoxField(BaseField):
 
     def to_dict(self) -> dict[str, Any]:
         return {
-            self.name("left"): round(self.left, 0),
-            self.name("right"): round(self.right, 0),
-            self.name("top"): round(self.top, 0),
-            self.name("bottom"): round(self.bottom, 0),
+            self.header("left"): round(self.left, 0),
+            self.header("right"): round(self.right, 0),
+            self.header("top"): round(self.top, 0),
+            self.header("bottom"): round(self.bottom, 0),
         }
 
     def to_unreconciled_dict(self) -> dict[str, Any]:
