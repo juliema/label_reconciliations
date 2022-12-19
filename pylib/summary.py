@@ -9,7 +9,7 @@ from jinja2 import Environment
 from jinja2 import PackageLoader
 from pandas.io.formats.style import Styler
 
-from pylib import result
+from pylib import flag
 from pylib.table import Table
 
 THRESHOLD = 50
@@ -288,15 +288,15 @@ def get_results(reconcilable, problem_df):
     df = pd.concat(data, axis=1)
 
     df = Table.natural_column_sort(df).transpose()
-    for col in range(result.Result.OK, result.RESULT_END):
+    for col in range(result.Flag.OK, result.RESULT_END):
         if col not in df.columns:
             df[col] = 0
 
-    df = df[range(result.Result.OK, result.RESULT_END)]
+    df = df[range(result.Flag.OK, result.RESULT_END)]
     df = df.fillna(0).astype(int)
 
     df["Total"] = df[
-        range(result.Result.OK, result.Result.NO_MATCH)
+        range(result.Flag.OK, result.Flag.NO_MATCH)
     ].sum(axis="columns")
 
     total = df.pop("Total")

@@ -1,16 +1,11 @@
-"""Reconcile line lengths.
-
-Note: I am assuming that length notations are required. If this is no longer the case
-      you will need to edit this file.
-"""
 import math
 import re
 import statistics as stats
 from dataclasses import dataclass
+from typing import Any
 
-from pylib import result
 from pylib.fields.base_field import BaseField
-from pylib.result import Result
+from pylib.flag import Flag
 from pylib.utils import P
 
 PIX_LEN = "length pixels"
@@ -32,23 +27,33 @@ class LengthField(BaseField):
     factor: float = 0.0
     units: str = ""
     is_scale: bool = False
-    use: bool = True
 
-    def to_dict(self):
-        dict_ = self.round("x1", "y1", "x2", "y2")
-        if self.is_reconciled:
-            dict_ |= self.round("pixel_length", digits=2)
-            if not self.is_scale:
-                dict_[self.header(f"length {self.units}")] = round(self.length, 2)
-        return dict_
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            self.name("x1"): round(self.x1),
+            self.name("y1"): round(self.y1),
+            self.name("x2"): round(self.x2),
+            self.name("y2"): round(self.y2),
+        }
+
+    def to_unreconciled_dict(self) -> dict[str, Any]:
+        return self.to_dict()
+
+    def to_reconciled_dict(self, add_note=False) -> dict[str, Any]:
+        as_dict = self.to_dict()
+        as_dict[self.name("pixel_length")] = round(self.pixel_length, 2)
+        if not self.is_scale:
+            name = self.name(f"length {self.units}")
+            as_dict[name] = round(self.length, 2)
+        return self.add_note(as_dict, add_note)
 
     @classmethod
     def reconcile(cls, group, _=None):
         count = len(group)
-        use = [g for g in group if g.use]
+        use = [g for g in group if not g.is_padding]
 
         note = (
-            f'There {P("is", count)} {count} of {len(use)} '
+            f'There {P("is", len(use))} {len(use)} of {count}'
             f'length {P("record", count)}'
         )
 
@@ -70,7 +75,7 @@ class LengthField(BaseField):
 
         return cls(
             note=note,
-            result=Result.OK,
+            flag=Flag.OK,
             x1=x1,
             y1=y1,
             x2=x2,
@@ -80,12 +85,6 @@ class LengthField(BaseField):
             units=units,
             is_scale=is_scale,
         )
-
-    @classmethod
-    def pad_group(cls, group, length):
-        while len(group) < length:
-            group.append(cls(use=False))
-        return group
 
     @staticmethod
     def reconcile_row(reconciled_row, args=None):
@@ -110,7 +109,3 @@ class LengthField(BaseField):
             (f for f in reconciled_row.values() if getattr(f, "is_scale", False)),
             None,
         )
-
-    @staticmethod
-    def results():
-        return result.sort_results(Result.ALL_BLANK, Result.OK)

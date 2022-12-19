@@ -10,12 +10,22 @@ import pandas as pd
 from pylib.fields.base_field import BaseField
 from pylib.fields.noop_field import NoOpField
 from pylib.fields.same_field import SameField
-from pylib.result import GOOD, Result
+from pylib.flag import GOOD, Flag
 from pylib.row import Row
 
 
 @dataclass
 class Table:
+    headers: dict[str, BaseField] = field(default_factory=dict)
+    rows: list[Row] = field(default_factory=list)
+    is_reconciled: bool = False
+
+    def __len__(self):
+        return len(self.rows)
+
+
+@dataclass
+class OldTable:
     rows: list[Row[BaseField]] = field(default_factory=list)
     is_reconciled: bool = False
 
@@ -45,7 +55,7 @@ class Table:
         try:
             return json.loads(obj)["result"]
         except (TypeError, json.decoder.JSONDecodeError):
-            return Result.ALL_BLANK.value
+            return Flag.ALL_BLANK.value
 
     def to_df(self, args):
         df = pd.DataFrame(self.to_records())
@@ -102,7 +112,7 @@ class Table:
     @staticmethod
     def sort_columns(args, df):
         """A hack to workaround Zooniverse random-ish column ordering."""
-        order = [(0, 0, args.group_by)]
+        order: [int, int, str] = [(0, 0, args.group_by)]
         skips = [args.group_by]
         if hasattr(args, "row_key") and args.row_key and args.row_key in df.columns:
             order.append((0, 1, args.row_key))
@@ -160,8 +170,8 @@ class Table:
                     value = json.dumps(
                         {
                             "note": field_.note,
-                            "result": field_.result.value,
-                            "good": field_.result in GOOD,
+                            "result": field_.flag.value,
+                            "good": field_.flag in GOOD,
                         }
                     )
                     for key in keys:

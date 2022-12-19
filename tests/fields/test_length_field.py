@@ -2,7 +2,7 @@ import unittest
 
 from pylib.fields.length_field import LengthField
 from pylib.fields.noop_field import NoOpField
-from pylib.result import Result
+from pylib.flag import Flag
 from pylib.row import Row
 
 
@@ -18,7 +18,7 @@ class TestLengthField(unittest.TestCase):
             LengthField.reconcile(group),
             LengthField(
                 note="There are 3 length records",
-                result=Result.OK,
+                flag=Flag.OK,
                 x1=10,
                 y1=40,
                 x2=40,
@@ -38,7 +38,7 @@ class TestLengthField(unittest.TestCase):
             LengthField.reconcile(group),
             LengthField(
                 note="There are 3 length records",
-                result=Result.OK,
+                flag=Flag.OK,
                 x1=10,
                 y1=40,
                 x2=40,

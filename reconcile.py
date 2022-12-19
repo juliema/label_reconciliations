@@ -11,10 +11,10 @@ from pylib import utils
 from pylib.table import Table
 
 
-VERSION = "0.6.4"
+VERSION = "0.6.5"
 
 
-def parse_args():
+def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawDescriptionHelpFormatter,
         fromfile_prefix_chars="@",
@@ -182,7 +182,6 @@ def parse_args():
 
     if args.format == "nfn" and args.column_types:
         warnings.warn("Column types are ignored for 'nfn' format.")
-        return
 
     return args
 
@@ -213,7 +212,7 @@ def main():
     formats = utils.get_plugins("formats")
     unreconciled: Table = formats[args.format].read(args)
 
-    if not unreconciled.has_rows:
+    if len(unreconciled) == 0:
         utils.error_exit(f"Workflow {args.workflow_id} has no data.")
 
     if args.unreconciled:

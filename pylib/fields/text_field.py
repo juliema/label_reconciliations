@@ -5,12 +5,12 @@ from collections import defaultdict
 from collections import namedtuple
 from dataclasses import dataclass
 from itertools import combinations
+from typing import Any
 
 from fuzzywuzzy import fuzz  # pylint: disable=import-error
 
 from pylib.fields.base_field import BaseField
-from pylib.result import Result
-from pylib.result import sort_results
+from pylib.flag import Flag
 from pylib.utils import P
 
 
@@ -24,7 +24,14 @@ class TextField(BaseField):
     value: str = ""
 
     def to_dict(self):
-        return {self.key: self.value}
+        return {self.header: self.value}
+
+    def to_unreconciled_dict(self) -> dict[str, Any]:
+        return self.to_dict()
+
+    def to_reconciled_dict(self, add_note=False) -> dict[str, Any]:
+        as_dict = self.to_dict()
+        return self.add_note(as_dict, add_note)
 
     @classmethod
     def reconcile(cls, group, args=None):
@@ -43,19 +50,19 @@ class TextField(BaseField):
                     f"{P('The', count)} {count} {P('record', count)} "
                     f"{P('is', count)} blank"
                 )
-                return cls(note=note, result=Result.ALL_BLANK)
+                return cls(note=note, flag=Flag.ALL_BLANK)
 
             # Only one selected
             case [e0] if e0.count == 1:
                 note = f"Only 1 transcript in {count} {P('record', count)}"
-                return cls(note=note, value=e0.string, result=Result.ONLY_ONE)
+                return cls(note=note, value=e0.string, flag=Flag.ONLY_ONE)
 
             # Everyone chose the same value
             case [e0] if e0.count == count and e0.count > 1:
                 note = (
                     f"Exact unanimous match, {e0.count} of {count} {P('record', count)}"
                 )
-                return cls(note=note, value=e0.string, result=Result.UNANIMOUS)
+                return cls(note=note, value=e0.string, flag=Flag.UNANIMOUS)
 
             # It was a tie for the text chosen
             case [e0, e1, *_] if e0.count > 1 and e0.count == e1.count:
@@ -63,7 +70,7 @@ class TextField(BaseField):
                     f"Exact match is a tie, {e0.count} of {count} {P('record', count)} "
                     f"with {blanks} {P('blank', blanks)}"
                 )
-                return cls(note=note, value=e0.string, result=Result.MAJORITY)
+                return cls(note=note, value=e0.string, flag=Flag.MAJORITY)
 
             # We have a winner
             case [e0, *_] if e0.count > 1:
@@ -71,7 +78,7 @@ class TextField(BaseField):
                     f"Exact match, {e0.count} of {count} {P('record', count)} with "
                     f"{blanks} {P('blank', blanks)}"
                 )
-                return cls(note=note, value=e0.string, result=Result.MAJORITY)
+                return cls(note=note, value=e0.string, flag=Flag.MAJORITY)
 
         # Look for normalized exact matches
         norm = normalized_exact_matches(strings)
@@ -85,7 +92,7 @@ class TextField(BaseField):
                     f"{P('The', count)} {count} normalized {P('record', count)} "
                     f"{P('is', count)} blank"
                 )
-                return cls(note=note, result=Result.NO_MATCH)
+                return cls(note=note, flag=Flag.NO_MATCH)
 
             # Everyone chose the same value
             case [n0] if n0.count == count and n0.count > 1:
@@ -93,7 +100,7 @@ class TextField(BaseField):
                     f"Normalized unanimous match, {n0.count} of {count} "
                     f"{P('record', count)}"
                 )
-                return cls(note=note, value=n0.string, result=Result.UNANIMOUS)
+                return cls(note=note, value=n0.string, flag=Flag.UNANIMOUS)
 
             # The winners are a tie
             case [n0, n1, *_] if n0.count > 1 and n0.count == n1.count:
@@ -101,7 +108,7 @@ class TextField(BaseField):
                     f"Normalized match is a tie, {n0.count} of {count} "
                     f"{P('record', count)} with {blanks} {P('blank', blanks)}"
                 )
-                return cls(note=note, value=n0.string, result=Result.MAJORITY)
+                return cls(note=note, value=n0.string, flag=Flag.MAJORITY)
 
             # We have a winner
             case [n0, *_] if n0.count > 1:
@@ -109,16 +116,16 @@ class TextField(BaseField):
                     f"Normalized match, {n0.count} of {count} {P('record', count)} "
                     f"with {blanks} {P('blank', blanks)}"
                 )
-                return cls(note=note, value=n0.string, result=Result.MAJORITY)
+                return cls(note=note, value=n0.string, flag=Flag.MAJORITY)
 
         # Check for simple in-place fuzzy matches
         top = top_partial_ratio(strings)
-        if top.score >= args.fuzzy_ratio_threshold:
+        if top and top.score >= args.fuzzy_ratio_threshold:
             note = (
                 f"Partial ratio match on {count} {P('record', count)} with {blanks} "
                 f"{P('blank', blanks)}, score={top.score}"
             )
-            return cls(note=note, value=top.value, result=Result.FUZZY)
+            return cls(note=note, value=top.value, flag=Flag.FUZZY)
 
         # Now look for the best token match
         top = top_token_set_ratio(strings)
@@ -127,31 +134,14 @@ class TextField(BaseField):
                 f"Token set ratio match on {count} {P('record', count)} with {blanks} "
                 f"{P('blank', blanks)}, score={top.score}"
             )
-            return cls(note=note, value=top.value, result=Result.FUZZY)
+            return cls(note=note, value=top.value, flag=Flag.FUZZY)
 
         # Nothing matches
         note = (
             f"No text match on {count} {P('record', count)} with {blanks} "
             f"{P('blank', blanks)}"
         )
-        return cls(note=note, result=Result.NO_MATCH)
-
-    @classmethod
-    def pad_group(cls, group, length):
-        while len(group) < length:
-            group.append(cls())
-        return group
-
-    @staticmethod
-    def results():
-        return sort_results(
-            Result.ALL_BLANK,
-            Result.UNANIMOUS,
-            Result.MAJORITY,
-            Result.ONLY_ONE,
-            Result.NO_MATCH,
-            Result.FUZZY,
-        )
+        return cls(note=note, flag=Flag.NO_MATCH)
 
 
 def exact_matches(strings):
