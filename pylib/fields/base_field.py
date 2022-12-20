@@ -4,6 +4,9 @@ from typing import Any
 from pylib.flag import Flag
 
 
+EXPLAIN_SUFFIX = ": Explanation"
+
+
 @dataclass(kw_only=True)
 class BaseField:
     name: str = ""
@@ -22,7 +25,7 @@ class BaseField:
 
     def add_note(self, as_dict: dict[str, Any], add_note: bool) -> dict[str, Any]:
         if add_note:
-            as_dict[f"{self.name}: Explanation"] = self.note
+            as_dict[f"{self.name}{EXPLAIN_SUFFIX}"] = self.note
         return as_dict
 
     @classmethod

@@ -9,6 +9,14 @@ from pylib.fields.select_field import SelectField
 from pylib.fields.text_field import TextField
 
 
-FIELD_TYPES = Union[
+ALL_FIELDS = Union[
     BoxField, LengthField, NoOpField, PointField, SameField, SelectField, TextField
 ]
+
+RECONCILABLE_FIELDS = Union[
+    BoxField, LengthField, PointField, SelectField, TextField
+]
+
+
+def reconcilable_field(field):
+    return isinstance(field, RECONCILABLE_FIELDS)

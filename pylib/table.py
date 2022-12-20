@@ -9,12 +9,12 @@ import pandas as pd
 from pylib import utils
 from pylib.flag import Flag
 from pylib.row import Row
-from pylib.fields.field_types import FIELD_TYPES
+from pylib.fields.field_types import ALL_FIELDS, reconcilable_field
 
 
 @dataclasses.dataclass
 class Table:
-    headers: dict[str, FIELD_TYPES] = dataclasses.field(default_factory=dict)
+    headers: dict[str, ALL_FIELDS] = dataclasses.field(default_factory=dict)
     rows: list[Row] = dataclasses.field(default_factory=list)
     reconciled: bool = False
 
@@ -41,10 +41,7 @@ class Table:
         records = self.to_records(add_note)
         self.headers = self.sort_headers(args)
         df = pd.DataFrame(records)
-        headers = []
-        for h in self.headers:
-            headers += [c for c in df.columns if c.startswith(h)]
-        df = df[headers]
+        df = df[self.valid_headers(df)]
         return df
 
     def to_records(self, add_note=False) -> list[dict]:
@@ -92,8 +89,6 @@ class Table:
 
     def sort_headers(self, args):
         """A hack to workaround Zooniverse random-ish column ordering."""
-        first = [args.group_by, args.row_key, args.user_column]
-
         order: [int, int, str] = [(0, 0, args.group_by)]
 
         if args.row_key in self.headers:
@@ -101,6 +96,11 @@ class Table:
 
         if args.user_column in self.headers:
             order.append((0, 2, args.user_column))
+
+        return self._sort_header(order)
+
+    def _sort_header(self, order):
+        first = [o[2] for o in order]
 
         for i, header in enumerate(self.headers.keys()):
             if header in first:
@@ -112,3 +112,31 @@ class Table:
                 order.append((2, i, header))
         order = [o[2] for o in sorted(order)]
         return {o: self.headers[o] for o in order}
+
+    def valid_headers(self, df):
+        headers = []
+        for h in self.headers:
+            headers += [c for c in df.columns if c.startswith(h)]
+        return headers
+
+    def to_flag_df(self, args):
+        """Get reconciliation flags, notes, & spans for the summary report."""
+        rows = []
+        for row in self.rows:
+            exp_row = {args.group_by: row[args.group_by].value}
+            for header, field in row.fields.items():
+                if reconcilable_field(field):
+                    exp_dict = field.to_reconciled_dict()
+                    for i, key in enumerate(exp_dict.keys()):
+                        exp_row[key] = {
+                            "flag": field.flag.value,
+                            "note": field.note,
+                            "span": len(exp_dict),
+                            "offset": i,
+                        }
+            rows.append(exp_row)
+        df = pd.DataFrame(rows)
+        headers = list(self._sort_header([(0, 0, args.group_by)]).keys())
+        headers = [h for h in headers if h in df.columns]
+        df = df[headers]
+        return df

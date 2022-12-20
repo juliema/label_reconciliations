@@ -9,14 +9,11 @@ from pylib.flag import Flag
 class SameField(BaseField):
     value: str = ""
 
-    def to_dict(self):
-        return {self.name: self.value}
-
     def to_unreconciled_dict(self) -> dict[str, Any]:
         return {self.name: self.value}
 
     def to_reconciled_dict(self, add_note=False) -> dict[str, Any]:
-        as_dict = self.to_dict()
+        as_dict = self.to_unreconciled_dict()
         if self.flag != Flag.OK:
             as_dict = self.add_note(as_dict, add_note)
         return as_dict

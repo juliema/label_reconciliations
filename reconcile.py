@@ -173,6 +173,7 @@ def parse_args() -> argparse.Namespace:
 
     setattr(args, "row_key", "classification_id")
     setattr(args, "user_column", "user_name")
+    setattr(args, "max_transcriptions", 50)
 
     if args.fuzzy_ratio_threshold < 0 or args.fuzzy_ratio_threshold > 100:
         utils.error_exit("--fuzzy-ratio-threshold must be between 0 and 100.")

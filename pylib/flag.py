@@ -16,22 +16,19 @@ class Flag(IntEnum):
     def sorter(*args):
         return sorted(args, key=lambda f: f.value)
 
-    @staticmethod
-    def result_labels():
-        return {
-            Flag.OK.value: "OK",
-            Flag.UNANIMOUS.value: "Unanimous Matches",
-            Flag.MAJORITY.value: "Majority Matches",
-            Flag.FUZZY.value: "Fuzzy Matches",
-            Flag.ALL_BLANK.value: "All Blank",
-            Flag.ONLY_ONE.value: "One Transcript",
-            Flag.NO_MATCH.value: "No Matches",
-            Flag.ERROR.value: "Errors",
-        }
+
+def flag_labels():
+    return {
+        Flag.OK.value: "OK",
+        Flag.UNANIMOUS.value: "Unanimous Matches",
+        Flag.MAJORITY.value: "Majority Matches",
+        Flag.FUZZY.value: "Fuzzy Matches",
+        Flag.ALL_BLANK.value: "All Blank",
+        Flag.ONLY_ONE.value: "One Transcript",
+        Flag.NO_MATCH.value: "No Matches",
+        Flag.ERROR.value: "Errors",
+    }
 
 
-RESULT_END = Flag.ERROR + 1
-PROBLEM = {Flag.ERROR, Flag.ALL_BLANK, Flag.ONLY_ONE, Flag.NO_MATCH}
-BAD = {Flag.ERROR, Flag.ALL_BLANK, Flag.ONLY_ONE, Flag.NO_MATCH}
-GOOD = {Flag.NO_FLAG, Flag.OK, Flag.UNANIMOUS, Flag.MAJORITY, Flag.FUZZY}
-
+FLAG_END = Flag.ERROR + 1
+PROBLEM = {Flag.ERROR, Flag.ONLY_ONE, Flag.NO_MATCH}
