@@ -41,7 +41,7 @@ class Table:
         records = self.to_records(add_note)
         self.headers = self.sort_headers(args)
         df = pd.DataFrame(records)
-        df = df[self.valid_headers(df)]
+        df = df[self.get_all_headers(df)]
         return df
 
     def to_records(self, add_note=False) -> list[dict]:
@@ -113,7 +113,7 @@ class Table:
         order = [o[2] for o in sorted(order)]
         return {o: self.headers[o] for o in order}
 
-    def valid_headers(self, df):
+    def get_all_headers(self, df):
         headers = []
         for h in self.headers:
             headers += [c for c in df.columns if c.startswith(h)]
@@ -136,7 +136,6 @@ class Table:
                         }
             rows.append(exp_row)
         df = pd.DataFrame(rows)
-        headers = list(self._sort_header([(0, 0, args.group_by)]).keys())
-        headers = [h for h in headers if h in df.columns]
+        headers = self.get_all_headers(df)
         df = df[headers]
         return df

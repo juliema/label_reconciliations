@@ -28,10 +28,10 @@ class LengthField(BaseField):
 
     def to_unreconciled_dict(self) -> dict[str, Any]:
         return {
-            self.header("x1"): round(self.x1),
-            self.header("y1"): round(self.y1),
-            self.header("x2"): round(self.x2),
-            self.header("y2"): round(self.y2),
+            self.header("x1"): int(round(self.x1)),
+            self.header("y1"): int(round(self.y1)),
+            self.header("x2"): int(round(self.x2)),
+            self.header("y2"): int(round(self.y2)),
         }
 
     def to_reconciled_dict(self, add_note=False) -> dict[str, Any]:

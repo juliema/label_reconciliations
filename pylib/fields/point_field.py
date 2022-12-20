@@ -14,8 +14,8 @@ class PointField(BaseField):
 
     def to_unreconciled_dict(self) -> dict[str, Any]:
         return {
-            self.header("x"): round(self.x),
-            self.header("y"): round(self.y),
+            self.header("x"): int(round(self.x)),
+            self.header("y"): int(round(self.y)),
         }
 
     def to_reconciled_dict(self, add_note=False) -> dict[str, Any]:
