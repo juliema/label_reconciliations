@@ -1,7 +1,7 @@
 import unittest
 
 from pylib.fields.select_field import SelectField
-from pylib.result import Result
+from pylib.flag import Flag
 
 
 class TestSelectField(unittest.TestCase):
@@ -10,7 +10,7 @@ class TestSelectField(unittest.TestCase):
         group = [SelectField(), SelectField(), SelectField()]
         self.assertEqual(
             SelectField.reconcile(group),
-            SelectField(note="All 3 records are blank", result=Result.ALL_BLANK),
+            SelectField(note="All 3 records are blank", flag=Flag.ALL_BLANK),
         )
 
     def test_reconcile_02(self):
@@ -25,7 +25,7 @@ class TestSelectField(unittest.TestCase):
             SelectField(
                 note="Unanimous match, 3 of 3 records",
                 value="Is same",
-                result=Result.UNANIMOUS,
+                flag=Flag.UNANIMOUS,
             ),
         )
 
@@ -42,7 +42,7 @@ class TestSelectField(unittest.TestCase):
             SelectField(
                 note="Match is a tie, 2 of 4 records with 0 blanks",
                 value="Are same",
-                result=Result.MAJORITY,
+                flag=Flag.MAJORITY,
             ),
         )
 
@@ -59,7 +59,7 @@ class TestSelectField(unittest.TestCase):
             SelectField(
                 note="Match 2 of 4 records with 1 blank",
                 value="Are same",
-                result=Result.MAJORITY,
+                flag=Flag.MAJORITY,
             ),
         )
 
@@ -74,7 +74,7 @@ class TestSelectField(unittest.TestCase):
             SelectField(
                 note="Only 1 transcript in 2 records",
                 value="Is value",
-                result=Result.ONLY_ONE,
+                flag=Flag.ONLY_ONE,
             ),
         )
 
@@ -89,6 +89,6 @@ class TestSelectField(unittest.TestCase):
             SelectField.reconcile(group),
             SelectField(
                 note="No select match on 3 records with 1 blank",
-                result=Result.NO_MATCH,
+                flag=Flag.NO_MATCH,
             ),
         )

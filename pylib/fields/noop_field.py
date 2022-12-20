@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Any
 
 from pylib.fields.base_field import BaseField
 
@@ -7,20 +8,12 @@ from pylib.fields.base_field import BaseField
 class NoOpField(BaseField):
     value: str = ""
 
-    def to_dict(self):
-        value = "" if self.is_reconciled else self.value
-        return {self.key: value}
+    def to_unreconciled_dict(self) -> dict[str, Any]:
+        return {self.name: self.value}
+
+    def to_reconciled_dict(self, add_note=False) -> dict[str, Any]:
+        return {}
 
     @classmethod
-    def reconcile(cls, group, _=None):
+    def reconcile(cls, group, args=None):
         return cls()
-
-    @classmethod
-    def pad_group(cls, group, length):
-        while len(group) < length:
-            group.append(cls())
-        return group
-
-    @staticmethod
-    def results():
-        return []

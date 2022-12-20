@@ -11,10 +11,10 @@ from pylib import utils
 from pylib.table import Table
 
 
-VERSION = "0.6.4"
+VERSION = "0.6.5"
 
 
-def parse_args():
+def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         formatter_class=argparse.RawDescriptionHelpFormatter,
         fromfile_prefix_chars="@",
@@ -173,6 +173,7 @@ def parse_args():
 
     setattr(args, "row_key", "classification_id")
     setattr(args, "user_column", "user_name")
+    setattr(args, "max_transcriptions", 50)
 
     if args.fuzzy_ratio_threshold < 0 or args.fuzzy_ratio_threshold > 100:
         utils.error_exit("--fuzzy-ratio-threshold must be between 0 and 100.")
@@ -182,7 +183,6 @@ def parse_args():
 
     if args.format == "nfn" and args.column_types:
         warnings.warn("Column types are ignored for 'nfn' format.")
-        return
 
     return args
 
@@ -213,17 +213,17 @@ def main():
     formats = utils.get_plugins("formats")
     unreconciled: Table = formats[args.format].read(args)
 
-    if not unreconciled.has_rows:
+    if len(unreconciled) == 0:
         utils.error_exit(f"Workflow {args.workflow_id} has no data.")
 
     if args.unreconciled:
         unreconciled.to_csv(args, args.unreconciled)
 
     if args.reconciled or args.summary:
-        reconciled = Table.reconcile(unreconciled, args)
+        reconciled = unreconciled.reconcile(args)
 
         if args.reconciled:
-            reconciled.to_csv(args, args.reconciled, unreconciled)
+            reconciled.to_csv(args, args.reconciled, args.explanations)
 
         if args.summary:
             summary.report(args, unreconciled, reconciled)

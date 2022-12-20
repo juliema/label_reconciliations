@@ -64,14 +64,16 @@ def read(args):
         extract_metadata(raw_row, row)
         extract_misc_data(raw_row, row)
 
-        table.append(row)
+        table.append_row(row)
 
     return table
 
 
 # ###################################################################################
-def flatten_task(task, row, workflow_strings, task_id=""):
-    """Extract task annotations from the json object in the annotations column.
+def flatten_task(
+        task: dict, row: Row, workflow_strings: WorkflowStrings, task_id: str = ""
+):
+    """Extract task annotations from the json object in the annotations' column.
 
     Task annotations are nested json blobs with a WTF format. Part of the WTF is that
     each record can have a different format. It all starts with a list of annotations.
@@ -106,61 +108,63 @@ def subtask_task(task, row, workflow_strings, task_id):
         flatten_task(subtask, row, workflow_strings, task_id)
 
 
-def list_task(task, row, task_id):
+def list_task(task: dict, row: Row, task_id: str) -> None:
     values = sorted(task.get("value", ""))
-    key = get_key(task["task_label"], task_id, row)
-    row.add_field(key, TextField(value=" ".join(values)))
+    row.add_field(task["task_label"], TextField(value=" ".join(values)), task_id)
 
 
-def select_label_task(task, row, task_id):
-    key = get_key(task["select_label"], task_id, row)
+def select_label_task(task: dict, row: Row, task_id: str) -> None:
     option = task.get("option")
     value = task.get("label", "") if option else task.get("value", "")
-    row.add_field(key, SelectField(value=value))
+    row.add_field(task["select_label"], SelectField(value=value), task_id)
 
 
-def task_label_task(task, row, task_id):
-    key = get_key(task["task_label"], task_id, row)
+def task_label_task(task: dict, row: Row, task_id: str) -> None:
     value = task.get("value", "")
     value = value if value else ""
-    row.add_field(key, TextField(value=value))
+    row.add_field(task["task_label"], TextField(value=value), task_id)
 
 
-def box_task(task, row, task_id):
+def box_task(task: dict, row: Row, task_id: str) -> None:
     row.add_field(
-        get_key(task["tool_label"], task_id, row),
+        task["tool_label"],
         BoxField(
             left=round(task["x"]),
             right=round(task["x"] + task["width"]),
             top=round(task["y"]),
             bottom=round(task["y"] + task["height"]),
         ),
+        task_id,
     )
 
 
-def length_task(task, row, task_id):
+def length_task(task: dict, row: Row, task_id: str) -> None:
     row.add_field(
-        get_key(task["tool_label"], task_id, row),
+        task["tool_label"],
         LengthField(
             x1=round(task["x1"]),
             y1=round(task["y1"]),
             x2=round(task["x2"]),
             y2=round(task["y2"]),
         ),
+        task_id,
     )
 
 
-def point_task(task, row, task_id):
+def point_task(task: dict, row: Row, task_id: str) -> None:
     row.add_field(
-        get_key(task["tool_label"], task_id, row),
+        task["tool_label"],
         PointField(
             x=round(task["x"]),
             y=round(task["y"]),
         ),
+        task_id,
     )
 
 
-def workflow_task(task, row, workflow_strings, task_id):
+def workflow_task(
+        task: dict, row: Row, workflow_strings: WorkflowStrings, task_id: str
+) -> None:
     """Get the value of a task from workflow data.
 
     We are trying to match a coded value (UUID-like) with strings in the workflow
@@ -197,27 +201,13 @@ def workflow_task(task, row, workflow_strings, task_id):
 
             value = ",".join(v for v in values if v)
             label = f"{task['tool_label']}.{label}".strip()
-            label = get_key(label, task_id, row)
-            row.add_field(label, TextField(value=value))
+            row.add_field(label, TextField(value=value), task_id)
 
         # It's a single text value
         else:
             label = labels[i] if i < len(labels) else "unknown"
             label = f"{task['tool_label']}.{label}".strip()
-            label = get_key(label, task_id, row)
-            row.add_field(label, TextField(value=outer_value))
-
-
-def get_key(label: str, task_id: str, row):
-    label = label.strip() if label else ""
-
-    i = 1
-    key = f"{task_id}_{i} {label}"
-    while key in row:
-        i += 1
-        key = f"{task_id}_{i} {label}"
-
-    return key
+            row.add_field(label, TextField(value=outer_value), task_id)
 
 
 # #############################################################################
