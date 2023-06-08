@@ -1,8 +1,6 @@
 import json
 import re
 from collections import defaultdict
-from dataclasses import dataclass
-from dataclasses import field
 
 import pandas as pd
 from dateutil.parser import parse
@@ -10,6 +8,7 @@ from dateutil.parser import parse
 from pylib import utils
 from pylib.fields.box_field import BoxField
 from pylib.fields.length_field import LengthField
+from pylib.fields.mark_index_field import MarkIndexField
 from pylib.fields.noop_field import NoOpField
 from pylib.fields.point_field import PointField
 from pylib.fields.same_field import SameField
@@ -19,12 +18,7 @@ from pylib.row import Row
 from pylib.table import Table
 
 
-@dataclass
-class WorkflowStrings:
-    label_strings: dict[str, list[str]] = field(
-        default_factory=lambda: defaultdict(list)
-    )
-    value_strings: dict[str, dict[str, str]] = field(default_factory=dict)
+Strings = dict[str, dict[int, str]]
 
 
 # #####################################################################################
@@ -39,7 +33,7 @@ def read(args):
     raw_records = df.to_dict("records")
 
     # A hack to workaround coded values returned from Zooniverse
-    workflow_strings = get_workflow_strings(args.workflow_csv, args.workflow_id)
+    strings = get_workflow_strings(args.workflow_csv, args.workflow_id)
 
     table = Table()
     for raw_row in raw_records:
@@ -58,7 +52,7 @@ def read(args):
             )
 
         for task in json.loads(raw_row["annotations"]):
-            flatten_task(task, row, workflow_strings)
+            flatten_task(task, row, strings)
 
         extract_subject_data(raw_row, row)
         extract_metadata(raw_row, row)
@@ -71,7 +65,7 @@ def read(args):
 
 # ###################################################################################
 def flatten_task(
-        task: dict, row: Row, workflow_strings: WorkflowStrings, task_id: str = ""
+    task: dict, row: Row, strings: dict, task_id: str = ""
 ):
     """Extract task annotations from the json object in the annotations' column.
 
@@ -81,31 +75,40 @@ def flatten_task(
     task_id = task.get("task", task_id)
 
     match task:
+
         case {"value": [str(), *__], **___}:
             list_task(task, row, task_id)
+
         case {"value": list(), **__}:
-            subtask_task(task, row, workflow_strings, task_id)
+            subtask_task(task, row, strings, task_id)
+
         case {"select_label": _, **__}:
             select_label_task(task, row, task_id)
+
         case {"task_label": _, **__}:
             task_label_task(task, row, task_id)
+
         case {"tool_label": _, "width": __, **___}:
             box_task(task, row, task_id)
+
         case {"tool_label": _, "x1": __, **___}:
             length_task(task, row, task_id)
-        case {"tool_label": _, "x": __, **___}:
+
+        case {"tool_label": _, "toolType": "point", "x": __, "y": ___, **____}:
             point_task(task, row, task_id)
-        case {"tool_label": _, "details": __, **___}:
-            workflow_task(task, row, workflow_strings, task_id)
+
+        case {"task": _, "value": __, "taskType": ___, "markIndex": ____}:
+            mark_index_task(task, row, strings, task_id)
+
         case _:
             print(f"Annotation type not found: {task}")
 
 
-def subtask_task(task, row, workflow_strings, task_id):
+def subtask_task(task, row, strings, task_id):
     """Handle an annotation with subtasks."""
     task_id = task.get("task", task_id)
     for subtask in task["value"]:
-        flatten_task(subtask, row, workflow_strings, task_id)
+        flatten_task(subtask, row, strings, task_id)
 
 
 def list_task(task: dict, row: Row, task_id: str) -> None:
@@ -119,9 +122,15 @@ def select_label_task(task: dict, row: Row, task_id: str) -> None:
     row.add_field(task["select_label"], SelectField(value=value), task_id)
 
 
+def mark_index_task(task, row, strings, task_id) -> None:
+    value = strings[task["task"]][task["value"]]
+    index = task["markIndex"]
+    name = f'{task["taskType"]}_{index}'
+    row.add_field(name, MarkIndexField(value=value, index=index), task_id)
+
+
 def task_label_task(task: dict, row: Row, task_id: str) -> None:
     value = task.get("value", "")
-    value = value if value else ""
     row.add_field(task["task_label"], TextField(value=value), task_id)
 
 
@@ -152,62 +161,10 @@ def length_task(task: dict, row: Row, task_id: str) -> None:
 
 
 def point_task(task: dict, row: Row, task_id: str) -> None:
-    row.add_field(
-        task["tool_label"],
-        PointField(
-            x=round(task["x"]),
-            y=round(task["y"]),
-        ),
-        task_id,
-    )
-
-
-def workflow_task(
-        task: dict, row: Row, workflow_strings: WorkflowStrings, task_id: str
-) -> None:
-    """Get the value of a task from workflow data.
-
-    We are trying to match a coded value (UUID-like) with strings in the workflow
-    description.The field may be a text value or a (multi-)select value.
-    """
-    label = "unknown"
-
-    # Get all possible strings for the annotation
-    values = []
-    for key_, value in workflow_strings.label_strings.items():
-        if key_.startswith(task_id) and key_.endswith("details"):
-            values.append(value)
-    labels = values[-1] if values else []
-
-    # Loop thru the UUID values
-    for i, detail in enumerate(task["details"]):
-        outer_value = detail["value"]
-
-        # If it's a list then we have a (multi-)select value
-        if isinstance(outer_value, list):
-            values = []
-
-            for item in outer_value:
-                # We found the workflow string for the UUID
-                if item["value"] in workflow_strings.value_strings:
-                    value, label = workflow_strings.value_strings[item["value"]]
-                    values.append(value)
-
-                # Paranoia: Cannot find string in workflow
-                else:
-                    value = item["value"]
-                    label = item.get("label", "unknown")
-                    values.append(value)
-
-            value = ",".join(v for v in values if v)
-            label = f"{task['tool_label']}.{label}".strip()
-            row.add_field(label, TextField(value=value), task_id)
-
-        # It's a single text value
-        else:
-            label = labels[i] if i < len(labels) else "unknown"
-            label = f"{task['tool_label']}.{label}".strip()
-            row.add_field(label, TextField(value=outer_value), task_id)
+    field = PointField(x=round(task["x"]), y=round(task["y"]))
+    label = task.get("tool_label", task.get("toolType"))
+    label = label if label else task["toolType"]
+    row.add_field(label, field, task_id)
 
 
 # #############################################################################
@@ -280,49 +237,24 @@ def get_workflow_name(args, df):
     return workflow_name
 
 
-def get_workflow_strings(workflow_csv, workflow_id):
+def get_workflow_strings(workflow_csv, workflow_id) -> Strings:
     """Get strings from the workflow for when they're not in the annotations."""
-    value_strings = {}
     if not workflow_csv:
-        return value_strings
+        return {}
 
-    # Read the workflow
     df = pd.read_csv(workflow_csv)
     df = df.loc[df.workflow_id == int(workflow_id), :]
     workflow = df.iloc[-1]  # Get the most recent version
 
-    strings = json.loads(workflow["strings"]).items()
+    strings = defaultdict(dict)
 
-    instructions = {}
-    label_strings = defaultdict(list)
-    for key, value in strings.items():
-        if key.endswith("instruction"):
-            parts = key.split(".")
-            key = ".".join(parts[:-1])
-            value = value.strip()
-            instructions[key] = value
-            key = ".".join(parts[:-2])
-            if key:
-                label_strings[key].append(value)
+    # TODO Moar formats
+    for key, value in json.loads(workflow["strings"]).items():
+        parts = key.split(".")
 
-    # Recursively go thru the workflow strings
-    def _task_dive(node):
-        match node:
-            case {"value": val, "label": label, **___}:
-                if string := strings.get(label):
-                    string = string.strip()
-                    label = label.strip()
-                    labels = [v for k, v in instructions.items() if label.startswith(k)]
-                    label = labels[-1] if labels else ""
-                    value_strings[val] = {string: label}
-            case dict():
-                for child in node.values():
-                    _task_dive(child)
-            case list():
-                for child in node:
-                    _task_dive(child)
+        match parts:
 
-    annos = json.loads(workflow["tasks"])
-    _task_dive(annos)
+            case [_, "tools", __, "details", ___, "answers", *____]:
+                strings[f"{parts[0]}.{parts[2]}.{parts[4]}"][int(parts[6])] = value
 
-    return WorkflowStrings(label_strings=label_strings, value_strings=value_strings)
+    return strings

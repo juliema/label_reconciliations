@@ -5,8 +5,9 @@ from pylib.fields.base_field import BaseField, controlled_vocab
 
 
 @dataclass(kw_only=True)
-class SelectField(BaseField):
+class MarkIndexField(BaseField):
     value: str = ""
+    index: int = -1
 
     def to_unreconciled_dict(self) -> dict[str, Any]:
         return {self.name: self.value}

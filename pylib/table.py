@@ -3,18 +3,19 @@ import re
 import dataclasses
 from argparse import Namespace
 from itertools import groupby
+from typing import Any
 
 import pandas as pd
 
 from pylib import utils
 from pylib.flag import Flag
 from pylib.row import Row
-from pylib.fields.field_types import ALL_FIELDS, reconcilable_field
+from pylib.fields.field_types import reconcilable_field
 
 
 @dataclasses.dataclass
 class Table:
-    headers: dict[str, ALL_FIELDS] = dataclasses.field(default_factory=dict)
+    headers: dict[str, Any] = dataclasses.field(default_factory=dict)
     rows: list[Row] = dataclasses.field(default_factory=list)
     reconciled: bool = False
 

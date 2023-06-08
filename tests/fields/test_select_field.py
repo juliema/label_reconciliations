@@ -88,7 +88,7 @@ class TestSelectField(unittest.TestCase):
         self.assertEqual(
             SelectField.reconcile(group),
             SelectField(
-                note="No select match on 3 records with 1 blank",
+                note="No match on 3 records with 1 blank",
                 flag=Flag.NO_MATCH,
             ),
         )

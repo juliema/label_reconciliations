@@ -1,11 +1,10 @@
 import dataclasses
-
-from pylib.fields.field_types import ALL_FIELDS
+from typing import Any
 
 
 @dataclasses.dataclass
 class Row:
-    fields: dict[str, ALL_FIELDS] = dataclasses.field(default_factory=dict)
+    fields: dict[str, Any] = dataclasses.field(default_factory=dict)
 
     def __getitem__(self, key):
         return self.fields[key]
