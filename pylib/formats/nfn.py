@@ -125,7 +125,7 @@ def select_label_task(task: dict, row: Row, task_id: str) -> None:
 def mark_index_task(task, row, strings, task_id) -> None:
     value = strings[task["task"]][task["value"]]
     index = task["markIndex"]
-    name = f'{task["taskType"]}_{index}'
+    name = f'{task["taskType"]}_{index + 1}'
     row.add_field(name, MarkIndexField(value=value, index=index), task_id)
 
 
