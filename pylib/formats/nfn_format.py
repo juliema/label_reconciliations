@@ -7,6 +7,7 @@ from dateutil.parser import parse
 
 from pylib import utils
 from pylib.fields.box_field import BoxField
+from pylib.fields.highlighter_field import Highlight, HighlighterField
 from pylib.fields.length_field import LengthField
 from pylib.fields.mark_index_field import MarkIndexField
 from pylib.fields.noop_field import NoOpField
@@ -58,7 +59,7 @@ def read(args):
         extract_metadata(raw_row, row)
         extract_misc_data(raw_row, row)
 
-        table.append_row(row)
+        table.rows.append(row)
 
     return table
 
@@ -78,6 +79,9 @@ def flatten_task(
 
         case {"value": [str(), *__], **___}:
             list_task(task, row, task_id)
+
+        case {"value": list(), "taskType": "highlighter", **__}:
+            highlighter_task(task, row, task_id)
 
         case {"value": list(), **__}:
             subtask_task(task, row, strings, task_id)
@@ -165,6 +169,19 @@ def point_task(task: dict, row: Row, task_id: str) -> None:
     label = task.get("tool_label", task.get("toolType"))
     label = label if label else task["toolType"]
     row.add_field(label, field, task_id)
+
+
+def highlighter_task(task, row, task_id):
+    values = []
+    for val in task["value"]:
+        info = val["labelInformation"]
+        text = val["text"]
+        start = val["start"]
+        end = val["end"] + 1
+        values.append(Highlight.fixup(
+            text=text, label=info["label"], start=start, end=end)
+        )
+    row.add_field(task["taskType"], HighlighterField(highlights=values), task_id)
 
 
 # #############################################################################

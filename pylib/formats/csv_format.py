@@ -1,8 +1,8 @@
 import pandas as pd
 
-from . import common
+from . import common_format
 
 
 def read(args):
     df = pd.read_csv(args.input_file, dtype=str)
-    return common.read_table(args, df)
+    return common_format.read_table(args, df)

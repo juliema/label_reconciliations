@@ -1,7 +1,8 @@
 from dataclasses import dataclass
 from typing import Any
 
-from pylib.fields.base_field import BaseField, controlled_vocab
+from pylib.fields.base_field import BaseField
+from pylib.fields.controlled_vocab import controlled_vocab
 
 
 @dataclass(kw_only=True)

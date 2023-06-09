@@ -113,6 +113,6 @@ def read_table(args, df):
                     value = value if value else ""
                     row.add_field(name, TextField(value=value))
 
-        table.append_row(row)
+        table.rows.append(row)
 
     return table

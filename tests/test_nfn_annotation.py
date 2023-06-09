@@ -1,7 +1,7 @@
 import unittest
 
 from pylib.fields.text_field import TextField
-from pylib.formats import nfn
+from pylib.formats import nfn_format
 from pylib.flag import Flag
 from pylib.row import Row
 
@@ -28,5 +28,5 @@ class TestFlattenAnnotation(unittest.TestCase):
             )
         )
         actual = Row()
-        nfn.flatten_task(anno, actual, {}, {})
+        nfn_format.flatten_task(anno, actual, {}, {})
         self.assertEqual(actual, expect)

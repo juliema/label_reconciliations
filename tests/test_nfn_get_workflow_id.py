@@ -4,7 +4,7 @@ from unittest.mock import patch
 
 import pandas as pd
 
-from pylib.formats import nfn
+from pylib.formats import nfn_format
 
 
 class TestGetWorkflowId(unittest.TestCase):
@@ -20,7 +20,7 @@ class TestGetWorkflowId(unittest.TestCase):
         _, df2 = self.setup_dataframes()
         args = Namespace(workflow_id="1001")
 
-        workflow_id = nfn.get_workflow_id(args, df2)
+        workflow_id = nfn_format.get_workflow_id(args, df2)
 
         assert workflow_id == "1001"
 
@@ -29,7 +29,7 @@ class TestGetWorkflowId(unittest.TestCase):
         df1, _ = self.setup_dataframes()
         args = Namespace(workflow_id=None)
 
-        workflow_id = nfn.get_workflow_id(args, df1)
+        workflow_id = nfn_format.get_workflow_id(args, df1)
 
         assert workflow_id == "1001"
 
@@ -39,7 +39,7 @@ class TestGetWorkflowId(unittest.TestCase):
         _, df2 = self.setup_dataframes()
         args = Namespace(workflow_id=None)
 
-        nfn.get_workflow_id(args, df2)
+        nfn_format.get_workflow_id(args, df2)
 
         error_exit.assert_called_once_with(
             "There are multiple workflows in this file. "

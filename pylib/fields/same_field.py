@@ -8,6 +8,7 @@ from pylib.flag import Flag
 @dataclass(kw_only=True)
 class SameField(BaseField):
     value: str = ""
+    reconcilable: bool = False
 
     def to_unreconciled_dict(self) -> dict[str, Any]:
         return {self.name: self.value}

@@ -7,10 +7,8 @@ from typing import Any
 
 import pandas as pd
 
-from pylib import utils
 from pylib.flag import Flag
 from pylib.row import Row
-from pylib.fields.field_types import reconcilable_field
 
 
 @dataclasses.dataclass
@@ -22,27 +20,15 @@ class Table:
     def __len__(self) -> int:
         return len(self.rows)
 
-    def append_row(self, row: Row) -> None:
-        for name, field in row.fields.items():
-            if name not in self.headers:
-                self.headers[name] = field
-            else:
-                old_type = type(self.headers[name])
-                if not isinstance(field, old_type):
-                    utils.error_exit(
-                        f"Field type {name} changed from {old_type} to {type(field)}"
-                    )
-        self.rows.append(row)
-
     def to_csv(self, args: Namespace, path, add_note=False) -> None:
         df = self.to_df(args, add_note)
         df.to_csv(path, index=False)
 
     def to_df(self, args: Namespace, add_note=False) -> pd.DataFrame:
         records = self.to_records(add_note)
-        self.headers = self.sort_headers(args)
         df = pd.DataFrame(records)
         df = df[self.get_all_headers(df)]
+        headers = self.sort_headers(args)
         return df
 
     def to_records(self, add_note=False) -> list[dict]:
@@ -60,7 +46,7 @@ class Table:
     def reconcile(self, args) -> "Table":
         rows = sorted(self.rows, key=lambda r: r[args.group_by].value)
         groups = groupby(rows, key=lambda r: r[args.group_by].value)
-        reconciled = Table(reconciled=True)
+        table = Table(reconciled=True)
 
         for _, row_group in groups:
             row = Row()
@@ -75,18 +61,22 @@ class Table:
                 if all(f.is_padding for f in field_group):
                     n = len(row_group)
                     field = cls(note=f"All {n} records are blank", flag=Flag.ALL_BLANK)
+                    row.add_field(header, field)
                 else:
                     field = cls.reconcile(field_group, args)
-
-                row.add_field(header, field)
+                    if isinstance(field, list):
+                        for fld in field:
+                            row.add_field(header, fld)
+                    else:
+                        row.add_field(header, field)
 
             # This loop tweaks a row for fields that depend on each other
             for field in self.headers.values():
                 field.reconcile_row(row, args)
 
-            reconciled.append_row(row)
+            table.rows.append(row)
 
-        return reconciled
+        return table
 
     def sort_headers(self, args):
         """A hack to workaround Zooniverse random-ish column ordering."""
@@ -126,7 +116,7 @@ class Table:
         for row in self.rows:
             exp_row = {args.group_by: row[args.group_by].value}
             for header, field in row.fields.items():
-                if reconcilable_field(field):
+                if field.reconcilable:
                     exp_dict = field.to_reconciled_dict()
                     for i, key in enumerate(exp_dict.keys()):
                         exp_row[key] = {
