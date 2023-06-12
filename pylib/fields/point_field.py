@@ -23,16 +23,13 @@ class PointField(BaseField):
         return self.add_note(as_dict, add_note)
 
     @classmethod
-    def reconcile(cls, group, _=None):
-        count = len(group)
-        use = [g for g in group if not g.is_padding]
-
+    def reconcile(cls, group, row_count, _=None):
         note = (
-            f'There {P("is", len(use))} {len(use)} of {count}'
-            f'point {P("record", count)}'
+            f'There {P("is", len(group))} {len(group)} of {row_count}'
+            f'point {P("record", row_count)}'
         )
 
-        x = round(stats.mean([ln.x for ln in use]))
-        y = round(stats.mean([ln.y for ln in use]))
+        x = round(stats.mean([ln.x for ln in group]))
+        y = round(stats.mean([ln.y for ln in group]))
 
         return cls(note=note, x=x, y=y, flag=Flag.OK)

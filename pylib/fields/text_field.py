@@ -31,86 +31,87 @@ class TextField(BaseField):
         return self.add_note(as_dict, add_note)
 
     @classmethod
-    def reconcile(cls, group, args=None):
+    def reconcile(cls, group, row_count, args=None):
         strings = [" ".join(f.value.split()) if f.value else "" for f in group]
-        count = len(strings)
 
         # Look for exact matches
         exact = exact_matches(strings)
-        blanks = count - sum(f.count for f in exact)
+        blanks = row_count - sum(f.count for f in exact)
 
         match exact:
 
             # No matches
             case []:
                 note = (
-                    f"{P('The', count)} {count} {P('record', count)} "
-                    f"{P('is', count)} blank"
+                    f"{P('The', row_count)} {row_count} {P('record', row_count)} "
+                    f"{P('is', row_count)} blank"
                 )
                 return cls(note=note, flag=Flag.ALL_BLANK)
 
             # Only one selected
             case [e0] if e0.count == 1:
-                note = f"Only 1 transcript in {count} {P('record', count)}"
+                note = f"Only 1 transcript in {row_count} {P('record', row_count)}"
                 return cls(note=note, value=e0.string, flag=Flag.ONLY_ONE)
 
             # Everyone chose the same value
-            case [e0] if e0.count == count and e0.count > 1:
+            case [e0] if e0.count == row_count and e0.count > 1:
                 note = (
-                    f"Exact unanimous match, {e0.count} of {count} {P('record', count)}"
+                    f"Exact unanimous match, {e0.count} of {row_count} "
+                    f"{P('record', row_count)}"
                 )
                 return cls(note=note, value=e0.string, flag=Flag.UNANIMOUS)
 
             # It was a tie for the text chosen
             case [e0, e1, *_] if e0.count > 1 and e0.count == e1.count:
                 note = (
-                    f"Exact match is a tie, {e0.count} of {count} {P('record', count)} "
-                    f"with {blanks} {P('blank', blanks)}"
+                    f"Exact match is a tie, {e0.count} of {row_count} "
+                    f"{P('record', row_count)} with {blanks} {P('blank', blanks)}"
                 )
                 return cls(note=note, value=e0.string, flag=Flag.MAJORITY)
 
             # We have a winner
             case [e0, *_] if e0.count > 1:
                 note = (
-                    f"Exact match, {e0.count} of {count} {P('record', count)} with "
-                    f"{blanks} {P('blank', blanks)}"
+                    f"Exact match, {e0.count} of {row_count} "
+                    f"{P('record', row_count)} with {blanks} {P('blank', blanks)}"
                 )
                 return cls(note=note, value=e0.string, flag=Flag.MAJORITY)
 
         # Look for normalized exact matches
         norm = normalized_exact_matches(strings)
-        blanks = count - sum(f.count for f in norm)
+        blanks = row_count - sum(f.count for f in norm)
 
         match norm:
 
             # No matches
             case []:
                 note = (
-                    f"{P('The', count)} {count} normalized {P('record', count)} "
-                    f"{P('is', count)} blank"
+                    f"{P('The', row_count)} {row_count} normalized "
+                    f"{P('record', row_count)} {P('is', row_count)} blank"
                 )
                 return cls(note=note, flag=Flag.NO_MATCH)
 
             # Everyone chose the same value
-            case [n0] if n0.count == count and n0.count > 1:
+            case [n0] if n0.count == row_count and n0.count > 1:
                 note = (
-                    f"Normalized unanimous match, {n0.count} of {count} "
-                    f"{P('record', count)}"
+                    f"Normalized unanimous match, {n0.count} of {row_count} "
+                    f"{P('record', row_count)}"
                 )
                 return cls(note=note, value=n0.string, flag=Flag.UNANIMOUS)
 
             # The winners are a tie
             case [n0, n1, *_] if n0.count > 1 and n0.count == n1.count:
                 note = (
-                    f"Normalized match is a tie, {n0.count} of {count} "
-                    f"{P('record', count)} with {blanks} {P('blank', blanks)}"
+                    f"Normalized match is a tie, {n0.count} of {row_count} "
+                    f"{P('record', row_count)} with {blanks} {P('blank', blanks)}"
                 )
                 return cls(note=note, value=n0.string, flag=Flag.MAJORITY)
 
             # We have a winner
             case [n0, *_] if n0.count > 1:
                 note = (
-                    f"Normalized match, {n0.count} of {count} {P('record', count)} "
+                    f"Normalized match, {n0.count} of {row_count} "
+                    f"{P('record', row_count)} "
                     f"with {blanks} {P('blank', blanks)}"
                 )
                 return cls(note=note, value=n0.string, flag=Flag.MAJORITY)
@@ -119,7 +120,8 @@ class TextField(BaseField):
         top = top_partial_ratio(strings)
         if top and top.score >= args.fuzzy_ratio_threshold:
             note = (
-                f"Partial ratio match on {count} {P('record', count)} with {blanks} "
+                f"Partial ratio match on {row_count} "
+                f"{P('record', row_count)} with {blanks} "
                 f"{P('blank', blanks)}, score={top.score}"
             )
             return cls(note=note, value=top.value, flag=Flag.FUZZY)
@@ -128,14 +130,15 @@ class TextField(BaseField):
         top = top_token_set_ratio(strings)
         if top.score >= args.fuzzy_set_threshold:
             note = (
-                f"Token set ratio match on {count} {P('record', count)} with {blanks} "
+                f"Token set ratio match on {row_count} "
+                f"{P('record', row_count)} with {blanks} "
                 f"{P('blank', blanks)}, score={top.score}"
             )
             return cls(note=note, value=top.value, flag=Flag.FUZZY)
 
         # Nothing matches
         note = (
-            f"No text match on {count} {P('record', count)} with {blanks} "
+            f"No text match on {row_count} {P('record', row_count)} with {blanks} "
             f"{P('blank', blanks)}"
         )
         return cls(note=note, flag=Flag.NO_MATCH)

@@ -20,8 +20,8 @@ class SameField(BaseField):
         return as_dict
 
     @classmethod
-    def reconcile(cls, group, _=None):
-        use = [g for g in group if not g.is_padding]
+    def reconcile(cls, group, row_count, _=None):
+        use = [g for g in group if g is not None]
 
         if all(g.value == group[0].value for g in use):
             value = group[0].value

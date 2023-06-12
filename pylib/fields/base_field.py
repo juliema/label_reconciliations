@@ -11,7 +11,6 @@ class BaseField:
     name: str = ""
     note: str = ""
     flag: Flag = Flag.NO_FLAG
-    is_padding: bool = False
     reconcilable: bool = True
 
     def header(self, attr: str) -> str:
@@ -29,17 +28,9 @@ class BaseField:
         return as_dict
 
     @classmethod
-    def reconcile(cls, group, args=None):
+    def reconcile(cls, group, row_count, args=None):
         raise NotImplementedError()
-
-    @classmethod
-    def pad_group(cls, group, length):
-        while len(group) < length:
-            group.append(cls(is_padding=True))
-        return group
 
     @staticmethod
     def reconcile_row(reconciled_row, args=None):
         return
-
-

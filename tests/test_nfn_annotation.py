@@ -23,7 +23,6 @@ class TestFlattenAnnotation(unittest.TestCase):
                 name="T1_1 testing",
                 note="",
                 flag=Flag.NO_FLAG,
-                is_padding=False,
                 value="val1 val2",
             )
         )

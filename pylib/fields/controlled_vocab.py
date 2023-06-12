@@ -6,37 +6,29 @@ from pylib.utils import P
 PLACEHOLDERS = ["placeholder"]
 
 
-def controlled_vocab(cls, group):
-    values = [
-        f.value
-        if f.value and f.value.lower() not in PLACEHOLDERS else ""
-        for f in group
-    ]
+def controlled_vocab(cls, group, row_count):
+    filled = [f.value for f in group if f.value.lower not in PLACEHOLDERS]
+    blanks = row_count - len(filled)
 
-    filled = Counter([v for v in values if v.strip()]).most_common()
-
-    count = len(values)
-    blanks = count - sum(f[1] for f in filled)
-
-    match filled:
+    match Counter([v for v in filled]).most_common():
 
         # Nobody chose a value
         case []:
             note = (
-                f"{P('The', count)} {count} {P('record', count)} "
-                f"{P('is', count)} blank"
+                f"{P('The', row_count)} {row_count} {P('record', row_count)} "
+                f"{P('is', row_count)} blank"
             )
             return cls(note=note, flag=Flag.ALL_BLANK)
 
         # Everyone chose the same value
-        case [f0] if f0[1] > 1 and f0[1] == count:
-            note = f"Unanimous match, {f0[1]} of {count} {P('record', count)}"
+        case [f0] if f0[1] > 1 and f0[1] == row_count:
+            note = f"Unanimous match, {f0[1]} of {row_count} {P('record', row_count)}"
             return cls(note=note, value=f0[0], flag=Flag.UNANIMOUS)
 
         # It was a tie for the values chosen
         case [f0, f1, *_] if f0[1] > 1 and f0[1] == f1[1]:
             note = (
-                f"Match is a tie, {f0[1]} of {count} {P('record', count)} with "
+                f"Match is a tie, {f0[1]} of {row_count} {P('record', row_count)} with "
                 f"{blanks} {P('blank', blanks)}"
             )
             return cls(note=note, value=f0[0], flag=Flag.MAJORITY)
@@ -44,20 +36,20 @@ def controlled_vocab(cls, group):
         # We have a winner
         case [f0, *_] if f0[1] > 1:
             note = (
-                f"Match {f0[1]} of {count} {P('record', count)} with {blanks} "
+                f"Match {f0[1]} of {row_count} {P('record', row_count)} with {blanks} "
                 f"{P('blank', blanks)}"
             )
             return cls(note=note, value=f0[0], flag=Flag.MAJORITY)
 
         # Only one person chose a value
         case [f0] if f0[1] == 1:
-            note = f"Only 1 transcript in {count} {P('record', count)}"
+            note = f"Only 1 transcript in {row_count} {P('record', row_count)}"
             return cls(note=note, value=f0[0], flag=Flag.ONLY_ONE)
 
         # Everyone picked a different value
         case _:
             note = (
-                f"No match on {count} {P('record', count)} with {blanks} "
+                f"No match on {row_count} {P('record', row_count)} with {blanks} "
                 f"{P('blank', blanks)}"
             )
             return cls(note=note, flag=Flag.NO_MATCH)

@@ -43,23 +43,20 @@ class LengthField(BaseField):
         return self.add_note(as_dict, add_note)
 
     @classmethod
-    def reconcile(cls, group, _=None):
-        count = len(group)
-        use = [g for g in group if not g.is_padding]
-
+    def reconcile(cls, group, row_count, _=None):
         note = (
-            f'There {P("is", len(use))} {len(use)} of {count} '
-            f'length {P("record", count)}'
+            f'There {P("is", len(group))} {len(group)} of {row_count} '
+            f'length {P("record", row_count)}'
         )
 
-        x1 = round(stats.mean([ln.x1 for ln in use]))
-        y1 = round(stats.mean([ln.y1 for ln in use]))
-        x2 = round(stats.mean([ln.x2 for ln in use]))
-        y2 = round(stats.mean([ln.y2 for ln in use]))
+        x1 = round(stats.mean([ln.x1 for ln in group]))
+        y1 = round(stats.mean([ln.y1 for ln in group]))
+        x2 = round(stats.mean([ln.x2 for ln in group]))
+        y2 = round(stats.mean([ln.y2 for ln in group]))
 
         pix_len = round(math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2), 2)
 
-        if match := SCALE_RE.search(use[0].name):
+        if match := SCALE_RE.search(group[0].name):
             units = match.group("units")
             factor = float(match.group("scale")) / pix_len
             is_scale = True

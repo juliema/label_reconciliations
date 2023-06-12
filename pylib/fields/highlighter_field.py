@@ -7,6 +7,8 @@ from pylib.fields.base_field import BaseField
 from pylib.flag import Flag
 from pylib.utils import P
 
+SKIPS = "start end label".split()
+
 
 @dataclass(order=True)
 class Highlight:
@@ -43,28 +45,18 @@ class HighlighterField(BaseField):
         return {self.header("highlights"): values}
 
     def to_reconciled_dict(self, add_note=False) -> dict[str, Any]:
-        highlight = asdict(self.highlights[0]) if self.highlights else {}
-        return self.add_note(highlight, add_note)
+        raw = asdict(self.highlights[0]) if self.highlights else {}
+        out = {f"{self.name}: {k}": v for k, v in raw.items() if k not in SKIPS}
+        return self.add_note(out, add_note)
 
     def rename(self, old):
         return "_".join([old, self.highlights[0].label]) if self.highlights else old
 
     @classmethod
-    def reconcile(cls, group, _=None):
-        use = [g for g in group if not g.is_padding]
-
-        # Handle when there are no highlights
-        if not use:
-            count = len(use)
-            note = (
-                f"{P('The', count)} {count} {P('record', count)} "
-                f"{P('is', count)} blank"
-            )
-            return cls(note=note, flag=Flag.ALL_BLANK)
-
+    def reconcile(cls, group, row_count, _=None):
         fields: list[HighlighterField] = []
 
-        by_label = HighlighterField.get_by_labels(use)
+        by_label = HighlighterField.get_by_labels(group)
 
         for label, highlights in by_label.items():
             count = len(highlights)
@@ -76,7 +68,9 @@ class HighlighterField(BaseField):
                     start, end, text, label = c0[0]
                     note = f"Only 1 highlight in {count} {P('record', count)}"
                     lit = Highlight(start=start, end=end, text=text, label=label)
-                    fields.append(cls(note=note, highlights=[lit], flag=Flag.ONLY_ONE))
+                    fields.append(
+                        cls(name=label, note=note, highlights=[lit], flag=Flag.ONLY_ONE)
+                    )
 
                 # Everyone chose the same value
                 case [c0] if c0[1] == count and c0[1] > 1:
@@ -86,7 +80,9 @@ class HighlighterField(BaseField):
                         f"{P('record', count)}"
                     )
                     lit = Highlight(start=start, end=end, text=text, label=label)
-                    fields.append(cls(note=note, highlights=[lit], flag=Flag.UNANIMOUS))
+                    fields.append(
+                        cls(name=label, note=note, highlights=[lit], flag=Flag.UNANIMOUS)
+                    )
 
                 # It was a tie for the text chosen
                 case [c0, c1, *_] if c0[1] > 1 and c0[1] == c1[1]:
@@ -95,21 +91,27 @@ class HighlighterField(BaseField):
                         f"Exact match is a tie, {c0[1]} of {count} {P('record', count)}"
                     )
                     lit = Highlight(start=start, end=end, text=text, label=label)
-                    fields.append(cls(note=note, highlights=[lit], flag=Flag.MAJORITY))
+                    fields.append(
+                        cls(name=label, note=note, highlights=[lit], flag=Flag.MAJORITY)
+                    )
 
                 # We have a winner
                 case [c0, *_] if c0[1] > 1:
                     start, end, text, label = c0[0]
                     note = f"Exact match, {c0[1]} of {count} {P('record', count)}"
                     lit = Highlight(start=start, end=end, text=text, label=label)
-                    fields.append(cls(note=note, highlights=[lit], flag=Flag.MAJORITY))
+                    fields.append(
+                        cls(name=label, note=note, highlights=[lit], flag=Flag.MAJORITY)
+                    )
 
                 # They're all different
                 case [c0, *_] if c0[1] == 1:
                     start, end, text, label = c0[0]
                     note = f"No text match on {count} {P('record', count)}"
                     lit = Highlight(start=start, end=end, text=text, label=label)
-                    fields.append(cls(note=note, highlights=[lit], flag=Flag.MAJORITY))
+                    fields.append(
+                        cls(name=label, note=note, highlights=[lit], flag=Flag.NO_MATCH)
+                    )
 
                 case _:
                     sys.exit(f"Unknown count pattern {highlights}")

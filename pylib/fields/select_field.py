@@ -17,5 +17,5 @@ class SelectField(BaseField):
         return self.add_note(as_dict, add_note)
 
     @classmethod
-    def reconcile(cls, group, _=None):
-        return controlled_vocab(cls, group)
+    def reconcile(cls, group, row_count, _=None):
+        return controlled_vocab(cls, group, row_count)

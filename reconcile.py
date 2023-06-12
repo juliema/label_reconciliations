@@ -11,7 +11,7 @@ from pylib import utils
 from pylib.table import Table
 
 
-VERSION = "0.6.6"
+VERSION = "0.7.0"
 
 
 def parse_args() -> argparse.Namespace:
@@ -174,6 +174,7 @@ def parse_args() -> argparse.Namespace:
     setattr(args, "row_key", "classification_id")
     setattr(args, "user_column", "user_name")
     setattr(args, "max_transcriptions", 50)
+    setattr(args, "format", f"{args.format}_format")
 
     if args.fuzzy_ratio_threshold < 0 or args.fuzzy_ratio_threshold > 100:
         utils.error_exit("--fuzzy-ratio-threshold must be between 0 and 100.")

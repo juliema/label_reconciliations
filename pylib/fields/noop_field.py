@@ -16,5 +16,5 @@ class NoOpField(BaseField):
         return {}
 
     @classmethod
-    def reconcile(cls, group, args=None):
+    def reconcile(cls, group, row_count, args=None):
         return cls()

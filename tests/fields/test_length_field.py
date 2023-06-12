@@ -37,7 +37,6 @@ class TestLengthField(unittest.TestCase):
         expect = LengthField(
             note="There are 3 of 3 length records",
             flag=Flag.OK,
-            is_padding=False,
             x1=10,
             y1=40,
             x2=40,

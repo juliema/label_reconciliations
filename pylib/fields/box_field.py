@@ -27,11 +27,10 @@ class BoxField(BaseField):
         return self.add_note(as_dict, add_note)
 
     @classmethod
-    def reconcile(cls, group, _=None):
-        count = len(group)
-        use = [g for g in group if not g.is_padding]
+    def reconcile(cls, group, row_count, _=None):
+        use = [g for g in group if g is not None]
 
-        note = f"There {P('is', count)} {count} box {P('record', count)}"
+        note = f"There {P('is', row_count)} {row_count} box {P('record', row_count)}"
 
         return cls(
             note=note,

@@ -18,7 +18,6 @@ from pylib.fields.text_field import TextField
 from pylib.row import Row
 from pylib.table import Table
 
-
 Strings = dict[str, dict[int, str]]
 
 

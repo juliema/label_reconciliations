@@ -1,16 +1,16 @@
 import json
 import warnings
 
-from .. import utils
-from ..fields.box_field import BoxField
-from ..fields.length_field import LengthField
-from ..fields.noop_field import NoOpField
-from ..fields.point_field import PointField
-from ..fields.same_field import SameField
-from ..fields.select_field import SelectField
-from ..fields.text_field import TextField
-from ..row import Row
-from ..table import Table
+from pylib import utils
+from pylib.fields.box_field import BoxField
+from pylib.fields.length_field import LengthField
+from pylib.fields.noop_field import NoOpField
+from pylib.fields.point_field import PointField
+from pylib.fields.same_field import SameField
+from pylib.fields.select_field import SelectField
+from pylib.fields.text_field import TextField
+from pylib.row import Row
+from pylib.table import Table
 
 
 def validate_columns(args, df):
