@@ -1,6 +1,8 @@
+import re
 import sys
 from collections import defaultdict, Counter
 from dataclasses import dataclass, field, asdict, astuple
+from itertools import groupby
 from typing import Any
 
 from pylib.fields.base_field import BaseField
@@ -56,9 +58,9 @@ class HighlighterField(BaseField):
     def reconcile(cls, group, row_count, _=None):
         fields: list[HighlighterField] = []
 
-        by_label = HighlighterField.get_by_labels(group)
+        aligned = HighlighterField.align_json_fields(group)
 
-        for label, highlights in by_label.items():
+        for suffix, highlights in aligned:
             count = len(highlights)
 
             match Counter([astuple(h) for h in highlights]).most_common():
@@ -66,6 +68,7 @@ class HighlighterField(BaseField):
                 # Only one selected
                 case [c0] if c0[1] == 1:
                     start, end, text, label = c0[0]
+                    label = f"{label}_{suffix}"
                     note = f"Only 1 highlight in {count} {P('record', count)}"
                     lit = Highlight(start=start, end=end, text=text, label=label)
                     fields.append(
@@ -75,18 +78,25 @@ class HighlighterField(BaseField):
                 # Everyone chose the same value
                 case [c0] if c0[1] == count and c0[1] > 1:
                     start, end, text, label = c0[0]
+                    label = f"{label}_{suffix}"
                     note = (
                         f"Exact unanimous match, {c0[1]} of {count} "
                         f"{P('record', count)}"
                     )
                     lit = Highlight(start=start, end=end, text=text, label=label)
                     fields.append(
-                        cls(name=label, note=note, highlights=[lit], flag=Flag.UNANIMOUS)
+                        cls(
+                            name=label,
+                            note=note,
+                            highlights=[lit],
+                            flag=Flag.UNANIMOUS,
+                        )
                     )
 
                 # It was a tie for the text chosen
                 case [c0, c1, *_] if c0[1] > 1 and c0[1] == c1[1]:
                     start, end, text, label = c0[0]
+                    label = f"{label}_{suffix}"
                     note = (
                         f"Exact match is a tie, {c0[1]} of {count} {P('record', count)}"
                     )
@@ -98,6 +108,7 @@ class HighlighterField(BaseField):
                 # We have a winner
                 case [c0, *_] if c0[1] > 1:
                     start, end, text, label = c0[0]
+                    label = f"{label}_{suffix}"
                     note = f"Exact match, {c0[1]} of {count} {P('record', count)}"
                     lit = Highlight(start=start, end=end, text=text, label=label)
                     fields.append(
@@ -107,6 +118,7 @@ class HighlighterField(BaseField):
                 # They're all different
                 case [c0, *_] if c0[1] == 1:
                     start, end, text, label = c0[0]
+                    label = f"{label}_{suffix}"
                     note = f"No text match on {count} {P('record', count)}"
                     lit = Highlight(start=start, end=end, text=text, label=label)
                     fields.append(
@@ -114,18 +126,64 @@ class HighlighterField(BaseField):
                     )
 
                 case _:
-                    sys.exit(f"Unknown count pattern {highlights}")
+                    sys.exit(f"Unknown pattern {highlights}")
 
         return fields
 
     @staticmethod
-    def get_by_labels(use):
-        by_label = defaultdict(list)
+    def align_json_fields(group):
+        tie = defaultdict(int)
 
-        for highlights in use:
-            for lit in highlights.highlights:
-                by_label[lit.label].append(lit)
+        by_label = [(i, rec) for i, fld in enumerate(group) for rec in fld.highlights]
+        by_label = sorted(by_label, key=lambda h: (h[1].label, h[0], h[1].start))
+        by_label = groupby(by_label, key=lambda h: h[1].label)
 
-        by_label = {k: sorted(v) for k, v in by_label.items()}
+        aligned = []
 
-        return by_label
+        for label, label_hi in by_label:
+            label_hi = list(label_hi)
+
+            start = min(h[1].start for h in label_hi)
+            end = max(h[1].end for h in label_hi)
+
+            # Find where the highlights overlap
+            hits = bytearray(end - start)
+            for hi in label_hi:
+                for i in range(hi[1].start, hi[1].end):
+                    hits[i - start] = 1
+
+            # Get all contiguous matches
+            frags = [
+                (m.start() + start, m.end() + start)
+                for m in re.finditer(b"(\x01+)", hits)
+            ]
+
+            # Match highlights to the fragments
+            highlights = defaultdict(list)
+            for hi in label_hi:
+                for frag in frags:
+                    if frag[0] <= hi[1].start < frag[1]:
+                        key = label, frag[0], frag[1]
+                        highlights[key].append(hi)
+                        break
+
+            # Merge disjointed highlights
+            for key, highs in highlights.items():
+                joined = []
+                by_user = groupby(highs, key=lambda h: h[0])
+                for user, parts in by_user:
+                    parts = [p[1] for p in parts]
+                    if len(parts) == 1:
+                        joined.append(parts[0])
+                    else:
+                        joined.append(Highlight(
+                            start=min(p.start for p in parts),
+                            end=max(p.end for p in parts),
+                            text=" ".join(p.text for p in parts),
+                            label=label,
+                        ))
+
+                tie[label] += 1
+                aligned.append((f"{label}_{tie[label]}", joined))
+
+        return aligned
