@@ -32,5 +32,5 @@ class BaseField:
         raise NotImplementedError()
 
     @staticmethod
-    def reconcile_row(reconciled_row, args=None):
+    def adjust_reconciled(reconciled_row, args=None):
         return

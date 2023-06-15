@@ -1,4 +1,4 @@
-# Reconcile Notes from Nature Transcripts [![Build Status](https://travis-ci.org/juliema/label_reconciliations.svg?branch=master)](https://travis-ci.org/juliema/label_reconciliations)
+# Reconcile Notes from Nature Transcripts
 
 ## Installation
 

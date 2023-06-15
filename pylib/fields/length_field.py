@@ -79,7 +79,7 @@ class LengthField(BaseField):
         )
 
     @staticmethod
-    def reconcile_row(reconciled_row, args=None):
+    def adjust_reconciled(reconciled_row, args=None):
         """Calculate lengths using units and pixel_lengths."""
         ruler = LengthField.find_ruler(reconciled_row)
         if not ruler:

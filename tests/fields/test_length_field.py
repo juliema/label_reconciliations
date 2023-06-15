@@ -49,12 +49,12 @@ class TestLengthField(unittest.TestCase):
         actual = LengthField.reconcile(group)
         self.assertEqual(actual, expect)
 
-    def test_reconcile_row_01(self):
+    def test_adjust_reconciled_01(self):
         """It calculates length from ruler units & factor."""
         row = Row()
         row.add_field("nothing", NoOpField())
         row.add_field("Length", LengthField(pixel_length=200))
         row.add_field("Ruler", LengthField(factor=0.01, units="LY", is_scale=True))
-        LengthField.reconcile_row(row)
+        LengthField.adjust_reconciled(row)
         expect = LengthField(name="Length", pixel_length=200.0, length=2.0, units="LY")
         self.assertEqual(row["Length"], expect)

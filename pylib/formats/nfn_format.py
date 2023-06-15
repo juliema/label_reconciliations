@@ -7,11 +7,12 @@ from dateutil.parser import parse
 
 from pylib import utils
 from pylib.fields.box_field import BoxField
-from pylib.fields.highlighter_field import Highlight, HighlighterField
+from pylib.fields.highlighter_field import HighlightField
 from pylib.fields.length_field import LengthField
 from pylib.fields.mark_index_field import MarkIndexField
 from pylib.fields.noop_field import NoOpField
 from pylib.fields.point_field import PointField
+# from pylib.fields.polygon_field import PolygonField, PolygonPoint
 from pylib.fields.same_field import SameField
 from pylib.fields.select_field import SelectField
 from pylib.fields.text_field import TextField
@@ -52,7 +53,7 @@ def read(args):
             )
 
         for task in json.loads(raw_row["annotations"]):
-            flatten_task(task, row, strings)
+            flatten_task(task, row, strings, args)
 
         extract_subject_data(raw_row, row)
         extract_metadata(raw_row, row)
@@ -65,7 +66,7 @@ def read(args):
 
 # ###################################################################################
 def flatten_task(
-    task: dict, row: Row, strings: dict, task_id: str = ""
+    task: dict, row: Row, strings: dict, args, task_id: str = ""
 ):
     """Extract task annotations from the json object in the annotations' column.
 
@@ -79,11 +80,14 @@ def flatten_task(
         case {"value": [str(), *__], **___}:
             list_task(task, row, task_id)
 
+        # case {"value": [{"points": list(), **__}, *___], **____}:
+        #     polygon_task(task, row, task_id)
+
         case {"value": list(), "taskType": "highlighter", **__}:
-            highlighter_task(task, row, task_id)
+            highlighter_task(task, row, args, task_id)
 
         case {"value": list(), **__}:
-            subtask_task(task, row, strings, task_id)
+            subtask_task(task, row, strings, args, task_id)
 
         case {"select_label": _, **__}:
             select_label_task(task, row, task_id)
@@ -107,11 +111,11 @@ def flatten_task(
             print(f"Annotation type not found: {task}")
 
 
-def subtask_task(task, row, strings, task_id):
+def subtask_task(task, row, strings, args, task_id):
     """Handle an annotation with subtasks."""
     task_id = task.get("task", task_id)
     for subtask in task["value"]:
-        flatten_task(subtask, row, strings, task_id)
+        flatten_task(subtask, row, strings, args, task_id)
 
 
 def list_task(task: dict, row: Row, task_id: str) -> None:
@@ -170,17 +174,15 @@ def point_task(task: dict, row: Row, task_id: str) -> None:
     row.add_field(label, field, task_id)
 
 
-def highlighter_task(task, row, task_id):
-    values = []
-    for val in task["value"]:
-        info = val["labelInformation"]
-        text = val["text"]
-        start = val["start"]
-        end = val["end"] + 1
-        values.append(Highlight.fixup(
-            text=text, label=info["label"], start=start, end=end)
-        )
-    row.add_field(task["taskType"], HighlighterField(highlights=values), task_id)
+# def polygon_task(task: dict, row: Row, task_id: str) -> None:
+#     points = [PolygonPoint(x=p["x"], y=p["y"]) for p in task["value"]["points"]]
+#     row.add_field(task["task_label"], PolygonField(points=points), task_id)
+
+
+def highlighter_task(task, row, args, task_id):
+    fields = HighlightField.unreconciled_list(task["value"], args)
+    for field in fields:
+        row.add_field(task['taskType'], field, f"{task_id}_{field.label}")
 
 
 # #############################################################################

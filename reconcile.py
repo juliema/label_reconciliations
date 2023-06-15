@@ -113,6 +113,14 @@ def parse_args() -> argparse.Namespace:
     )
 
     parser.add_argument(
+        "--join-distance",
+        default=6,
+        type=int,
+        help="""When highlighted text are withing this distance join them into a
+            single text (default: %(default)s).""",
+    )
+
+    parser.add_argument(
         "--workflow-csv",
         default="",
         metavar="CSV",

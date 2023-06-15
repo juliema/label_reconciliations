@@ -102,7 +102,7 @@ class Table:
 
             # This loop tweaks a row for fields that depend on each other
             for field in self.headers.values():
-                field.reconcile_row(row, args)
+                field.adjust_reconciled(row, args)
 
             table.rows.append(row)
 
