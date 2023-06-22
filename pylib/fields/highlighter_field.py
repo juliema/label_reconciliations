@@ -15,7 +15,6 @@ class HighlightField(BaseField):
     end: int = -1
     text: str = ""
     label: str = ""
-    span: int = 0
 
     @property
     def name_group(self) -> str:
@@ -108,7 +107,7 @@ class HighlightField(BaseField):
             by_value = defaultdict(list)
             for hi in highlights:
                 by_value[(hi.text, hi.start, hi.end)].append(hi)
-            counters = sorted(by_value.values(), key=lambda highs: len(highs))
+            counters = sorted(by_value.values(), key=lambda highs: -len(highs))
 
             match counters:
 
@@ -118,7 +117,7 @@ class HighlightField(BaseField):
                         f"The {row_count} {P('record', row_count)} "
                         f"{P('is', row_count)} blank"
                     )
-                    return cls(note=note, flag=Flag.ALL_BLANK)
+                    fields.append(cls(note=note, flag=Flag.ALL_BLANK))
 
                 # Only one selected
                 case [c0] if len(c0) == 1:
@@ -157,7 +156,7 @@ class HighlightField(BaseField):
                 # They're all different
                 case [c0, *_] if len(c0) == 1:
                     note = (
-                        f"No match on {count} {P('record', count)} "
+                        f"No match on {row_count} {P('record', row_count)} "
                         f"with {blanks} {P('blank', blanks)}"
                     )
                     fields.append(replace(c0[0], flag=Flag.NO_MATCH, note=note))
@@ -189,31 +188,31 @@ class HighlightField(BaseField):
             for m in re.finditer(b"(\x01+)", hits)
         ]
 
-        # Match highlights to the fragments, merging when needed
         for i, (start, end) in enumerate(contigs, 1):
 
             for row in group:
                 parts: list[HighlightField] = [h for h in row if start <= h.start < end]
 
-                if parts:
+                if not parts:
+                    continue
 
-                    # Update unreconciled suffixes to match the reconciled span
-                    for j, part in enumerate(parts):
-                        part.suffix = i if j == 0 else float(f"{i}.{j}")
+                parts = sorted(parts, key=lambda p: p.start)
 
-                    # Add a reconciled record
-                    aligned[(start, end)].append(
-                        HighlightField(
-                            name=parts[0].name,
-                            task_id=parts[0].task_id,
-                            start=min(p.start for p in parts),
-                            end=max(p.end for p in parts),
-                            text=" ".join(p.text for p in parts),  # TODO when strings
-                            label=parts[0].label,
-                            field_set=parts[0].field_set,
-                            suffix=i,
-                            span=len(parts)
-                        )
+                # Update unreconciled suffixes to match the reconciled span
+                for j, part in enumerate(parts):
+                    part.suffix = i if j == 0 else float(f"{i}.{j}")
+
+                # Add a reconciled record, one for each set of parts
+                high = HighlightField(
+                        name=parts[0].name,
+                        task_id=parts[0].task_id,
+                        start=min(p.start for p in parts),
+                        end=max(p.end for p in parts),
+                        text=" ".join(p.text for p in parts),  # TODO when strings
+                        label=parts[0].label,
+                        field_set=parts[0].field_set,
+                        suffix=i,
                     )
+                aligned[(start, end)].append(high)
 
         return aligned

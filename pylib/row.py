@@ -22,21 +22,35 @@ AnyField = Union[NoOpField, SameField, TaskField]
 
 @dataclass
 class Row:
-    counts: dict[str, int] = field_default(default_factory=lambda : defaultdict(int))
-    fields: dict[str, AnyField] = field_default(default_factory=dict)
+    # Yes, a list and not a dict because we're renaming things etc.
+    fields: list[AnyField] = field_default(default_factory=list)
+
+    def __getitem__(self, key):
+        return next(f for f in self.fields if f.field_name == key)
 
     def append(self, field: AnyField):
-        self.counts[field.name_group] += 1
-        field.suffix = self.counts[field.name_group]
-        self.fields[field.field_name] = field
+        self.fields.append(field)
+
+    @property
+    def tasks(self):
+        return [f for f in self.fields if isinstance(f, TaskField)]
 
     def to_dict(self, add_note=False, reconciled=False) -> dict[str, Any]:
+        suffixes = defaultdict(int)
+
         row_dict = {}
 
-        for field_name, field in self.fields.items():
+        for field in self.fields:
+
+            if isinstance(field, TaskField):
+                suffixes[field.name_group] += 1
+                field.suffix = suffixes[field.name_group]
+
             field_dict = field.to_dict(reconciled)
+
             if add_note:
-                field.add_note(field_dict)
+                field.decorate_dict(field_dict)
+
             row_dict |= field_dict
 
         return row_dict

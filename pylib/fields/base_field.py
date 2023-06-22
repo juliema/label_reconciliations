@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any, Union
 from pylib.flag import Flag
 
@@ -36,3 +36,9 @@ class BaseField:
         if add_note:
             field_dict[self.header("Explanation")] = self.note
         return field_dict
+
+    @classmethod
+    def copy(cls, group, **kwargs):
+        src = group[0] if group else cls()
+        dst = replace(src, **kwargs)
+        return dst

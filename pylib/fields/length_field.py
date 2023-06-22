@@ -65,7 +65,8 @@ class LengthField(BaseField):
             factor = 0.0
             is_scale = False
 
-        return cls(
+        return cls.copy(
+            group,
             note=note,
             flag=Flag.OK,
             x1=x1,
@@ -88,7 +89,7 @@ class LengthField(BaseField):
 
     @staticmethod
     def calculate_lengths(reconciled_row, ruler):
-        for field in reconciled_row.fields.values():
+        for field in reconciled_row.fields:
             if isinstance(field, LengthField) and not field.is_scale:
                 field.length = round(field.pixel_length * ruler.factor, 2)
                 field.units = ruler.units
@@ -96,6 +97,6 @@ class LengthField(BaseField):
     @staticmethod
     def find_ruler(row):
         return next(
-            (f for f in row.fields.values() if hasattr(f, "is_scale") and f.is_scale),
+            (f for f in row.fields if hasattr(f, "is_scale") and f.is_scale),
             None,
         )

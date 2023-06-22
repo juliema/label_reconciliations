@@ -13,7 +13,6 @@ from pylib.fields.base_field import BaseField
 from pylib.flag import Flag
 from pylib.utils import P
 
-
 FuzzyRatioScore = namedtuple("FuzzyRatioScore", "score value")
 FuzzySetScore = namedtuple("FuzzySetScore", "score value tokens")
 ExactScore = namedtuple("ExactScore", "string count")

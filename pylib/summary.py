@@ -25,6 +25,10 @@ def report(args, unreconciled: Table, reconciled: Table):
     reconciled_df = reconciled.to_df(args)
     flag_df = reconciled.to_flag_df(args)
     alias_group_by(args, unreconciled_df, reconciled_df, flag_df)
+    from pprint import pp
+    # pp(unreconciled_df.columns)
+    # pp(reconciled_df.columns)
+    # pp(flag_df.columns)
 
     has_users = 1 if args.user_column in unreconciled_df.columns else 0
     transcribers_df = get_transcribers_df(args, unreconciled_df)
@@ -101,7 +105,7 @@ def get_transcribers_df(args, unreconciled_df):
         return pd.DataFrame(columns=["Transcriber", "Count"])
 
     df = unreconciled_df.sort_values(args.user_column)
-    df = df.groupby(args.user_column)[[args.user_column]].suffix()
+    df = df.groupby(args.user_column)[[args.user_column]].count()
     df = df.rename(columns={args.user_column: "Count"})
     df["Transcriber"] = df.index
     df = df[["Transcriber", "Count"]]
@@ -135,7 +139,7 @@ def get_transcribers_table(transcribers_df):
 
 
 def get_chart(args, transcribers_df):
-    df = transcribers_df.groupby("Count").suffix()
+    df = transcribers_df.groupby("Count").count()
     df["Transcriptions"] = df.index
     lump = df[df["Transcriptions"] >= args.max_transcriptions].sum()
     df = df[df["Transcriptions"] < args.max_transcriptions]
@@ -163,7 +167,8 @@ def get_results(args, flag_df):
         data.append(datum)
     df = pd.concat(data, axis=1)
 
-    df = df.transpose()
+    df = df.transpose().sort_index()
+
     for col in range(Flag.OK, FLAG_END):
         if col not in df.columns:
             df[col] = 0

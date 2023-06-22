@@ -29,7 +29,8 @@ class BoxField(BaseField):
 
         note = f"There {P('is', row_count)} {row_count} box {P('record', row_count)}"
 
-        return cls(
+        return cls.copy(
+            group,
             note=note,
             flag=Flag.OK,
             left=round(mean(b.left for b in use)),

@@ -35,6 +35,7 @@ class TestLengthField(unittest.TestCase):
             LengthField(name="1 mm", x1=20, y1=80, x2=80, y2=160),
         ]
         expect = LengthField(
+            name="1 mm",
             note="There are 3 of 3 length records",
             flag=Flag.OK,
             x1=10,
@@ -58,4 +59,4 @@ class TestLengthField(unittest.TestCase):
         row.append(LengthField(name="Ruler", factor=0.01, units="LY", is_scale=True))
         LengthField.adjust_reconciled(row)
         expect = LengthField(name="Length", pixel_length=200.0, length=2.0, units="LY")
-        self.assertEqual(row.fields["Length_1"], expect)
+        self.assertEqual(row["Length"], expect)

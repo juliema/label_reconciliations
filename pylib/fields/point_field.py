@@ -29,4 +29,4 @@ class PointField(BaseField):
         x = round(stats.mean([ln.x for ln in group]))
         y = round(stats.mean([ln.y for ln in group]))
 
-        return cls(note=note, x=x, y=y, flag=Flag.OK)
+        return cls.copy(group, note=note, x=x, y=y, flag=Flag.OK)

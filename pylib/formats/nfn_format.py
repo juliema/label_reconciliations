@@ -32,16 +32,16 @@ def read(args):
     for raw_row in raw_records:
         row = Row()
 
-        row.group_by = SameField(
+        row.append(SameField(
             name=args.group_by, value=raw_row["subject_ids"].split(",", 1)[0],
-        )
+        ))
 
-        row.row_key = NoOpField(name=args.row_key, value=raw_row[args.row_key])
+        row.append(NoOpField(name=args.row_key, value=raw_row[args.row_key]))
 
         if args.user_column:
-            row.user = NoOpField(
+            row.append(NoOpField(
                 name=args.user_column, value=raw_row.get(args.user_column, "")
-            )
+            ))
 
         for task in json.loads(raw_row["annotations"]):
             flatten_task(task, row, strings, args)
@@ -50,7 +50,7 @@ def read(args):
         extract_metadata(raw_row, row)
         extract_misc_data(raw_row, row)
 
-        table.rows.append(row)
+        table.append(row)
 
     return table
 
@@ -217,7 +217,7 @@ def extract_misc_data(raw_row, row):
     wanted = """ gold_standard expert workflow_version """.split()
     for key in wanted:
         if (value := raw_row.get(key)) is not None:
-            row.others.append(NoOpField(name=key, value=value))
+            row.append(NoOpField(name=key, value=value))
 
 
 # #############################################################################

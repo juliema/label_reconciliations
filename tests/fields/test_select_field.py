@@ -90,5 +90,6 @@ class TestSelectField(unittest.TestCase):
             SelectField(
                 note="No match on 3 records with 1 blank",
                 flag=Flag.NO_MATCH,
+                value="Is value",
             ),
         )
