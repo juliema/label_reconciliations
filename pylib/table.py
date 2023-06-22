@@ -1,13 +1,12 @@
-"""A table of reconciled or unreconciled data."""
 import re
 import dataclasses
 from argparse import Namespace
+from collections import namedtuple
 from itertools import groupby
-from typing import Any
 
 import pandas as pd
 
-from pylib.flag import Flag
+from pylib.fields.base_field import Flag
 from pylib.row import Row
 
 
@@ -19,77 +18,82 @@ class Table:
     def __len__(self) -> int:
         return len(self.rows)
 
-    @property
-    def headers(self) -> dict[str, Any]:
-        field_types = {}
-        for row in self.rows:
-            for header, field in row.fields.items():
-                if header not in field_types:
-                    field_types[header] = type(field)
-        return field_types
-
     def to_csv(self, args: Namespace, path, add_note=False) -> None:
         df = self.to_df(args, add_note)
         df.to_csv(path, index=False)
 
     def to_df(self, args: Namespace, add_note=False) -> pd.DataFrame:
-        records = self.to_records(add_note)
+        records = self.to_dict(add_note=add_note)
         df = pd.DataFrame(records)
-        headers = self.sort_headers(df, args)
+        headers = self.field_order(df, args)
         df = df[headers]
         return df
 
-    def to_records(self, add_note=False) -> list[dict]:
-        records = []
-        for row in self.rows:
-            rec = {}
-            for field in row.fields.values():
-                if self.reconciled:
-                    rec |= field.to_reconciled_dict(add_note)
-                else:
-                    rec |= field.to_unreconciled_dict()
-            records.append(rec)
-        return records
+    def to_dict(self, add_note=False) -> list[dict]:
+        return [r.to_dict(add_note, self.reconciled) for r in self.rows]
 
     @staticmethod
-    def sort_headers(df, args):
+    def field_order(df, args):
         """A hack to workaround Zooniverse random-ish column ordering."""
-        order: [int, int, str] = [(0, 0, args.group_by)]
+        Order = namedtuple("Order", "group major minor column")
 
-        if args.row_key in df.columns:
-            order.append((0, 1, args.row_key))
+        first = (args.group_by, args.row_key, args.user_column)
+        order: list[Order] = [
+            Order(group=0, major=0, minor=i, column=c)
+            for i, c in enumerate(first) if c in df.columns
+        ]
 
-        if args.user_column in df.columns:
-            order.append((0, 2, args.user_column))
+        first = [o.column for o in order]
 
-        first = [o[2] for o in order]
-
-        for i, header in enumerate(df.columns):
-            if header in first:
+        for i, column in enumerate(df.columns):
+            if column in first:
                 continue
-            if match := re.match(r"[Tt](\d+)", header):
+            if match := re.match(r"^[Tt](\d+)", column):
                 task_no = int(match.group(1))
-                order.append((1, task_no, header))
+                order.append(Order(group=1, major=task_no, minor=i, column=column))
             else:
-                order.append((2, i, header))
-        return [o[2] for o in sorted(order)]
+                order.append(Order(group=2, major=0, minor=i, column=column))
+
+        ordered = [o.column for o in sorted(order)]
+        return ordered
 
     def reconcile(self, args) -> "Table":
-        unrec_rows = sorted(self.rows, key=lambda r: r.fields[args.group_by].value)
-        groups = groupby(unrec_rows, key=lambda r: r.fields[args.group_by].value)
+        unrec_rows = sorted(self.rows, key=lambda r: r.group_by.value)
+        groups = groupby(unrec_rows, key=lambda r: r.group_by.value)
         table = Table(reconciled=True)
+
+        FieldType = namedtuple("FieldType", "cls field_set")
+        field_types = {
+            f.header: FieldType(cls=type(f), field_set=f.field_set)
+            for r in self.rows for f in r.fields.values()
+        }
 
         for _, row_group in groups:
             row = Row()
             row_group = list(row_group)
             row_count = len(row_group)
 
-            for header, cls in self.headers.items():
-                group = [r.fields[header] for r in row_group if header in r.fields]
+            used_field_sets = set()
+
+            for header, (cls, field_set) in field_types.items():
+                print(header)
+                if field_set and field_set not in used_field_sets:
+                    group = []
+                    for row in row_group:
+                        row_set = [
+                            f for f in row.fields.values() if f.field_set == field_set
+                        ]
+                        group.append(row_set)
+                    used_field_sets.add(field_set)
+                elif field_set in used_field_sets:
+                    continue
+                else:
+                    group = [r.all_fields[header] for r in row_group]
 
                 if not group:
                     field = cls(
-                        note=f"All {row_count} records are blank", flag=Flag.ALL_BLANK
+                        note=f"All {row_count} records are blank",
+                        flag=Flag.ALL_BLANK,
                     )
                     row.add_field(header, field)
                     continue
@@ -97,32 +101,25 @@ class Table:
                 field = cls.reconcile(group, row_count, args)
                 field = field if isinstance(field, list) else [field]
                 for fld in field:
-                    name = f"{header} {fld.name}" if fld.name else header
-                    row.add_field(name, fld)
-
-            # This loop tweaks a row for fields that depend on each other
-            for field in self.headers.values():
-                field.adjust_reconciled(row, args)
+                    row.add_field(fld.name, fld)
 
             table.rows.append(row)
-
         return table
 
     def to_flag_df(self, args):
         """Get reconciliation flags, notes, & spans for the summary report."""
         rows = []
         for row in self.rows:
-            exp_row = {args.group_by: row.fields[args.group_by].value}
-            for header, field in row.fields.items():
-                if field.reconcilable:
-                    exp_dict = field.to_reconciled_dict()
-                    for i, key in enumerate(exp_dict.keys()):
-                        exp_row[key] = {
-                            "flag": field.flag.value,
-                            "note": field.note,
-                            "span": len(exp_dict),
-                            "offset": i,
-                        }
-            rows.append(exp_row)
+            row_dict = {args.group_by: row.group_by.value}
+            for field in row.tasks:
+                field_dict = field.to_dict(reconciled=True)
+                for i, key in enumerate(field_dict.keys()):
+                    row_dict[key] = {
+                        "flag": field.flag.value,
+                        "note": field.note,
+                        "span": len(field_dict),
+                        "offset": i,
+                    }
+            rows.append(row_dict)
         df = pd.DataFrame(rows)
         return df

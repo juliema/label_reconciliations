@@ -14,20 +14,17 @@ class BoxField(BaseField):
     top: float = 0.0
     bottom: float = 0.0
 
-    def to_unreconciled_dict(self) -> dict[str, Any]:
-        return {
+    def to_dict(self, reconciled=False, add_note=False) -> dict[str, Any]:
+        field_dict = {
             self.header("left"): int(round(self.left)),
             self.header("right"): int(round(self.right)),
             self.header("top"): int(round(self.top)),
             self.header("bottom"): int(round(self.bottom)),
         }
-
-    def to_reconciled_dict(self, add_note=False) -> dict[str, Any]:
-        as_dict = self.to_unreconciled_dict()
-        return self.add_note(as_dict, add_note)
+        return self.decorate_dict(field_dict, add_note)
 
     @classmethod
-    def reconcile(cls, group, row_count, _=None):
+    def reconcile(cls, group, row_count, args=None):
         use = [g for g in group if g is not None]
 
         note = f"There {P('is', row_count)} {row_count} box {P('record', row_count)}"

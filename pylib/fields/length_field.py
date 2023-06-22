@@ -26,21 +26,21 @@ class LengthField(BaseField):
     units: str = ""
     is_scale: bool = False
 
-    def to_unreconciled_dict(self) -> dict[str, Any]:
-        return {
+    def to_dict(self, reconciled=False, add_note=False) -> dict[str, Any]:
+        field_dict = {
             self.header("x1"): int(round(self.x1)),
             self.header("y1"): int(round(self.y1)),
             self.header("x2"): int(round(self.x2)),
             self.header("y2"): int(round(self.y2)),
         }
 
-    def to_reconciled_dict(self, add_note=False) -> dict[str, Any]:
-        as_dict = self.to_unreconciled_dict()
-        as_dict[self.header("pixel_length")] = round(self.pixel_length, 2)
-        if not self.is_scale:
-            name = self.header(f"length {self.units}")
-            as_dict[name] = round(self.length, 2)
-        return self.add_note(as_dict, add_note)
+        if reconciled:
+            field_dict[self.header("pixel_length")] = round(self.pixel_length, 2)
+            if not self.is_scale:
+                name = self.header(f"length {self.units}")
+                field_dict[name] = round(self.length, 2)
+
+        return self.decorate_dict(field_dict, add_note)
 
     @classmethod
     def reconcile(cls, group, row_count, _=None):
@@ -79,7 +79,7 @@ class LengthField(BaseField):
         )
 
     @staticmethod
-    def adjust_reconciled(reconciled_row, args=None):
+    def adjust_reconciled(reconciled_row, _=None):
         """Calculate lengths using units and pixel_lengths."""
         ruler = LengthField.find_ruler(reconciled_row)
         if not ruler:
@@ -88,7 +88,7 @@ class LengthField(BaseField):
 
     @staticmethod
     def calculate_lengths(reconciled_row, ruler):
-        for field in reconciled_row.values():
+        for field in reconciled_row.fields.values():
             if isinstance(field, LengthField) and not field.is_scale:
                 field.length = round(field.pixel_length * ruler.factor, 2)
                 field.units = ruler.units
@@ -96,6 +96,6 @@ class LengthField(BaseField):
     @staticmethod
     def find_ruler(row):
         return next(
-            (f for f in row.values() if hasattr(f, "is_scale") and f.is_scale),
+            (f for f in row.fields.values() if hasattr(f, "is_scale") and f.is_scale),
             None,
         )

@@ -1,7 +1,7 @@
 import unittest
 
 from pylib.fields.select_field import SelectField
-from pylib.flag import Flag
+from pylib.fields.base_field import Flag
 
 
 class TestSelectField(unittest.TestCase):
@@ -9,7 +9,7 @@ class TestSelectField(unittest.TestCase):
         """It handles an empty group."""
         group = [SelectField(), SelectField(), SelectField()]
         self.assertEqual(
-            SelectField.reconcile(group),
+            SelectField.reconcile(group, row_count=len(group)),
             SelectField(note="All 3 records are blank", flag=Flag.ALL_BLANK),
         )
 
@@ -21,9 +21,9 @@ class TestSelectField(unittest.TestCase):
             SelectField(value="Is same"),
         ]
         self.assertEqual(
-            SelectField.reconcile(group),
+            SelectField.reconcile(group, row_count=len(group)),
             SelectField(
-                note="Unanimous match, 3 of 3 records",
+                note="Unanimous match, 3 of 3 records 0 blanks",
                 value="Is same",
                 flag=Flag.UNANIMOUS,
             ),
@@ -38,7 +38,7 @@ class TestSelectField(unittest.TestCase):
             SelectField(value="Is same"),
         ]
         self.assertEqual(
-            SelectField.reconcile(group),
+            SelectField.reconcile(group, row_count=len(group)),
             SelectField(
                 note="Match is a tie, 2 of 4 records with 0 blanks",
                 value="Are same",
@@ -55,7 +55,7 @@ class TestSelectField(unittest.TestCase):
             SelectField(value="Are same"),
         ]
         self.assertEqual(
-            SelectField.reconcile(group),
+            SelectField.reconcile(group, row_count=len(group)),
             SelectField(
                 note="Match 2 of 4 records with 1 blank",
                 value="Are same",
@@ -70,9 +70,9 @@ class TestSelectField(unittest.TestCase):
             SelectField(value="Is value"),
         ]
         self.assertEqual(
-            SelectField.reconcile(group),
+            SelectField.reconcile(group, row_count=len(group)),
             SelectField(
-                note="Only 1 transcript in 2 records",
+                note="Only 1 transcript in 2 records with 1 blank",
                 value="Is value",
                 flag=Flag.ONLY_ONE,
             ),
@@ -86,7 +86,7 @@ class TestSelectField(unittest.TestCase):
             SelectField(value="Different"),
         ]
         self.assertEqual(
-            SelectField.reconcile(group),
+            SelectField.reconcile(group, row_count=len(group)),
             SelectField(
                 note="No match on 3 records with 1 blank",
                 flag=Flag.NO_MATCH,

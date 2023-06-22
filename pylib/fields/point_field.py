@@ -12,18 +12,15 @@ class PointField(BaseField):
     x: float = 0.0
     y: float = 0.0
 
-    def to_unreconciled_dict(self) -> dict[str, Any]:
-        return {
+    def to_dict(self, reconciled=False, add_note=False) -> dict[str, Any]:
+        field_dict = {
             self.header("x"): int(round(self.x)),
             self.header("y"): int(round(self.y)),
         }
-
-    def to_reconciled_dict(self, add_note=False) -> dict[str, Any]:
-        as_dict = self.to_unreconciled_dict()
-        return self.add_note(as_dict, add_note)
+        return self.decorate_dict(field_dict, add_note)
 
     @classmethod
-    def reconcile(cls, group, row_count, _=None):
+    def reconcile(cls, group, row_count, args=None):
         note = (
             f'There {P("is", len(group))} {len(group)} of {row_count}'
             f'point {P("record", row_count)}'

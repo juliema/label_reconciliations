@@ -1,8 +1,7 @@
 import re
 import sys
-from collections import defaultdict, Counter
-from dataclasses import dataclass, astuple
-from itertools import groupby
+from collections import defaultdict
+from dataclasses import dataclass, replace
 from typing import Any
 
 from pylib.fields.base_field import BaseField
@@ -12,43 +11,45 @@ from pylib.utils import P
 
 @dataclass(kw_only=True)
 class HighlightField(BaseField):
-    """I'm converting to & from a tuple (astuple) so field order is important."""
     start: int = -1
     end: int = -1
     text: str = ""
     label: str = ""
+    span: int = 0
+
+    @property
+    def name_group(self) -> str:
+        return f"{self.task_id}_{self.name}_{self.label}"
 
     @classmethod
     def unreconciled_list(
-        cls, values: list[dict], args, text: str = ""
+        cls, task: dict[str, Any], task_id: str, args, text: str = ""
     ) -> list["HighlightField"]:
         """Create an unreconciled list from the values list."""
         highlights = []
-        for value in values:
-            label = value["labelInformation"]["label"]
-            highlights.append(
-                HighlightField(
-                    text=value["text"],
-                    label=label,
-                    start=value["start"],
-                    end=value["end"] + 1,
-                )
+        for value in task["value"]:
+            field = HighlightField(
+                name=task["taskType"],
+                task_id=task_id,
+                label=value["labelInformation"]["label"],
+                text=value["text"],
+                start=value["start"],
+                end=value["end"] + 1,
             )
+            field.field_set = field.name_group
+            highlights.append(field)
 
         highlights = HighlightField._join(highlights, args.join_distance, text)
         HighlightField._strip(highlights)
         return highlights
 
-    def to_unreconciled_dict(self) -> dict[str, Any]:
-        return {
+    def to_dict(self, reconciled=False, add_note=False) -> dict[str, Any]:
+        field_dict = {
             self.header("text"): self.text,
-            self.header("start"): self.start,
-            self.header("end"): self.end,
+            # self.header("start"): self.start,
+            # self.header("end"): self.end,
         }
-
-    def to_reconciled_dict(self, add_note=False) -> dict[str, Any]:
-        as_dict = self.to_unreconciled_dict()
-        return self.add_note(as_dict, add_note)
+        return self.decorate_dict(field_dict, add_note)
 
     @staticmethod
     def _join(
@@ -95,16 +96,21 @@ class HighlightField(BaseField):
                 hi.text = hi.text.lstrip()
 
     @classmethod
-    def reconcile(cls, group, row_count, _=None):
+    def reconcile(cls, group, row_count, args=None):
         fields: list[HighlightField] = []
 
         aligned = HighlightField.align_json_fields(group)
 
-        for suffix, highlights in aligned:
+        for _, highlights in aligned.items():
             count = len(highlights)
             blanks = row_count - count
 
-            match Counter([astuple(h) for h in highlights]).most_common():
+            by_value = defaultdict(list)
+            for hi in highlights:
+                by_value[(hi.text, hi.start, hi.end)].append(hi)
+            counters = sorted(by_value.values(), key=lambda highs: len(highs))
+
+            match counters:
 
                 # Nobody chose a value
                 case []:
@@ -115,106 +121,46 @@ class HighlightField(BaseField):
                     return cls(note=note, flag=Flag.ALL_BLANK)
 
                 # Only one selected
-                case [c0] if c0[1] == 1:
-                    start, end, text, label = c0[0]
-                    label = f"{label}_{suffix}"
+                case [c0] if len(c0) == 1:
                     note = (
                         f"Only 1 highlight in {count} {P('record', count)} "
                         f"with {blanks} {P('blank', blanks)}"
                     )
-                    fields.append(
-                        cls(
-                            name=label,
-                            note=note,
-                            start=start,
-                            end=end,
-                            text=text,
-                            label=label,
-                            flag=Flag.ONLY_ONE,
-                        )
-                    )
+                    fields.append(replace(c0[0], flag=Flag.ONLY_ONE, note=note))
 
                 # Everyone chose the same value
-                case [c0] if c0[1] == count and c0[1] > 1:
-                    start, end, text, label = c0[0]
-                    label = f"{label}_{suffix}"
+                case [c0] if len(c0) == count and len(c0) > 1:
                     note = (
-                        f"Exact unanimous match, {c0[1]} "
-                        f"of {count} {P('record', count)} "
+                        f"Exact unanimous match, "
+                        f"{len(c0)} of {row_count} {P('record', row_count)} "
                         f"with {blanks} {P('blank', blanks)}"
                     )
-                    fields.append(
-                        cls(
-                            name=label,
-                            note=note,
-                            start=start,
-                            end=end,
-                            text=text,
-                            label=label,
-                            flag=Flag.UNANIMOUS,
-                        )
-                    )
+                    fields.append(replace(c0[0], flag=Flag.UNANIMOUS, note=note))
 
                 # It was a tie for the text chosen
-                case [c0, c1, *_] if c0[1] > 1 and c0[1] == c1[1]:
-                    start, end, text, label = c0[0]
-                    label = f"{label}_{suffix}"
+                case [c0, c1, *_] if len(c0) > 1 and len(c0) == len(c1):
                     note = (
-                        f"Match is a tie, {c0[1]} "
+                        f"Match is a tie, {len(c0)} "
                         f"of {row_count} {P('record', row_count)} "
                         f"with {blanks} {P('blank', blanks)}"
                     )
-                    fields.append(
-                        cls(
-                            name=label,
-                            note=note,
-                            start=start,
-                            end=end,
-                            text=text,
-                            label=label,
-                            flag=Flag.MAJORITY,
-                        )
-                    )
+                    fields.append(replace(c0[0], flag=Flag.MAJORITY, note=note))
 
                 # We have a winner
-                case [c0, *_] if c0[1] > 1:
-                    start, end, text, label = c0[0]
-                    label = f"{label}_{suffix}"
+                case [c0, *_] if len(c0) > 1:
                     note = (
-                        f"Match {c0[1]} of {row_count} {P('record', row_count)} "
+                        f"Match {len(c0)} of {row_count} {P('record', row_count)} "
                         f"with {blanks} {P('blank', blanks)}"
                     )
-                    fields.append(
-                        cls(
-                            name=label,
-                            note=note,
-                            start=start,
-                            end=end,
-                            text=text,
-                            label=label,
-                            flag=Flag.MAJORITY,
-                        )
-                    )
+                    fields.append(replace(c0[0], flag=Flag.MAJORITY, note=note))
 
                 # They're all different
-                case [c0, *_] if c0[1] == 1:
-                    start, end, text, label = c0[0]
-                    label = f"{label}_{suffix}"
+                case [c0, *_] if len(c0) == 1:
                     note = (
-                        f"No match on {row_count} {P('record', row_count)} "
+                        f"No match on {count} {P('record', count)} "
                         f"with {blanks} {P('blank', blanks)}"
                     )
-                    fields.append(
-                        cls(
-                            name=label,
-                            note=note,
-                            start=start,
-                            end=end,
-                            text=text,
-                            label=label,
-                            flag=Flag.NO_MATCH,
-                        )
-                    )
+                    fields.append(replace(c0[0], flag=Flag.NO_MATCH, note=note))
 
                 case _:
                     sys.exit(f"Unknown pattern {highlights}")
@@ -222,59 +168,52 @@ class HighlightField(BaseField):
         return fields
 
     @staticmethod
-    def align_json_fields(group) -> list["HighlightField"]:
-        tie = defaultdict(int)
+    def align_json_fields(group) -> dict[str, list["HighlightField"]]:
+        aligned = defaultdict(list)
 
-        by_label = [(i, rec) for i, fld in enumerate(group) for rec in fld.highlights]
-        by_label = sorted(by_label, key=lambda h: (h[1].label, h[0], h[1].start))
-        by_label = groupby(by_label, key=lambda h: h[1].label)
+        all_highlights = [h for row in group for h in row]
 
-        aligned = []
+        # Get the extremes of the highlighted field
+        start = min([h.start for h in all_highlights], default=0)
+        end = max([h.end for h in all_highlights], default=0)
 
-        for label, label_hi in by_label:
-            label_hi = list(label_hi)
+        # Mark where the highlights are in the string
+        hits = bytearray(end - start)
+        for hi in all_highlights:
+            for i in range(hi.start, hi.end):
+                hits[i - start] = 1
 
-            start = min(h[1].start for h in label_hi)
-            end = max(h[1].end for h in label_hi)
+        # Get all contiguous matches
+        contigs = [
+            (m.start() + start, m.end() + start)
+            for m in re.finditer(b"(\x01+)", hits)
+        ]
 
-            # Find where the highlights overlap
-            hits = bytearray(end - start)
-            for hi in label_hi:
-                for i in range(hi[1].start, hi[1].end):
-                    hits[i - start] = 1
+        # Match highlights to the fragments, merging when needed
+        for i, (start, end) in enumerate(contigs, 1):
 
-            # Get all contiguous matches
-            frags = [
-                (m.start() + start, m.end() + start)
-                for m in re.finditer(b"(\x01+)", hits)
-            ]
+            for row in group:
+                parts: list[HighlightField] = [h for h in row if start <= h.start < end]
 
-            # Match highlights to the fragments
-            highlights = defaultdict(list)
-            for hi in label_hi:
-                for frag in frags:
-                    if frag[0] <= hi[1].start < frag[1]:
-                        key = label, frag[0], frag[1]
-                        highlights[key].append(hi)
-                        break
+                if parts:
 
-            # Merge disjointed highlights
-            for key, highs in highlights.items():
-                joined = []
-                by_user = groupby(highs, key=lambda h: h[0])
-                for user, parts in by_user:
-                    parts = [p[1] for p in parts]
-                    if len(parts) == 1:
-                        joined.append(parts[0])
-                    else:
-                        joined.append(Highlight(
+                    # Update unreconciled suffixes to match the reconciled span
+                    for j, part in enumerate(parts):
+                        part.suffix = i if j == 0 else float(f"{i}.{j}")
+
+                    # Add a reconciled record
+                    aligned[(start, end)].append(
+                        HighlightField(
+                            name=parts[0].name,
+                            task_id=parts[0].task_id,
                             start=min(p.start for p in parts),
                             end=max(p.end for p in parts),
-                            text=" ".join(p.text for p in parts),
-                            label=label,
-                        ))
-
-                tie[label] += 1
-                aligned.append((f"{label}_{tie[label]}", joined))
+                            text=" ".join(p.text for p in parts),  # TODO when strings
+                            label=parts[0].label,
+                            field_set=parts[0].field_set,
+                            suffix=i,
+                            span=len(parts)
+                        )
+                    )
 
         return aligned

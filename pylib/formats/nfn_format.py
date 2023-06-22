@@ -6,17 +6,9 @@ import pandas as pd
 from dateutil.parser import parse
 
 from pylib import utils
-from pylib.fields.box_field import BoxField
-from pylib.fields.highlighter_field import HighlightField
-from pylib.fields.length_field import LengthField
-from pylib.fields.mark_index_field import MarkIndexField
-from pylib.fields.noop_field import NoOpField
-from pylib.fields.point_field import PointField
-# from pylib.fields.polygon_field import PolygonField, PolygonPoint
-from pylib.fields.same_field import SameField
-from pylib.fields.select_field import SelectField
-from pylib.fields.text_field import TextField
 from pylib.row import Row
+from pylib.row import BoxField, HighlightField, LengthField, MarkIndexField, NoOpField
+from pylib.row import PointField, SameField, SelectField, TextField
 from pylib.table import Table
 
 Strings = dict[str, dict[int, str]]
@@ -40,16 +32,15 @@ def read(args):
     for raw_row in raw_records:
         row = Row()
 
-        row.add_field(
-            args.group_by,
-            SameField(value=raw_row["subject_ids"].split(",", 1)[0]),
+        row.group_by = SameField(
+            name=args.group_by, value=raw_row["subject_ids"].split(",", 1)[0],
         )
 
-        row.add_field(args.row_key, NoOpField(value=raw_row[args.row_key]))
+        row.row_key = NoOpField(name=args.row_key, value=raw_row[args.row_key])
 
         if args.user_column:
-            row.add_field(
-                args.user_column, NoOpField(value=raw_row.get(args.user_column, ""))
+            row.user = NoOpField(
+                name=args.user_column, value=raw_row.get(args.user_column, "")
             )
 
         for task in json.loads(raw_row["annotations"]):
@@ -65,9 +56,7 @@ def read(args):
 
 
 # ###################################################################################
-def flatten_task(
-    task: dict, row: Row, strings: dict, args, task_id: str = ""
-):
+def flatten_task(task: dict, row: Row, strings: dict, args, task_id: str = ""):
     """Extract task annotations from the json object in the annotations' column.
 
     Task annotations are nested json blobs with a WTF format. Part of the WTF is that
@@ -120,58 +109,69 @@ def subtask_task(task, row, strings, args, task_id):
 
 def list_task(task: dict, row: Row, task_id: str) -> None:
     values = sorted(task.get("value", ""))
-    row.add_field(task["task_label"], TextField(value=" ".join(values)), task_id)
+    row.append(TextField(
+        name=task["task_label"],
+        task_id=task_id,
+        value=" ".join(values),
+    ))
 
 
 def select_label_task(task: dict, row: Row, task_id: str) -> None:
     option = task.get("option")
     value = task.get("label", "") if option else task.get("value", "")
-    row.add_field(task["select_label"], SelectField(value=value), task_id)
+    row.append(SelectField(
+        name=task["select_label"],
+        task_id=task_id,
+        value=value,
+    ))
 
 
-def mark_index_task(task, row, strings, task_id) -> None:
-    value = strings[task["task"]][task["value"]]
-    index = task["markIndex"]
-    name = f'{task["taskType"]}_{index + 1}'
-    row.add_field(name, MarkIndexField(value=value, index=index), task_id)
+def mark_index_task(task: dict, row, strings, task_id) -> None:
+    row.append(MarkIndexField(
+        name=task["taskType"],
+        task_id=task_id,
+        value=strings[task["task"]][task["value"]],
+        index=task["markIndex"],
+    ))
 
 
 def task_label_task(task: dict, row: Row, task_id: str) -> None:
-    value = task.get("value", "")
-    row.add_field(task["task_label"], TextField(value=value), task_id)
+    row.append(TextField(
+        name=task["task_label"],
+        task_id=task_id,
+        value=task.get("value", ""),
+    ))
 
 
 def box_task(task: dict, row: Row, task_id: str) -> None:
-    row.add_field(
-        task["tool_label"],
-        BoxField(
-            left=round(task["x"]),
-            right=round(task["x"] + task["width"]),
-            top=round(task["y"]),
-            bottom=round(task["y"] + task["height"]),
-        ),
-        task_id,
-    )
+    row.append(BoxField(
+        name=task["tool_label"],
+        task_id=task_id,
+        left=round(task["x"]),
+        right=round(task["x"] + task["width"]),
+        top=round(task["y"]),
+        bottom=round(task["y"] + task["height"]),
+    ))
 
 
 def length_task(task: dict, row: Row, task_id: str) -> None:
-    row.add_field(
-        task["tool_label"],
-        LengthField(
-            x1=round(task["x1"]),
-            y1=round(task["y1"]),
-            x2=round(task["x2"]),
-            y2=round(task["y2"]),
-        ),
-        task_id,
-    )
+    row.append(LengthField(
+        name=task["tool_label"],
+        task_id=task_id,
+        x1=round(task["x1"]),
+        y1=round(task["y1"]),
+        x2=round(task["x2"]),
+        y2=round(task["y2"]),
+    ))
 
 
 def point_task(task: dict, row: Row, task_id: str) -> None:
-    field = PointField(x=round(task["x"]), y=round(task["y"]))
-    label = task.get("tool_label", task.get("toolType"))
-    label = label if label else task["toolType"]
-    row.add_field(label, field, task_id)
+    row.append(PointField(
+        name=task.get("tool_label", task.get("toolType")),
+        task_id=task_id,
+        x=round(task["x"]),
+        y=round(task["y"]),
+    ))
 
 
 # def polygon_task(task: dict, row: Row, task_id: str) -> None:
@@ -180,17 +180,16 @@ def point_task(task: dict, row: Row, task_id: str) -> None:
 
 
 def highlighter_task(task, row, args, task_id):
-    fields = HighlightField.unreconciled_list(task["value"], args)
+    fields = HighlightField.unreconciled_list(task, task_id, args)
     for field in fields:
-        row.add_field(task['taskType'], field, f"{task_id}_{field.label}")
+        row.append(field)
 
 
 # #############################################################################
 def extract_subject_data(raw_row, row):
     """Extract subject data from the json object in the subject_data column.
 
-    We prefix the new column names with "subject_" to keep them separate from
-    the other data df columns. The subject data json looks like:
+    The subject data json looks like:
         {<subject_id>: {"key_1": "value_1", "key_2": "value_2", ...}}
     """
     annos = json.loads(raw_row["subject_data"])
@@ -198,7 +197,7 @@ def extract_subject_data(raw_row, row):
     for val1 in annos.values():
         for key2, val2 in val1.items():
             if key2 and key2 != "retired":
-                row.add_field(key2, SameField(value=val2))
+                row.append(SameField(name=key2, value=val2))
 
 
 # #############################################################################
@@ -209,8 +208,8 @@ def extract_metadata(raw_row, row):
     def _date(value):
         return parse(value).strftime("%d-%b-%Y %H:%M:%S")
 
-    row.add_field("started_at", NoOpField(value=_date(annos.get("started_at"))))
-    row.add_field("finished_at", NoOpField(value=_date(annos.get("finished_at"))))
+    row.append(NoOpField(name="started_at", value=_date(annos.get("started_at"))))
+    row.append(NoOpField(name="finished_at", value=_date(annos.get("finished_at"))))
 
 
 # #############################################################################
@@ -218,7 +217,7 @@ def extract_misc_data(raw_row, row):
     wanted = """ gold_standard expert workflow_version """.split()
     for key in wanted:
         if (value := raw_row.get(key)) is not None:
-            row.add_field(key, NoOpField(value=value))
+            row.others.append(NoOpField(name=key, value=value))
 
 
 # #############################################################################

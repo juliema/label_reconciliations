@@ -1,9 +1,6 @@
 from dataclasses import dataclass
-from typing import Any
-
+from typing import Any, Union
 from pylib.flag import Flag
-
-EXPLAIN_SUFFIX = ": Explanation"
 
 
 @dataclass(kw_only=True)
@@ -11,26 +8,31 @@ class BaseField:
     name: str = ""
     note: str = ""
     flag: Flag = Flag.NO_FLAG
-    reconcilable: bool = True
+    field_set: str = ""  # All fields in this set get reconciled at the same time
+    suffix: Union[int, float] = 0  # When columns have same name break the tie with this
+    task_id: str = ""
 
-    def header(self, attr: str) -> str:
-        return f"{self.name}: {attr}"
-
-    def to_unreconciled_dict(self) -> dict[str, Any]:
+    def to_dict(self, reconciled=False, add_note=False) -> dict[str, Any]:
         raise NotImplementedError()
-
-    def to_reconciled_dict(self, add_note=False) -> dict[str, Any]:
-        raise NotImplementedError()
-
-    def add_note(self, as_dict: dict[str, Any], add_note: bool) -> dict[str, Any]:
-        if add_note:
-            as_dict[f"{self.name}{EXPLAIN_SUFFIX}"] = self.note
-        return as_dict
 
     @classmethod
     def reconcile(cls, group, row_count, args=None):
         raise NotImplementedError()
 
-    @staticmethod
-    def adjust_reconciled(reconciled_row, args=None):
-        return
+    @property
+    def name_group(self) -> str:
+        return f"{self.task_id}_{self.name}" if self.task_id else self.name
+
+    @property
+    def field_name(self) -> str:
+        return f"{self.name_group}_{self.suffix}" if self.suffix else self.name_group
+
+    def header(self, attr: str) -> str:
+        return f"{self.field_name}: {attr}"
+
+    def decorate_dict(
+        self, field_dict: dict[str, Any], add_note=False
+    ) -> dict[str, Any]:
+        if add_note:
+            field_dict[self.header("Explanation")] = self.note
+        return field_dict

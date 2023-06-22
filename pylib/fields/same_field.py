@@ -8,19 +8,18 @@ from pylib.flag import Flag
 @dataclass(kw_only=True)
 class SameField(BaseField):
     value: str = ""
-    reconcilable: bool = False
 
-    def to_unreconciled_dict(self) -> dict[str, Any]:
-        return {self.name: self.value}
+    def to_dict(self, reconciled=False, add_note=False) -> dict[str, Any]:
+        field_dict = {self.name: self.value}
+        return self.decorate_dict(field_dict, add_note)
 
-    def to_reconciled_dict(self, add_note=False) -> dict[str, Any]:
-        as_dict = self.to_unreconciled_dict()
+    def add_note(self, field_dict: dict[str, Any]) -> dict[str, Any]:
         if self.flag != Flag.OK:
-            as_dict = self.add_note(as_dict, add_note)
-        return as_dict
+            field_dict = self.add_note(field_dict)
+        return field_dict
 
     @classmethod
-    def reconcile(cls, group, row_count, _=None):
+    def reconcile(cls, group, row_count, args=None):
         use = [g for g in group if g is not None]
 
         if all(g.value == group[0].value for g in use):

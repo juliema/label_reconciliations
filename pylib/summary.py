@@ -9,7 +9,8 @@ from jinja2 import Environment
 from jinja2 import PackageLoader
 from pandas.io.formats.style import Styler
 
-from pylib import flag
+from pylib.fields.base_field import Flag
+from pylib.flag import PROBLEM, FLAG_END, flag_labels
 from pylib.table import Table
 
 ALIAS = "__alias__"
@@ -71,10 +72,9 @@ def alias_group_by(args, unreconciled_df, reconciled_df, flag_df):
     aliases = {v: k for k, v in aliases.items()}
 
     unreconciled_df[ALIAS] = unreconciled_df[args.group_by].map(aliases)
-
     reconciled_df[ALIAS] = reconciled_df[args.group_by].map(aliases)
-
     flag_df[ALIAS] = flag_df[args.group_by].map(aliases)
+
     flag_df.set_index(ALIAS, drop=False, inplace=True)
 
 
@@ -101,7 +101,7 @@ def get_transcribers_df(args, unreconciled_df):
         return pd.DataFrame(columns=["Transcriber", "Count"])
 
     df = unreconciled_df.sort_values(args.user_column)
-    df = df.groupby(args.user_column)[[args.user_column]].count()
+    df = df.groupby(args.user_column)[[args.user_column]].suffix()
     df = df.rename(columns={args.user_column: "Count"})
     df["Transcriber"] = df.index
     df = df[["Transcriber", "Count"]]
@@ -135,7 +135,7 @@ def get_transcribers_table(transcribers_df):
 
 
 def get_chart(args, transcribers_df):
-    df = transcribers_df.groupby("Count").count()
+    df = transcribers_df.groupby("Count").suffix()
     df["Transcriptions"] = df.index
     lump = df[df["Transcriptions"] >= args.max_transcriptions].sum()
     df = df[df["Transcriptions"] < args.max_transcriptions]
@@ -164,21 +164,21 @@ def get_results(args, flag_df):
     df = pd.concat(data, axis=1)
 
     df = df.transpose()
-    for col in range(flag.Flag.OK, flag.FLAG_END):
+    for col in range(Flag.OK, FLAG_END):
         if col not in df.columns:
             df[col] = 0
 
-    df = df[range(flag.Flag.OK, flag.FLAG_END)]
+    df = df[range(Flag.OK, FLAG_END)]
     df = df.fillna(0).astype(int)
 
     df["Total"] = df[
-        range(flag.Flag.OK, flag.Flag.ONLY_ONE)
+        range(Flag.OK, Flag.ONLY_ONE)
     ].sum(axis="columns")
 
     total = df.pop("Total")
     df.insert(len(df.columns) - 3, "Total", total)
 
-    renames = {k: v for k, v in flag.flag_labels().items()}
+    renames = {k: v for k, v in flag_labels().items()}
     df = df.rename(columns=renames)
     df.insert(0, "Field", list(df.index))
     df = df.drop([args.group_by, ALIAS, ROW_TYPE], axis=0)
@@ -229,7 +229,7 @@ def get_filters(args, flag_df):
     exclude = (args.group_by, ALIAS, ROW_TYPE)
     for col in [c for c in flag_df.columns if c not in exclude]:
         ids = flag_df[flag_df[col].apply(
-            get_flag_field, field="flag").isin(flag.PROBLEM)].index
+            get_flag_field, field="flag").isin(PROBLEM)].index
         name = f"Show problems with: {col}"
         problem_filters[name] = list(ids)
         all_problems |= set(ids)
@@ -333,7 +333,7 @@ def get_class_df(args, btn, df, flag_df):
 
     for col in columns:
         ids = flag_df[flag_df[col].apply(
-            get_flag_field, field="flag").isin(flag.PROBLEM)].index
+            get_flag_field, field="flag").isin(PROBLEM)].index
         ids = df.loc[df[ROW_TYPE] == 1 & df[ALIAS].isin(ids)].index
         class_df.loc[ids, col] = "problem"
 

@@ -1,7 +1,7 @@
 import unittest
 
 from pylib.fields.box_field import BoxField
-from pylib.flag import Flag
+from pylib.fields.base_field import Flag
 
 
 class TestBoxField(unittest.TestCase):
@@ -13,7 +13,7 @@ class TestBoxField(unittest.TestCase):
             BoxField(left=20, top=20, right=50, bottom=50),
         ]
         self.assertEqual(
-            BoxField.reconcile(group),
+            BoxField.reconcile(group, row_count=len(group)),
             BoxField(
                 note="There are 3 box records",
                 flag=Flag.OK,

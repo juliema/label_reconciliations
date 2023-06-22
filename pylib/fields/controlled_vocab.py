@@ -7,7 +7,10 @@ PLACEHOLDERS = ["placeholder"]
 
 
 def controlled_vocab(cls, group, row_count):
-    filled = [f.value for f in group if f.value.lower not in PLACEHOLDERS]
+    filled = [
+        f.value for f in group
+        if f.value.strip() and f.value.lower not in PLACEHOLDERS
+    ]
     blanks = row_count - len(filled)
 
     match Counter([v for v in filled]).most_common():
@@ -15,7 +18,7 @@ def controlled_vocab(cls, group, row_count):
         # Nobody chose a value
         case []:
             note = (
-                f"The {row_count} {P('record', row_count)} {P('is', row_count)} blank"
+                f"All {row_count} {P('record', row_count)} {P('is', row_count)} blank"
             )
             return cls(note=note, flag=Flag.ALL_BLANK)
 

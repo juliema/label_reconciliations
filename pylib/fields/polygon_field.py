@@ -16,12 +16,9 @@ class PolygonPoint:
 class PolygonField(BaseField):
     points: list[PolygonPoint] = field(default_factory=list)
 
-    def to_unreconciled_dict(self) -> dict[str, Any]:
-        return {}
-
-    def to_reconciled_dict(self, add_note=False) -> dict[str, Any]:
+    def to_dict(self, reconciled=False, add_note=False) -> dict[str, Any]:
         return {}
 
     @classmethod
-    def reconcile(cls, group, row_count, _=None):
+    def reconcile(cls, group, row_count, args=None):
         return
