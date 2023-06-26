@@ -35,7 +35,6 @@ class TextField(BaseField):
         blanks = row_count - sum(f.count for f in exact)
 
         match exact:
-
             # No matches
             case []:
                 note = (
@@ -78,7 +77,6 @@ class TextField(BaseField):
         blanks = row_count - sum(f.count for f in norm)
 
         match norm:
-
             # No matches
             case []:
                 note = (

@@ -32,16 +32,21 @@ def read(args):
     for raw_row in raw_records:
         row = Row()
 
-        row.append(SameField(
-            name=args.group_by, value=raw_row["subject_ids"].split(",", 1)[0],
-        ))
+        row.append(
+            SameField(
+                name=args.group_by,
+                value=raw_row["subject_ids"].split(",", 1)[0],
+            )
+        )
 
         row.append(NoOpField(name=args.row_key, value=raw_row[args.row_key]))
 
         if args.user_column:
-            row.append(NoOpField(
-                name=args.user_column, value=raw_row.get(args.user_column, "")
-            ))
+            row.append(
+                NoOpField(
+                    name=args.user_column, value=raw_row.get(args.user_column, "")
+                )
+            )
 
         for task in json.loads(raw_row["annotations"]):
             flatten_task(task, row, strings, args)
@@ -65,7 +70,6 @@ def flatten_task(task: dict, row: Row, strings: dict, args, task_id: str = ""):
     task_id = task.get("task", task_id)
 
     match task:
-
         case {"value": [str(), *__], **___}:
             list_task(task, row, task_id)
 
@@ -109,70 +113,84 @@ def subtask_task(task, row, strings, args, task_id):
 
 def list_task(task: dict, row: Row, task_id: str) -> None:
     values = sorted(task.get("value", ""))
-    row.append(TextField(
-        name=task["task_label"],
-        task_id=task_id,
-        value=" ".join(values),
-    ))
+    row.append(
+        TextField(
+            name=task["task_label"],
+            task_id=task_id,
+            value=" ".join(values),
+        )
+    )
 
 
 def select_label_task(task: dict, row: Row, task_id: str) -> None:
     option = task.get("option")
     value = task.get("label", "") if option else task.get("value", "")
-    row.append(SelectField(
-        name=task["select_label"],
-        task_id=task_id,
-        value=value,
-    ))
+    row.append(
+        SelectField(
+            name=task["select_label"],
+            task_id=task_id,
+            value=value,
+        )
+    )
 
 
 def mark_index_task(task: dict, row, strings, task_id) -> None:
-    row.append(MarkIndexField(
-        name=task["taskType"],
-        task_id=task_id,
-        value=strings[task["task"]][task["value"]],
-        index=task["markIndex"],
-    ))
+    row.append(
+        MarkIndexField(
+            name=task["taskType"],
+            task_id=task_id,
+            value=strings[task["task"]][task["value"]],
+            index=task["markIndex"],
+        )
+    )
 
 
 def task_label_task(task: dict, row: Row, task_id: str) -> None:
-    row.append(TextField(
-        name=task["task_label"],
-        task_id=task_id,
-        value=task.get("value", ""),
-    ))
+    row.append(
+        TextField(
+            name=task["task_label"],
+            task_id=task_id,
+            value=task.get("value", ""),
+        )
+    )
 
 
 def box_task(task: dict, row: Row, task_id: str) -> None:
-    row.append(BoxField(
-        name=task["tool_label"],
-        task_id=task_id,
-        left=round(task["x"]),
-        right=round(task["x"] + task["width"]),
-        top=round(task["y"]),
-        bottom=round(task["y"] + task["height"]),
-    ))
+    row.append(
+        BoxField(
+            name=task["tool_label"],
+            task_id=task_id,
+            left=round(task["x"]),
+            right=round(task["x"] + task["width"]),
+            top=round(task["y"]),
+            bottom=round(task["y"] + task["height"]),
+        )
+    )
 
 
 def length_task(task: dict, row: Row, task_id: str) -> None:
-    row.append(LengthField(
-        name=task["tool_label"],
-        task_id=task_id,
-        field_set="length",
-        x1=round(task["x1"]),
-        y1=round(task["y1"]),
-        x2=round(task["x2"]),
-        y2=round(task["y2"]),
-    ))
+    row.append(
+        LengthField(
+            name=task["tool_label"],
+            task_id=task_id,
+            field_set="length",
+            x1=round(task["x1"]),
+            y1=round(task["y1"]),
+            x2=round(task["x2"]),
+            y2=round(task["y2"]),
+        )
+    )
 
 
 def point_task(task: dict, row: Row, task_id: str) -> None:
-    row.append(PointField(
-        name=task.get("tool_label", task.get("toolType")),
-        task_id=task_id,
-        x=round(task["x"]),
-        y=round(task["y"]),
-    ))
+    row.append(
+        PointField(
+            name=task.get("tool_label", task.get("toolType")),
+            task_id=task_id,
+            x=round(task["x"]),
+            y=round(task["y"]),
+        )
+    )
 
 
 # def polygon_task(task: dict, row: Row, task_id: str) -> None:
@@ -271,7 +289,6 @@ def get_workflow_strings(workflow_csv, workflow_id) -> Strings:
         parts = key.split(".")
 
         match parts:
-
             case [_, "tools", __, "details", ___, "answers", *____]:
                 strings[f"{parts[0]}.{parts[2]}.{parts[4]}"][int(parts[6])] = value
 

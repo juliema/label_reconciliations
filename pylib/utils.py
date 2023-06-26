@@ -35,5 +35,3 @@ def error_exit(msgs):
     for msg in msgs:
         print(msg, file=sys.stderr)
     sys.exit(1)
-
-

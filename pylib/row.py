@@ -14,8 +14,14 @@ from pylib.fields.select_field import SelectField
 from pylib.fields.text_field import TextField
 
 TaskField = Union[
-    BoxField, HighlightField, LengthField, MarkIndexField, PolygonField, PointField,
-    SelectField, TextField
+    BoxField,
+    HighlightField,
+    LengthField,
+    MarkIndexField,
+    PolygonField,
+    PointField,
+    SelectField,
+    TextField,
 ]
 AnyField = Union[NoOpField, SameField, TaskField]
 
@@ -50,7 +56,6 @@ class Row:
         row_dict = {}
 
         for field in self.fields:
-
             if isinstance(field, TaskField) and not field.freeze:
                 suffixes[field.name_group] += 1
                 field.suffix = suffixes[field.name_group]

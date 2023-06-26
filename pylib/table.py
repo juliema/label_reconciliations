@@ -71,7 +71,6 @@ class Table:
             used_field_sets = set()
 
             for field_name, (cls, field_set) in self.types.items():
-
                 if field_set and field_set not in used_field_sets:
                     group = []
                     for row in row_group:
@@ -86,9 +85,12 @@ class Table:
                     group = [r[field_name] for r in row_group]
 
                 if not group:
-                    new_row.append(cls(
-                        note=f"All {row_count} records are blank", flag=Flag.ALL_BLANK
-                    ))
+                    new_row.append(
+                        cls(
+                            note=f"All {row_count} records are blank",
+                            flag=Flag.ALL_BLANK,
+                        )
+                    )
                     continue
 
                 fields = cls.reconcile(group, row_count, args)

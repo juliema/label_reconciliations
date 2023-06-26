@@ -255,7 +255,7 @@ class TestHighlighterField(unittest.TestCase):
                     end=22,
                     text="Jane Doe",
                     label="collector",
-                )
+                ),
             ],
         ]
         actual = HighlightField.reconcile(group, row_count=len(group))

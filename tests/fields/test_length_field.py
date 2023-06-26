@@ -14,16 +14,18 @@ class TestLengthField(unittest.TestCase):
         ]
         self.assertEqual(
             LengthField.reconcile(group, row_count=len(group)),
-            [LengthField(
-                name="len",
-                note="There are 3 of 3 length records",
-                flag=Flag.OK,
-                x1=10,
-                y1=40,
-                x2=40,
-                y2=80,
-                pixel_length=50.0,
-            )],
+            [
+                LengthField(
+                    name="len",
+                    note="There are 3 of 3 length records",
+                    flag=Flag.OK,
+                    x1=10,
+                    y1=40,
+                    x2=40,
+                    y2=80,
+                    pixel_length=50.0,
+                )
+            ],
         )
 
     def test_reconcile_02(self):
@@ -33,19 +35,21 @@ class TestLengthField(unittest.TestCase):
             [LengthField(name="1 mm", x1=10, y1=40, x2=40, y2=80)],
             [LengthField(name="1 mm", x1=20, y1=80, x2=80, y2=160)],
         ]
-        expect = [LengthField(
-            name="1 mm",
-            note="There are 3 of 3 length records",
-            flag=Flag.OK,
-            x1=10,
-            y1=40,
-            x2=40,
-            y2=80,
-            pixel_length=50.0,
-            factor=0.02,
-            units="mm",
-            is_scale=True,
-        )]
+        expect = [
+            LengthField(
+                name="1 mm",
+                note="There are 3 of 3 length records",
+                flag=Flag.OK,
+                x1=10,
+                y1=40,
+                x2=40,
+                y2=80,
+                pixel_length=50.0,
+                factor=0.02,
+                units="mm",
+                is_scale=True,
+            )
+        ]
         actual = LengthField.reconcile(group, row_count=len(group))
         self.assertEqual(actual, expect)
 
@@ -67,7 +71,10 @@ class TestLengthField(unittest.TestCase):
                 name="Length",
                 note="There are 2 of 2 length records",
                 flag=Flag.OK,
-                x1=0, y1=0, x2=20, y2=0,
+                x1=0,
+                y1=0,
+                x2=20,
+                y2=0,
                 pixel_length=20.0,
                 length=2.0,
                 units="mm",
@@ -75,7 +82,10 @@ class TestLengthField(unittest.TestCase):
             LengthField(
                 name="1 mm",
                 note="There are 2 of 2 length records",
-                x1=0, y1=0, x2=10, y2=0,
+                x1=0,
+                y1=0,
+                x2=10,
+                y2=0,
                 pixel_length=10.0,
                 flag=Flag.OK,
                 factor=0.1,

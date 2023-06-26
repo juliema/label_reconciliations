@@ -109,7 +109,6 @@ class HighlightField(BaseField):
             counters = sorted(by_value.values(), key=lambda highs: -len(highs))
 
             match counters:
-
                 # Nobody chose a value
                 case []:
                     note = (
@@ -183,12 +182,10 @@ class HighlightField(BaseField):
 
         # Get all contiguous matches
         contigs = [
-            (m.start() + start, m.end() + start)
-            for m in re.finditer(b"(\x01+)", hits)
+            (m.start() + start, m.end() + start) for m in re.finditer(b"(\x01+)", hits)
         ]
 
         for i, (start, end) in enumerate(contigs, 1):
-
             for row in group:
                 parts: list[HighlightField] = [h for h in row if start <= h.start < end]
 
@@ -204,16 +201,16 @@ class HighlightField(BaseField):
 
                 # Add a reconciled record, one for each set of parts
                 high = HighlightField(
-                        name=parts[0].name,
-                        task_id=parts[0].task_id,
-                        start=min(p.start for p in parts),
-                        end=max(p.end for p in parts),
-                        text=" ".join(p.text for p in parts),  # TODO when strings
-                        label=parts[0].label,
-                        field_set=parts[0].field_set,
-                        suffix=i,
-                        freeze=True,
-                    )
+                    name=parts[0].name,
+                    task_id=parts[0].task_id,
+                    start=min(p.start for p in parts),
+                    end=max(p.end for p in parts),
+                    text=" ".join(p.text for p in parts),  # TODO when strings
+                    label=parts[0].label,
+                    field_set=parts[0].field_set,
+                    suffix=i,
+                    freeze=True,
+                )
                 aligned[(start, end)].append(high)
 
         return aligned

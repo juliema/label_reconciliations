@@ -39,7 +39,10 @@ def report(args, unreconciled: Table, reconciled: Table):
     if print_detail:
         filters = get_filters(args, flag_df)
         skeleton, groups = get_reconciliations(
-            args, unreconciled_df, reconciled_df, flag_df,
+            args,
+            unreconciled_df,
+            reconciled_df,
+            flag_df,
         )
 
     summary = template.render(
@@ -113,7 +116,7 @@ def get_transcribers_table(transcribers_df):
         [
             {
                 "selector": "th",
-                'props': [
+                "props": [
                     ("padding", "2px 4px"),
                     ("text-align", "left"),
                     ("text-decoration", "underline"),
@@ -121,7 +124,7 @@ def get_transcribers_table(transcribers_df):
             },
             {
                 "selector": "td",
-                'props': [
+                "props": [
                     ("padding", "2px 4px"),
                 ],
             },
@@ -141,7 +144,8 @@ def get_chart(args, transcribers_df):
     df = df[df["Transcriptions"] < args.max_transcriptions]
 
     df.loc[f"{args.max_transcriptions}+"] = [
-        lump["Transcriber"], args.max_transcriptions
+        lump["Transcriber"],
+        args.max_transcriptions,
     ]
 
     fig = px.bar(
@@ -172,9 +176,7 @@ def get_results(args, flag_df):
     df = df[range(Flag.OK, FLAG_END)]
     df = df.fillna(0).astype(int)
 
-    df["Total"] = df[
-        range(Flag.OK, Flag.ONLY_ONE)
-    ].sum(axis="columns")
+    df["Total"] = df[range(Flag.OK, Flag.ONLY_ONE)].sum(axis="columns")
 
     total = df.pop("Total")
     df.insert(len(df.columns) - 3, "Total", total)
@@ -188,7 +190,7 @@ def get_results(args, flag_df):
         [
             {
                 "selector": "th",
-                'props': [
+                "props": [
                     ("font-weight", "bold"),
                     ("padding", "4px 1rem"),
                 ],
@@ -229,8 +231,9 @@ def get_filters(args, flag_df):
     problem_filters = {}
     exclude = (args.group_by, ALIAS, ROW_TYPE)
     for col in [c for c in flag_df.columns if c not in exclude]:
-        ids = flag_df[flag_df[col].apply(
-            get_flag_field, field="flag").isin(PROBLEM)].index
+        ids = flag_df[
+            flag_df[col].apply(get_flag_field, field="flag").isin(PROBLEM)
+        ].index
         name = f"Show problems with: {col}"
         problem_filters[name] = list(ids)
         all_problems |= set(ids)
@@ -333,8 +336,9 @@ def get_class_df(args, btn, df, flag_df):
     class_df.loc[df[ROW_TYPE] == 2, columns] = "explain"
 
     for col in columns:
-        ids = flag_df[flag_df[col].apply(
-            get_flag_field, field="flag").isin(PROBLEM)].index
+        ids = flag_df[
+            flag_df[col].apply(get_flag_field, field="flag").isin(PROBLEM)
+        ].index
         ids = df.loc[df[ROW_TYPE] == 1 & df[ALIAS].isin(ids)].index
         class_df.loc[ids, col] = "problem"
 
@@ -353,8 +357,8 @@ def get_styler(class_df, df):
 def get_table(style):
     """Format table directly because some things are not possible with pandas.style."""
     html = style.to_html()
-    html = re.sub(r'data row\d+ col\d+\s?', "", html)
-    html = re.sub(r'col_heading level\d+ col\d+\s?', "", html)
+    html = re.sub(r"data row\d+ col\d+\s?", "", html)
+    html = re.sub(r"col_heading level\d+ col\d+\s?", "", html)
     html = re.sub(r' class=""\s?', "", html)
     html = re.sub(r'" >', '">', html)
     html = re.sub(
@@ -375,7 +379,7 @@ def split_table(html):
 
 def add_group_by_to_rows(rows):
     groups = {}
-    rows = re.split(r'(\s*<tr>\s*<td><button)', rows)[1:]
+    rows = re.split(r"(\s*<tr>\s*<td><button)", rows)[1:]
     it = iter(rows)
     for part1 in it:
         part2 = next(it)
