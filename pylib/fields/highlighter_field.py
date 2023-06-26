@@ -45,8 +45,7 @@ class HighlightField(BaseField):
     def to_dict(self, reconciled=False, add_note=False) -> dict[str, Any]:
         field_dict = {
             self.header("text"): self.text,
-            # self.header("start"): self.start,
-            # self.header("end"): self.end,
+            self.header("position"): f"({self.start}, {self.end})",
         }
         return self.decorate_dict(field_dict, add_note)
 
@@ -201,6 +200,7 @@ class HighlightField(BaseField):
                 # Update unreconciled suffixes to match the reconciled span
                 for j, part in enumerate(parts):
                     part.suffix = i if j == 0 else float(f"{i}.{j}")
+                    part.freeze = True
 
                 # Add a reconciled record, one for each set of parts
                 high = HighlightField(
@@ -212,6 +212,7 @@ class HighlightField(BaseField):
                         label=parts[0].label,
                         field_set=parts[0].field_set,
                         suffix=i,
+                        freeze=True,
                     )
                 aligned[(start, end)].append(high)
 

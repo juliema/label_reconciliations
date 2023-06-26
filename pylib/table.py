@@ -33,15 +33,15 @@ class Table:
         df.to_csv(path, index=False)
 
     def to_df(self, args: Namespace, add_note=False) -> pd.DataFrame:
-        records = self.to_dict(add_note=add_note)
+        records = self.to_records(add_note=add_note)
         df = pd.DataFrame(records)
         headers = self.field_order(df, args)
         df = df[headers]
         return df
 
-    def to_dict(self, add_note=False) -> list[dict]:
-        as_dict = [r.to_dict(add_note, self.reconciled) for r in self.rows]
-        return as_dict
+    def to_records(self, add_note=False) -> list[dict]:
+        as_recs = [r.to_dict(add_note, self.reconciled) for r in self.rows]
+        return as_recs
 
     @staticmethod
     def field_order(df, args):
@@ -64,7 +64,7 @@ class Table:
         table = Table(reconciled=True)
 
         for _, row_group in groups:
-            row = Row()
+            new_row = Row()
             row_group = list(row_group)
             row_count = len(row_group)
 
@@ -75,8 +75,8 @@ class Table:
                 if field_set and field_set not in used_field_sets:
                     group = []
                     for row in row_group:
-                        row_set = [f for f in row.fields if f.field_set == field_set]
-                        group.append(row_set)
+                        fields = [f for f in row.fields if f.field_set == field_set]
+                        group.append(fields)
                     used_field_sets.add(field_set)
 
                 elif field_set in used_field_sets:
@@ -86,17 +86,15 @@ class Table:
                     group = [r[field_name] for r in row_group]
 
                 if not group:
-                    row.append(cls(
+                    new_row.append(cls(
                         note=f"All {row_count} records are blank", flag=Flag.ALL_BLANK
                     ))
                     continue
 
                 fields = cls.reconcile(group, row_count, args)
-                fields = fields if isinstance(fields, list) else [fields]
-                for field in fields:
-                    row.append(field)
+                new_row += fields if isinstance(fields, list) else [fields]
 
-            table.rows.append(row)
+            table.rows.append(new_row)
 
         return table
 

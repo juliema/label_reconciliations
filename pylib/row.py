@@ -22,11 +22,17 @@ AnyField = Union[NoOpField, SameField, TaskField]
 
 @dataclass
 class Row:
-    # Yes, a list and not a dict because we're renaming things etc.
     fields: list[AnyField] = field_default(default_factory=list)
 
     def __getitem__(self, key):
         return next(f for f in self.fields if f.field_name == key)
+
+    def __iter__(self):
+        yield from self.fields
+
+    def __iadd__(self, other):
+        self.fields += other.fields if isinstance(other, Row) else other
+        return self
 
     def append(self, field: AnyField):
         self.fields.append(field)
@@ -42,7 +48,7 @@ class Row:
 
         for field in self.fields:
 
-            if isinstance(field, TaskField):
+            if isinstance(field, TaskField) and not field.freeze:
                 suffixes[field.name_group] += 1
                 field.suffix = suffixes[field.name_group]
 

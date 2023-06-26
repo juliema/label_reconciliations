@@ -25,10 +25,6 @@ def report(args, unreconciled: Table, reconciled: Table):
     reconciled_df = reconciled.to_df(args)
     flag_df = reconciled.to_flag_df(args)
     alias_group_by(args, unreconciled_df, reconciled_df, flag_df)
-    from pprint import pp
-    # pp(unreconciled_df.columns)
-    # pp(reconciled_df.columns)
-    # pp(flag_df.columns)
 
     has_users = 1 if args.user_column in unreconciled_df.columns else 0
     transcribers_df = get_transcribers_df(args, unreconciled_df)
@@ -279,7 +275,7 @@ def merge_dataframes(args, unreconciled_df, reconciled_df, flag_df):
     keys += [args.row_key] if args.row_key in unreconciled_df.columns else []
     keys += [args.user_column] if args.user_column in unreconciled_df.columns else []
 
-    df = pd.concat([reconciled_df, note_df, unreconciled_df]).fillna("")
+    df = pd.concat([unreconciled_df, note_df, reconciled_df]).fillna("")
     df = df.reset_index(drop=True)
     df = df[keys + [c for c in df.columns if c not in keys]]
     df = df.sort_values(keys)
