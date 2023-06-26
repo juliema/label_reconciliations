@@ -17,6 +17,7 @@ class TestHighlighterField(unittest.TestCase):
                     end=4,
                     text="text",
                     label="field",
+                    freeze=True,
                 )
             ],
             [
@@ -28,6 +29,7 @@ class TestHighlighterField(unittest.TestCase):
                     end=4,
                     text="text",
                     label="field",
+                    freeze=True,
                 )
             ],
             [
@@ -39,6 +41,7 @@ class TestHighlighterField(unittest.TestCase):
                     end=4,
                     text="text",
                     label="field",
+                    freeze=True,
                 )
             ],
         ]
@@ -57,6 +60,7 @@ class TestHighlighterField(unittest.TestCase):
                     end=4,
                     text="text",
                     label="field",
+                    freeze=True,
                 )
             ],
         )
@@ -131,6 +135,7 @@ class TestHighlighterField(unittest.TestCase):
                     end=4,
                     text="text1",
                     label="field",
+                    freeze=True,
                 ),
                 HighlightField(
                     name="highlighter",
@@ -143,6 +148,7 @@ class TestHighlighterField(unittest.TestCase):
                     end=14,
                     text="text2",
                     label="field",
+                    freeze=True,
                 ),
             ],
         )
@@ -199,6 +205,7 @@ class TestHighlighterField(unittest.TestCase):
                     end=4,
                     text="text1",
                     label="field",
+                    freeze=True,
                 ),
                 HighlightField(
                     name="highlighter",
@@ -211,6 +218,7 @@ class TestHighlighterField(unittest.TestCase):
                     end=14,
                     text="text2",
                     label="field",
+                    freeze=True,
                 ),
             ],
         )
@@ -265,6 +273,7 @@ class TestHighlighterField(unittest.TestCase):
                     end=22,
                     text="John Smythe & Jane Doe",
                     label="collector",
+                    freeze=True,
                 ),
             ],
         )

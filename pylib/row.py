@@ -34,6 +34,9 @@ class Row:
         self.fields += other.fields if isinstance(other, Row) else other
         return self
 
+    def __len__(self):
+        return len(self.fields)
+
     def append(self, field: AnyField):
         self.fields.append(field)
 

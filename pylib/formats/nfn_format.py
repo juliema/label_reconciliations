@@ -158,6 +158,7 @@ def length_task(task: dict, row: Row, task_id: str) -> None:
     row.append(LengthField(
         name=task["tool_label"],
         task_id=task_id,
+        field_set="length",
         x1=round(task["x1"]),
         y1=round(task["y1"]),
         x2=round(task["x2"]),

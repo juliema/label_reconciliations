@@ -1,6 +1,7 @@
 import math
 import re
 import statistics as stats
+from collections import defaultdict
 from dataclasses import dataclass
 from typing import Any
 
@@ -44,6 +45,22 @@ class LengthField(BaseField):
 
     @classmethod
     def reconcile(cls, group, row_count, _=None):
+        per_column = defaultdict(list)
+        for row in group:
+            for field in row:
+                per_column[field.field_name].append(field)
+
+        reconciled = []
+
+        for field_name, fields in per_column.items():
+            reconciled.append(cls.reconcile_column(fields, row_count, field_name))
+
+        cls.adjust_reconciled(reconciled)
+
+        return reconciled
+
+    @classmethod
+    def reconcile_column(cls, group, row_count, field_name):
         note = (
             f'There {P("is", len(group))} {len(group)} of {row_count} '
             f'length {P("record", row_count)}'
@@ -56,9 +73,9 @@ class LengthField(BaseField):
 
         pix_len = round(math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2), 2)
 
-        if match := SCALE_RE.search(group[0].name):
+        if match := SCALE_RE.search(field_name):
             units = match.group("units")
-            factor = float(match.group("scale")) / pix_len
+            factor = float(match.group("scale")) / pix_len if pix_len != 0 else 0.0
             is_scale = True
         else:
             units = ""
@@ -80,23 +97,14 @@ class LengthField(BaseField):
         )
 
     @staticmethod
-    def adjust_reconciled(reconciled_row, _=None):
+    def adjust_reconciled(reconciled):
         """Calculate lengths using units and pixel_lengths."""
-        ruler = LengthField.find_ruler(reconciled_row)
+        ruler = next((f for f in reconciled if f.is_scale), None)
+
         if not ruler:
             return
-        LengthField.calculate_lengths(reconciled_row, ruler)
 
-    @staticmethod
-    def calculate_lengths(reconciled_row, ruler):
-        for field in reconciled_row.fields:
-            if isinstance(field, LengthField) and not field.is_scale:
+        for field in reconciled:
+            if not field.is_scale:
                 field.length = round(field.pixel_length * ruler.factor, 2)
-                field.units = ruler.units
-
-    @staticmethod
-    def find_ruler(row):
-        return next(
-            (f for f in row.fields if hasattr(f, "is_scale") and f.is_scale),
-            None,
-        )
+            field.units = ruler.units
