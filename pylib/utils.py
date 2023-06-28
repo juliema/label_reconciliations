@@ -1,4 +1,5 @@
 import sys
+from collections import namedtuple
 from importlib import util as i_util
 from pathlib import Path
 from types import ModuleType
@@ -8,6 +9,8 @@ import inflect
 E = inflect.engine()
 E.defnoun("The", "All")
 P = E.plural
+
+Point = namedtuple("Point", "x y")
 
 
 def get_plugins(subdir) -> dict[str, ModuleType]:

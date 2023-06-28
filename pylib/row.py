@@ -28,37 +28,35 @@ AnyField = Union[NoOpField, SameField, TaskField]
 
 @dataclass
 class Row:
-    fields: list[AnyField] = field_default(default_factory=list)
+    fields: dict[str, AnyField] = field_default(default_factory=dict)
+    suffixes: dict[str, int] = field_default(default_factory=lambda : defaultdict(int))
 
-    def __getitem__(self, key):
-        return next(f for f in self.fields if f.field_name == key)
+    def __getitem__(self, key) -> Union[AnyField, None]:
+        return self.fields.get(key)
 
     def __iter__(self):
         yield from self.fields
 
-    def __iadd__(self, other):
-        self.fields += other.fields if isinstance(other, Row) else other
-        return self
-
     def __len__(self):
         return len(self.fields)
 
-    def append(self, field: AnyField):
-        self.fields.append(field)
+    def add(self, field: Union[AnyField, list[AnyField]]):
+        fields = field if isinstance(field, list) else [field]
+        for field in fields:
+            if isinstance(field, TaskField):
+                self.suffixes[field.name_group] += 1
+                field.suffix = self.suffixes[field.name_group]
+            self.fields[field.field_name] = field
 
     @property
     def tasks(self):
         return [f for f in self.fields if isinstance(f, TaskField)]
 
     def to_dict(self, add_note=False, reconciled=False) -> dict[str, Any]:
-        suffixes = defaultdict(int)
 
         row_dict = {}
 
-        for field in self.fields:
-            if isinstance(field, TaskField) and not field.freeze:
-                suffixes[field.name_group] += 1
-                field.suffix = suffixes[field.name_group]
+        for field in self.fields.values():
 
             field_dict = field.to_dict(reconciled)
 

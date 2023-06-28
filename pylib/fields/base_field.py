@@ -11,7 +11,6 @@ class BaseField:
     field_set: str = ""  # All fields in this set get reconciled at the same time
     suffix: Union[int, float] = 0  # When columns have same name break the tie with this
     task_id: str = ""
-    freeze: bool = False
 
     def to_dict(self, reconciled=False, add_note=False) -> dict[str, Any]:
         raise NotImplementedError()
@@ -40,6 +39,7 @@ class BaseField:
 
     @classmethod
     def copy(cls, group, **kwargs):
+        group = group if isinstance(group, list) else [group]
         src = group[0] if group else cls()
         dst = replace(src, **kwargs)
         return dst

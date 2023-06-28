@@ -2,12 +2,14 @@
 .~lock*
 .vscode/
 .idea/
+.virtual_documents/
 
 .cache/
 *.pyc
 .ropeproject/
 .pytest_cache/
 .mypy_cache/
+.ruff_cache/
 
 __pycache__/
 

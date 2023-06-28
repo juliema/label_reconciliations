@@ -60,7 +60,7 @@ def read_table(args, df):
     for raw_row in records:
         row = Row()
 
-        row.append(
+        row.add(
             SameField(
                 name=args.group_by,
                 value=raw_row[args.group_by],
@@ -79,7 +79,7 @@ def read_table(args, df):
                         value = json.loads(value)
                     else:
                         value = {"x": 0, "y": 0, "width": 0, "height": 0}
-                    row.append(
+                    row.add(
                         BoxField(
                             name=name,
                             left=round(value["x"]),
@@ -93,7 +93,7 @@ def read_table(args, df):
                         value = json.loads(value)
                     else:
                         value = {"x1": 0, "y1": 0, "x2": 0, "y2": 0}
-                    row.append(
+                    row.add(
                         LengthField(
                             name=name,
                             x1=round(value["x1"]),
@@ -104,10 +104,10 @@ def read_table(args, df):
                     )
                 case "noop":
                     value = value if value else ""
-                    row.append(NoOpField(name=name, value=value))
+                    row.add(NoOpField(name=name, value=value))
                 case "point":
                     value = json.loads(value) if value else {"x": 0, "y": 0}
-                    row.append(
+                    row.add(
                         PointField(
                             name=name,
                             x=round(value["x"]),
@@ -116,14 +116,14 @@ def read_table(args, df):
                     )
                 case "same":
                     value = value if value else ""
-                    row.append(SameField(name=name, value=value))
+                    row.add(SameField(name=name, value=value))
                 case "select":
                     value = value if value else ""
-                    row.append(SelectField(name=name, value=value))
+                    row.add(SelectField(name=name, value=value))
                 case "text":
                     value = value if value else ""
-                    row.append(TextField(name=name, value=value))
+                    row.add(TextField(name=name, value=value))
 
-        table.rows.append(row)
+        table.add(row)
 
     return table

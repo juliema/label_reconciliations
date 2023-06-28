@@ -7,7 +7,9 @@ PLACEHOLDERS = ["placeholder"]
 
 
 def controlled_vocab(cls, group, row_count):
-    filled = [f for f in group if f.value.strip() and f.value.lower not in PLACEHOLDERS]
+    filled = [
+        f for f in group if f and f.value.strip() and f.value.lower not in PLACEHOLDERS
+    ]
     count = len(filled)
     blanks = row_count - count
 
