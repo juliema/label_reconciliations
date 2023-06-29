@@ -30,4 +30,4 @@ class PolygonField(BaseField):
             f'of {row_count} polygon {P("record", row_count)}'
         )
         points = deepcopy(group[0].points)
-        return cls.copy(group, note=note, flag=Flag.OK, points=points)
+        return cls.like(group, note=note, flag=Flag.OK, points=points)

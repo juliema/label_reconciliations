@@ -113,7 +113,7 @@ class Table:
             f"{P('is', row_count)} blank"
         )
         new_row.add(
-            default_field.like(
+            default_field.copy_name(
                 note=note,
                 flag=Flag.ALL_BLANK,
             )

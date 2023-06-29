@@ -1,4 +1,4 @@
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from typing import Any, Union
 from pylib.flag import Flag
 
@@ -41,13 +41,13 @@ class BaseField:
         return field_dict
 
     @classmethod
-    def copy(cls, group, **kwargs):
+    def like(cls, group, **kwargs):
         group = group if isinstance(group, list) else [group]
-        src = group[0] if group else cls()
-        dst = replace(src, **kwargs)
-        return dst
+        field = group[0] if group else cls()
+        new = field.copy_name(**kwargs)
+        return new
 
-    def like(self, **kwargs):
+    def copy_name(self, **kwargs):
         kwargs |= {k: self.__dict__[k] for k in LIKE}
         new = self.__class__(**kwargs)  # noqa
         return new

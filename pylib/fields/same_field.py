@@ -31,4 +31,4 @@ class SameField(BaseField):
             flag = Flag.ERROR
             note = f"Not all values are the same: {value}"
 
-        return cls.copy(group, value=value, flag=flag, note=note)
+        return cls.like(group, value=value, flag=flag, note=note)

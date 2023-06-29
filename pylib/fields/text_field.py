@@ -35,12 +35,12 @@ class TextField(BaseField):
                     f"{P('The', row_count)} {row_count} "
                     f"{P('record', row_count)} {P('is', row_count)} blank"
                 )
-                return cls.copy(group, note=note, flag=Flag.ALL_BLANK)
+                return cls.like(group, note=note, flag=Flag.ALL_BLANK)
 
             # Only one selected
             case [c0] if len(c0) == 1:
                 note = f"Only 1 transcript in {row_count} {P('record', row_count)}"
-                return cls.copy(c0, note=note, value=c0[0].value, flag=Flag.ONLY_ONE)
+                return cls.like(c0, note=note, value=c0[0].value, flag=Flag.ONLY_ONE)
 
             # Everyone chose the same value
             case [c0] if len(c0) > 1 and len(c0) == row_count:
@@ -48,7 +48,7 @@ class TextField(BaseField):
                     f"Exact unanimous match, {len(c0)} of {row_count} "
                     f"{P('record', row_count)}"
                 )
-                return cls.copy(c0, note=note, value=c0[0].value, flag=Flag.UNANIMOUS)
+                return cls.like(c0, note=note, value=c0[0].value, flag=Flag.UNANIMOUS)
 
             # It was a tie for the text chosen
             case [c0, c1, *_] if len(c0) > 1 and len(c0) == len(c1):
@@ -56,7 +56,7 @@ class TextField(BaseField):
                     f"Exact match is a tie, {len(c0)} of {row_count} "
                     f"{P('record', row_count)} with {blanks} {P('blank', blanks)}"
                 )
-                return cls.copy(c0, note=note, value=c0[0].value, flag=Flag.MAJORITY)
+                return cls.like(c0, note=note, value=c0[0].value, flag=Flag.MAJORITY)
 
             # We have a winner
             case [c0, *_] if len(c0) > 1:
@@ -64,7 +64,7 @@ class TextField(BaseField):
                     f"Exact match, {len(c0)} of {row_count} "
                     f"{P('record', row_count)} with {blanks} {P('blank', blanks)}"
                 )
-                return cls.copy(c0, note=note, value=c0[0].value, flag=Flag.MAJORITY)
+                return cls.like(c0, note=note, value=c0[0].value, flag=Flag.MAJORITY)
 
         # Look for normalized exact matches
         count, blanks, norm = normalized_exact_matches(group, row_count)
@@ -84,7 +84,7 @@ class TextField(BaseField):
                     f"Normalized unanimous match, {len(c0)} of {row_count} "
                     f"{P('record', row_count)}"
                 )
-                return cls.copy(c0, note=note, value=c0[0].value, flag=Flag.UNANIMOUS)
+                return cls.like(c0, note=note, value=c0[0].value, flag=Flag.UNANIMOUS)
 
             # The winners are a tie
             case [c0, c1, *_] if len(c0) > 1 and len(c0) == len(c1):
@@ -92,7 +92,7 @@ class TextField(BaseField):
                     f"Normalized match is a tie, {len(c0)} of {row_count} "
                     f"{P('record', row_count)} with {blanks} {P('blank', blanks)}"
                 )
-                return cls.copy(c0, note=note, value=c0[0].value, flag=Flag.MAJORITY)
+                return cls.like(c0, note=note, value=c0[0].value, flag=Flag.MAJORITY)
 
             # We have a winner
             case [c0, *_] if len(c0) > 1:
@@ -101,7 +101,7 @@ class TextField(BaseField):
                     f"{P('record', row_count)} "
                     f"with {blanks} {P('blank', blanks)}"
                 )
-                return cls.copy(c0, note=note, value=c0[0].value, flag=Flag.MAJORITY)
+                return cls.like(c0, note=note, value=c0[0].value, flag=Flag.MAJORITY)
 
         # Check for simple in-place fuzzy matches
         top = top_partial_ratio(group)
@@ -111,7 +111,7 @@ class TextField(BaseField):
                 f"{P('record', row_count)} with {blanks} "
                 f"{P('blank', blanks)}, score={top.score}"
             )
-            return cls.copy(
+            return cls.like(
                 top.field, note=note, value=top.field.value, flag=Flag.FUZZY
             )
 
@@ -123,7 +123,7 @@ class TextField(BaseField):
                 f"{P('record', row_count)} with {blanks} "
                 f"{P('blank', blanks)}, score={top.score}"
             )
-            return cls.copy(
+            return cls.like(
                 top.field, note=note, value=top.field.value, flag=Flag.FUZZY
             )
 
@@ -132,7 +132,7 @@ class TextField(BaseField):
             f"No text match on {row_count} {P('record', row_count)} with {blanks} "
             f"{P('blank', blanks)}"
         )
-        return cls.copy(exact[0], note=note, flag=Flag.NO_MATCH, value="")
+        return cls.like(exact[0], note=note, flag=Flag.NO_MATCH, value="")
 
 
 def exact_matches(group, row_count) -> tuple[int, int, list[list]]:

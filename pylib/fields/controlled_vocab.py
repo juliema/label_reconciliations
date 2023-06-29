@@ -32,7 +32,7 @@ def controlled_vocab(cls, group, row_count):
                 f"Unanimous match, {len(c0)} of {row_count} {P('record', row_count)} "
                 f"{blanks} {P('blank', blanks)}"
             )
-            return cls.copy(c0, note=note, value=c0[0].value, flag=Flag.UNANIMOUS)
+            return cls.like(c0, note=note, value=c0[0].value, flag=Flag.UNANIMOUS)
 
         # It was a tie for the values chosen
         case [c0, c1, *_] if len(c0) > 1 and len(c0) == len(c1):
@@ -41,7 +41,7 @@ def controlled_vocab(cls, group, row_count):
                 f"of {row_count} {P('record', row_count)} with "
                 f"{blanks} {P('blank', blanks)}"
             )
-            return cls.copy(c0, note=note, value=c0[0].value, flag=Flag.MAJORITY)
+            return cls.like(c0, note=note, value=c0[0].value, flag=Flag.MAJORITY)
 
         # We have a winner
         case [c0, *_] if len(c0) > 1:
@@ -49,7 +49,7 @@ def controlled_vocab(cls, group, row_count):
                 f"Match {len(c0)} of {row_count} {P('record', row_count)} "
                 f"with {blanks} {P('blank', blanks)}"
             )
-            return cls.copy(c0, note=note, value=c0[0].value, flag=Flag.MAJORITY)
+            return cls.like(c0, note=note, value=c0[0].value, flag=Flag.MAJORITY)
 
         # Only one person chose a value
         case [c0] if len(c0) == 1:
@@ -57,7 +57,7 @@ def controlled_vocab(cls, group, row_count):
                 f"Only 1 transcript in {row_count} {P('record', row_count)} "
                 f"with {blanks} {P('blank', blanks)}"
             )
-            return cls.copy(c0, note=note, value=c0[0].value, flag=Flag.ONLY_ONE)
+            return cls.like(c0, note=note, value=c0[0].value, flag=Flag.ONLY_ONE)
 
         # Everyone picked a different value
         case [c0, *_] if len(c0) == 1:
@@ -65,4 +65,4 @@ def controlled_vocab(cls, group, row_count):
                 f"No match on {row_count} {P('record', row_count)} "
                 f"with {blanks} {P('blank', blanks)}"
             )
-            return cls.copy(c0, note=note, flag=Flag.NO_MATCH)
+            return cls.like(c0, note=note, flag=Flag.NO_MATCH)

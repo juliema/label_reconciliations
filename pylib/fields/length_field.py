@@ -82,7 +82,7 @@ class LengthField(BaseField):
             factor = 0.0
             is_scale = False
 
-        return cls.copy(
+        return cls.like(
             group,
             note=note,
             flag=Flag.OK,

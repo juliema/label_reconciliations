@@ -29,7 +29,7 @@ class BoxField(BaseField):
 
         note = f"There {P('is', row_count)} {row_count} box {P('record', row_count)}"
 
-        return cls.copy(
+        return cls.like(
             group,
             note=note,
             flag=Flag.OK,

@@ -14,4 +14,4 @@ class NoOpField(BaseField):
 
     @classmethod
     def reconcile(cls, group, row_count, args=None):
-        return cls.copy(group)
+        return cls.like(group)
