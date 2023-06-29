@@ -105,92 +105,84 @@ def flatten_task(task: dict, row: Row, strings: dict, args):
 
 def list_task(task: dict, row: Row) -> None:
     values = sorted(task.get("value", ""))
-    row.add(
-        TextField(
-            name=task["task_label"],
-            task_id=task.get("task", ""),
-            value=" ".join(values),
-        )
+    field = TextField(
+        name=task["task_label"],
+        task_id=task.get("task", ""),
+        value=" ".join(values),
     )
+    row.add(field)
 
 
 def select_label_task(task: dict, row: Row) -> None:
     first_value = task["value"][0]
     option = first_value.get("option")
     value = first_value.get("label", "") if option else first_value.get("value", "")
-    row.add(
-        SelectField(
-            name=first_value["select_label"], task_id=task.get("task", ""), value=value
-        )
+    field = SelectField(
+        name=first_value["select_label"], task_id=task.get("task", ""), value=value
     )
+    row.add(field)
 
 
 def mark_index_task(task: dict, row, strings) -> None:
-    row.add(
-        MarkIndexField(
-            name=task["taskType"],
-            task_id=task.get("task", ""),
-            value=strings[task["task"]][task["value"]],
-            index=task["markIndex"],
-        )
+    field = MarkIndexField(
+        name=task["taskType"],
+        task_id=task.get("task", ""),
+        value=strings[task["task"]][task["value"]],
+        index=task["markIndex"],
     )
+    row.add(field)
 
 
 def task_label_task(task: dict, row: Row) -> None:
-    row.add(
-        TextField(
-            name=task["task_label"],
-            task_id=task.get("task", ""),
-            value=task.get("value", ""),
-        )
+    field = TextField(
+        name=task["task_label"],
+        task_id=task.get("task", ""),
+        value=task.get("value", ""),
     )
+    row.add(field)
 
 
 def box_task(task: dict, row: Row) -> None:
-    row.add(
-        BoxField(
-            name=task["tool_label"],
-            task_id=task.get("task", ""),
-            left=round(task["x"]),
-            right=round(task["x"] + task["width"]),
-            top=round(task["y"]),
-            bottom=round(task["y"] + task["height"]),
-        )
+    field = BoxField(
+        name=task["tool_label"],
+        task_id=task.get("task", ""),
+        left=round(task["x"]),
+        right=round(task["x"] + task["width"]),
+        top=round(task["y"]),
+        bottom=round(task["y"] + task["height"]),
     )
+    row.add(field)
 
 
 def length_task(task: dict, row: Row) -> None:
-    row.add(
-        LengthField(
-            name=task["tool_label"],
-            task_id=task.get("task", ""),
-            field_set="length",
-            x1=round(task["x1"]),
-            y1=round(task["y1"]),
-            x2=round(task["x2"]),
-            y2=round(task["y2"]),
-        )
+    field = LengthField(
+        name=task["tool_label"],
+        task_id=task.get("task", ""),
+        field_set="length",
+        x1=round(task["x1"]),
+        y1=round(task["y1"]),
+        x2=round(task["x2"]),
+        y2=round(task["y2"]),
     )
+    row.add(field)
 
 
 def point_task(task: dict, row: Row) -> None:
-    row.add(
-        PointField(
-            name=task.get("tool_label", task.get("toolType")),
-            task_id=task.get("task", ""),
-            x=round(task["x"]),
-            y=round(task["y"]),
-        )
+    field = PointField(
+        name=task.get("tool_label", task.get("toolType")),
+        task_id=task.get("task", ""),
+        x=round(task["x"]),
+        y=round(task["y"]),
     )
+    row.add(field)
 
 
 def polygon_task(task: dict, row: Row) -> None:
     points = [utils.Point(x=p["x"], y=p["y"]) for p in task["value"][0]["points"]]
-    row.add(
-        PolygonField(
-            name=task["task_label"], task_id=task.get("task", ""), points=points
-        )
+    field = PolygonField(
+        name=task["task_label"], task_id=task.get("task", ""), points=points
     )
+    row.add(field)
 
 
 def highlighter_task(task, row, args):

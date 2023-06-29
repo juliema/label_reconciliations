@@ -1,23 +1,19 @@
 import re
-import dataclasses
+from dataclasses import dataclass, field as default
 from argparse import Namespace
-from collections import namedtuple
 from itertools import groupby
-from pprint import pp
 
 import pandas as pd
 
 from pylib.fields.base_field import Flag
-from pylib.row import Row
+from pylib.row import Row, AnyField
 from pylib.utils import P
 
-FieldType = namedtuple("FieldType", "cls field_set")
 
-
-@dataclasses.dataclass
+@dataclass
 class Table:
-    rows: list[Row] = dataclasses.field(default_factory=list)
-    types: dict[str, FieldType] = dataclasses.field(default_factory=dict)
+    rows: list[Row] = default(default_factory=list)
+    types: dict[str, AnyField] = default(default_factory=dict)
     reconciled: bool = False
 
     def __len__(self) -> int:
@@ -26,9 +22,7 @@ class Table:
     def add(self, row):
         self.rows.append(row)
         for field in row.fields.values():
-            self.types[field.field_name] = FieldType(
-                cls=type(field), field_set=field.field_set
-            )
+            self.types[field.field_name] = field
 
     def to_csv(self, args: Namespace, path, add_note=False) -> None:
         df = self.to_df(args, add_note)
@@ -60,10 +54,12 @@ class Table:
         return headers
 
     @staticmethod
-    def sort_key(header: str) -> tuple[str, float]:
+    def sort_key(header: str) -> tuple[int, str, float]:
+        match = re.match(r"^[Tt](\d+)", header)
+        task_no = int(match.group(1))
         field_name = header.rsplit(":", 1)[0]
         field_name, suffix = field_name.rsplit("_", 1)
-        return field_name, float(suffix)
+        return task_no, field_name, float(suffix)
 
     def reconcile(self, args) -> "Table":
         unrec_rows = sorted(self.rows, key=lambda r: r[args.group_by].value)
@@ -77,32 +73,31 @@ class Table:
 
             used_field_sets = set()
 
-            for field_name, (cls, field_set) in self.types.items():
+            for field_name, default_field in self.types.items():
 
-                if field_set and field_set not in used_field_sets:
+                if default_field.field_set and default_field.field_set not in used_field_sets:
                     group = []
 
                     for row in row_group:
-                        fields = [f for f in row.fields if f.field_set == field_set]
+                        fields = [f for f in row.fields if f.field_set == default_field.field_set]
                         group.append(fields)
 
-                    used_field_sets.add(field_set)
+                    used_field_sets.add(default_field.field_set)
 
-                elif field_set in used_field_sets:
+                elif default_field.field_set in used_field_sets:
                     continue
 
                 else:
                     group = [r[field_name] for r in row_group if r[field_name]]
 
                 if not group:
-                    self.all_blank(new_row, cls, row_count)
+                    self.all_blank(default_field, new_row, row_count)
                     continue
 
-                fields = cls.reconcile(group, row_count, args)
-                pp(fields)
+                fields = default_field.reconcile(group, row_count, args)
 
                 if fields is None:
-                    self.all_blank(new_row, cls, row_count)
+                    self.all_blank(default_field, new_row, row_count)
                     continue
 
                 new_row.add(fields)
@@ -112,13 +107,13 @@ class Table:
         return table
 
     @staticmethod
-    def all_blank(new_row, cls, row_count):
+    def all_blank(default_field, new_row, row_count):
         note = (
             f"{P('The', row_count)} {row_count} {P('record', row_count)} "
             f"{P('is', row_count)} blank"
         )
         new_row.add(
-            cls(
+            default_field.like(
                 note=note,
                 flag=Flag.ALL_BLANK,
             )

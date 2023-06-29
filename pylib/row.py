@@ -35,7 +35,7 @@ class Row:
         return self.fields.get(key)
 
     def __iter__(self):
-        yield from self.fields
+        yield from self.fields.values()
 
     def __len__(self):
         return len(self.fields)

@@ -2,6 +2,8 @@ from dataclasses import dataclass, replace
 from typing import Any, Union
 from pylib.flag import Flag
 
+LIKE = """name field_set suffix task_id""".split()
+
 
 @dataclass(kw_only=True)
 class BaseField:
@@ -27,8 +29,9 @@ class BaseField:
     def field_name(self) -> str:
         return f"{self.name_group}_{self.suffix}" if self.suffix else self.name_group
 
-    def header(self, attr: str) -> str:
-        return f"{self.field_name}: {attr}"
+    def header(self, attr: str = "") -> str:
+        header = f"{self.field_name}: {attr}" if attr else self.field_name
+        return header
 
     def decorate_dict(
         self, field_dict: dict[str, Any], add_note=False
@@ -43,3 +46,8 @@ class BaseField:
         src = group[0] if group else cls()
         dst = replace(src, **kwargs)
         return dst
+
+    def like(self, **kwargs):
+        kwargs |= {k: self.__dict__[k] for k in LIKE}
+        new = self.__class__(**kwargs)  # noqa
+        return new

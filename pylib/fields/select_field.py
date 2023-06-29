@@ -10,7 +10,7 @@ class SelectField(BaseField):
     value: str = ""
 
     def to_dict(self, reconciled=False, add_note=False) -> dict[str, Any]:
-        field_dict = {self.name: self.value}
+        field_dict = {self.header(): self.value}
         return self.decorate_dict(field_dict, add_note)
 
     @classmethod

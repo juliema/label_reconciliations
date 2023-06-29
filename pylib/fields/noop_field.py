@@ -9,7 +9,7 @@ class NoOpField(BaseField):
     value: str = ""
 
     def to_dict(self, reconciled=False, add_note=False) -> dict[str, Any]:
-        field_dict = {} if reconciled else {self.name: self.value}
+        field_dict = {} if reconciled else {self.header(): self.value}
         return self.decorate_dict(field_dict, add_note)
 
     @classmethod
