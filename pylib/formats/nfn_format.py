@@ -11,7 +11,7 @@ from pylib.row import BoxField, HighlightField, LengthField, MarkIndexField, NoO
 from pylib.row import PointField, PolygonField, SameField, SelectField, TextField
 from pylib.table import Table
 
-Strings = dict[str, dict[int, str]]
+Strings = dict[str, dict[int, tuple[str, str]]]
 
 
 # #####################################################################################
@@ -61,91 +61,90 @@ def read(args):
 
 
 # ###################################################################################
-def flatten_task(task: dict, row: Row, strings: dict, args):
-    """Extract task annotations from the json object in the annotations' column.
+def flatten_task(task: dict, row: Row, strings: dict, args, task_id: str = ""):
+    """Extract task annotations from the json object in the annotations' column."""
+    task_id = task.get("task", task_id)
 
-    Task annotations are nested json blobs with a WTF format. Part of the WTF is that
-    each record can have vastly different formats. It all starts with a list of
-    annotations and typically but not always an annotation will have a list of [one]
-    value.
-    """
     match task:
 
-        case {"task": _, "value": [str(), *__], **___}:
-            list_task(task, row)
+        case {"value": [str(), *__], **___}:
+            list_task(task, row, task_id)
 
-        case {"task": _, "value": [{"points": list(), **__}, *___], **____}:
-            polygon_task(task, row)
+        case {"value": [{"points": list(), **__}, *___], **____}:
+            polygon_task(task, row, task_id)
 
-        case {"task": _, "value": list(), "taskType": "highlighter", **__}:
-            highlighter_task(task, row, args)
+        case {"value": list(), "taskType": "highlighter", **__}:
+            highlighter_task(task, row, args, task_id)
 
-        case {"task": _, "value": [{"select_label": _, **__}, *___], **____}:
-            select_label_task(task, row)
+        case {"value": list(), **__}:
+            breakup_task(task, row, strings, args, task_id)
 
-        case {"task": _, "value": _, "task_label": __, **___}:
-            task_label_task(task, row)
+        case {"select_label": _, **__}:
+            select_label_task(task, row, task_id)
 
-        # ######## More here ##########################################################
+        case {"task_label": _, **__}:
+            task_label_task(task, row, task_id)
+
         case {"tool_label": _, "width": __, **___}:
-            box_task(task, row)
+            box_task(task, row, task_id)
 
         case {"tool_label": _, "x1": __, **___}:
-            length_task(task, row)
-
-        case {"tool_label": _, "toolType": "point", "x": __, "y": ___, **____}:
-            point_task(task, row)
+            length_task(task, row, task_id)
 
         case {"task": _, "value": __, "taskType": ___, "markIndex": ____}:
-            mark_index_task(task, row, strings)
+            mark_index_task(task, row, strings, task_id)
+
+        case {"tool_label": _, "toolType": "point", "x": __, "y": ___, **____}:
+            point_task(task, row, strings, task_id)
+
+        case {"x": _, "y": _, **__}:
+            point_task(task, row, strings, task_id)
 
         case _:
-            print(f"Annotation type not found: {task}")
+            print(f"Annotation type not found: {task}\n")
 
 
-def list_task(task: dict, row: Row) -> None:
+def breakup_task(task, row, strings, args, task_id):
+    """Handle an annotation with subtasks."""
+    task_id = task.get("task", task_id)
+    for subtask in task["value"]:
+        flatten_task(subtask, row, strings, args, task_id)
+
+
+def list_task(task: dict, row: Row, task_id: str) -> None:
     values = sorted(task.get("value", ""))
-    field = TextField(
-        name=task["task_label"],
-        task_id=task.get("task", ""),
-        value=" ".join(values),
-    )
+    field = TextField(name=task["task_label"], task_id=task_id, value=" ".join(values))
     row.add(field)
 
 
-def select_label_task(task: dict, row: Row) -> None:
-    first_value = task["value"][0]
-    option = first_value.get("option")
-    value = first_value.get("label", "") if option else first_value.get("value", "")
-    field = SelectField(
-        name=first_value["select_label"], task_id=task.get("task", ""), value=value
-    )
+def select_label_task(task: dict, row: Row, task_id: str) -> None:
+    option = task.get("option")
+    value = task.get("label", "") if option else task.get("value", "")
+    field = SelectField(name=task["select_label"], task_id=task_id, value=value)
     row.add(field)
 
 
-def mark_index_task(task: dict, row, strings) -> None:
+def mark_index_task(task: dict, row, strings, task_id: str) -> None:
     field = MarkIndexField(
         name=task["taskType"],
-        task_id=task.get("task", ""),
-        value=strings[task["task"]][task["value"]],
+        task_id=task_id,
+        value=strings[task_id][task["value"]][0],
         index=task["markIndex"],
     )
     row.add(field)
 
 
-def task_label_task(task: dict, row: Row) -> None:
+def task_label_task(task: dict, row: Row, task_id: str) -> None:
     field = TextField(
-        name=task["task_label"],
-        task_id=task.get("task", ""),
-        value=task.get("value", ""),
+        name=task["task_label"], task_id=task_id, value=task.get("value", ""),
     )
     row.add(field)
 
 
-def box_task(task: dict, row: Row) -> None:
+def box_task(task: dict, row: Row, task_id: str) -> None:
     field = BoxField(
         name=task["tool_label"],
-        task_id=task.get("task", ""),
+        task_id=task_id,
         left=round(task["x"]),
         right=round(task["x"] + task["width"]),
         top=round(task["y"]),
@@ -154,10 +153,10 @@ def box_task(task: dict, row: Row) -> None:
     row.add(field)
 
 
-def length_task(task: dict, row: Row) -> None:
+def length_task(task: dict, row: Row, task_id: str) -> None:
     field = LengthField(
         name=task["tool_label"],
-        task_id=task.get("task", ""),
+        task_id=task_id,
         field_set="length",
         x1=round(task["x1"]),
         y1=round(task["y1"]),
@@ -167,26 +166,33 @@ def length_task(task: dict, row: Row) -> None:
     row.add(field)
 
 
-def point_task(task: dict, row: Row) -> None:
+def point_task(task: dict, row: Row, strings, task_id: str) -> None:
+    name = task.get("tool_label", task.get("toolType"))
     field = PointField(
-        name=task.get("tool_label", task.get("toolType")),
-        task_id=task.get("task", ""),
-        x=round(task["x"]),
-        y=round(task["y"]),
+        name=name, task_id=task_id, x=round(task["x"]), y=round(task["y"])
     )
     row.add(field)
 
+    for detail in task.get("details", []):
+        for detail_value in detail.get("value", []):
+            value = detail_value.get("value")
+            try:
+                value, label = strings[task_id][value]
+                name2 = f"{name} {label}"
+                field = SelectField(name=name2, task_id=task_id, value=value)
+                row.add(field)
+            except KeyError:
+                pass
 
-def polygon_task(task: dict, row: Row) -> None:
+
+def polygon_task(task: dict, row: Row, task_id: str) -> None:
     points = [utils.Point(x=p["x"], y=p["y"]) for p in task["value"][0]["points"]]
-    field = PolygonField(
-        name=task["task_label"], task_id=task.get("task", ""), points=points
-    )
+    field = PolygonField(name=task["task_label"], task_id=task_id, points=points)
     row.add(field)
 
 
-def highlighter_task(task, row, args):
-    fields = HighlightField.unreconciled_list(task, task.get("task", ""), args)
+def highlighter_task(task, row, args, task_id: str):
+    fields = HighlightField.unreconciled_list(task, task_id, args)
     for field in fields:
         row.add(field)
 
@@ -273,10 +279,39 @@ def get_workflow_strings(workflow_csv, workflow_id) -> Strings:
 
     # TODO Moar formats
     for key, value in json.loads(workflow["strings"]).items():
-        parts = key.split(".")
+        part = key.split(".")
 
-        match parts:
+        match part:
             case [_, "tools", __, "details", ___, "answers", *____]:
-                strings[f"{parts[0]}.{parts[2]}.{parts[4]}"][int(parts[6])] = value
+                strings[f"{part[0]}.{part[2]}.{part[4]}"][int(part[6])] = (value, "")
 
+    # Seriously?!
+    # {
+    #   "T0": {
+    #     "tools": [
+    #       {
+    #         "type": "point",
+    #         "details": [
+    #           {
+    #             "type": "dropdown",
+    #             "selects": [
+    #               {
+    #                 "title": "Box Number",
+    #                 "options": {
+    #                   "*": [
+    #                     {
+    #                       "value": "e49acb525b63b8"
+    #                     },
+    tasks = json.loads(workflow["tasks"])
+    for task_id, task in tasks.items():
+        for tool in task.get("tools", []):
+            for detail in tool.get("details", []):
+                for select in detail.get("selects", []):
+                    title = select.get("title")
+                    if "options" in select:
+                        option = select.get("options")
+                        for i, choice in enumerate(option.get("*", []), 1):
+                            value = choice.get("value")
+                            if value:
+                                strings[task_id][value] = (str(i), title)
     return strings

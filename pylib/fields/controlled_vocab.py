@@ -65,4 +65,4 @@ def controlled_vocab(cls, group, row_count):
                 f"No match on {row_count} {P('record', row_count)} "
                 f"with {blanks} {P('blank', blanks)}"
             )
-            return cls.like(c0, note=note, flag=Flag.NO_MATCH)
+            return cls.like(c0, note=note, flag=Flag.NO_MATCH, value=c0[0].value)

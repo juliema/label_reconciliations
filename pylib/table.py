@@ -39,27 +39,18 @@ class Table:
         as_recs = [r.to_dict(add_note, self.reconciled) for r in self.rows]
         return as_recs
 
-    def field_order(self, df, args):
+    @staticmethod
+    def field_order(df, args):
         """A hack to workaround Zooniverse random-ish column ordering."""
         first = (args.group_by, args.row_key, args.user_column)
 
         temp = [(i, c) for i, c in enumerate(first) if c in df.columns]
         headers = [o[1] for o in temp]
 
-        temp = [c for c in df.columns if re.match(r"^[Tt](\d+)", c)]
-        headers += sorted(temp, key=self.sort_key)
-
+        headers += [c for c in df.columns if re.match(r"^[Tt](\d+)", c)]
         headers += [c for c in df.columns if c and c not in headers]
 
         return headers
-
-    @staticmethod
-    def sort_key(header: str) -> tuple[int, str, float]:
-        match = re.match(r"^[Tt](\d+)", header)
-        task_no = int(match.group(1))
-        field_name = header.rsplit(":", 1)[0]
-        field_name, suffix = field_name.rsplit("_", 1)
-        return task_no, field_name, float(suffix)
 
     def reconcile(self, args) -> "Table":
         unrec_rows = sorted(self.rows, key=lambda r: r[args.group_by].value)
