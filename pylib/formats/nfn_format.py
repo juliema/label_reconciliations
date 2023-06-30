@@ -1,9 +1,10 @@
 import json
 import re
-from collections import defaultdict
+from collections import namedtuple
 
 import pandas as pd
-from dateutil.parser import parse
+from dateutil.parser import parse as date_parse
+from jsonpath_ng import parse
 
 from pylib import utils
 from pylib.row import Row
@@ -11,7 +12,7 @@ from pylib.row import BoxField, HighlightField, LengthField, MarkIndexField, NoO
 from pylib.row import PointField, PolygonField, SameField, SelectField, TextField
 from pylib.table import Table
 
-Strings = dict[str, dict[int, tuple[str, str]]]
+WF_String = namedtuple("WF_String", "value title")
 
 
 # #####################################################################################
@@ -177,9 +178,9 @@ def point_task(task: dict, row: Row, strings, task_id: str) -> None:
         for detail_value in detail.get("value", []):
             value = detail_value.get("value")
             try:
-                value, label = strings[task_id][value]
-                name2 = f"{name} {label}"
-                field = SelectField(name=name2, task_id=task_id, value=value)
+                string = strings[value]
+                name2 = f"{name} {string.title}"
+                field = SelectField(name=name2, task_id=task_id, value=string.value)
                 row.add(field)
             except KeyError:
                 pass
@@ -218,7 +219,7 @@ def extract_metadata(raw_row, row):
     annos = json.loads(raw_row["metadata"])
 
     def _date(value):
-        return parse(value).strftime("%d-%b-%Y %H:%M:%S")
+        return date_parse(value).strftime("%d-%b-%Y %H:%M:%S")
 
     row.add(NoOpField(name="started_at", value=_date(annos.get("started_at"))))
     row.add(NoOpField(name="finished_at", value=_date(annos.get("finished_at"))))
@@ -266,7 +267,7 @@ def get_workflow_name(args, df):
     return workflow_name
 
 
-def get_workflow_strings(workflow_csv, workflow_id) -> Strings:
+def get_workflow_strings(workflow_csv, workflow_id) -> dict[str, WF_String]:
     """Get strings from the workflow for when they're not in the annotations."""
     if not workflow_csv:
         return {}
@@ -275,43 +276,21 @@ def get_workflow_strings(workflow_csv, workflow_id) -> Strings:
     df = df.loc[df.workflow_id == int(workflow_id), :]
     workflow = df.iloc[-1]  # Get the most recent version
 
-    strings = defaultdict(dict)
-
-    # TODO Moar formats
+    strings: dict[str, WF_String] = {}
     for key, value in json.loads(workflow["strings"]).items():
-        part = key.split(".")
+        strings[key] = WF_String(value=value, title="")
 
-        match part:
-            case [_, "tools", __, "details", ___, "answers", *____]:
-                strings[f"{part[0]}.{part[2]}.{part[4]}"][int(part[6])] = (value, "")
-
-    # Seriously?!
-    # {
-    #   "T0": {
-    #     "tools": [
-    #       {
-    #         "type": "point",
-    #         "details": [
-    #           {
-    #             "type": "dropdown",
-    #             "selects": [
-    #               {
-    #                 "title": "Box Number",
-    #                 "options": {
-    #                   "*": [
-    #                     {
-    #                       "value": "e49acb525b63b8"
-    #                     },
     tasks = json.loads(workflow["tasks"])
-    for task_id, task in tasks.items():
-        for tool in task.get("tools", []):
-            for detail in tool.get("details", []):
-                for select in detail.get("selects", []):
-                    title = select.get("title")
-                    if "options" in select:
-                        option = select.get("options")
-                        for i, choice in enumerate(option.get("*", []), 1):
-                            value = choice.get("value")
-                            if value:
-                                strings[task_id][value] = (str(i), title)
+
+    new: dict[str, WF_String] = {}
+    for match in parse("$.T0.tools[*].details[*].selects[*]").find(tasks):
+        title = match.value["title"]
+        for match2 in parse("$.options.'*'[*]").find(match.value):
+            label = match2.value['label']
+            key = match2.value['value']
+            value = strings[label]
+            new[key] = WF_String(value=value.value, title=title)
+
+    strings |= new
+
     return strings
