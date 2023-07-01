@@ -12,6 +12,8 @@ from pylib.row import BoxField, HighlightField, LengthField, MarkIndexField, NoO
 from pylib.row import PointField, PolygonField, SameField, SelectField, TextField
 from pylib.table import Table
 
+# WF_String = Strings and values gathered from the workflow CSV file used for table
+# lookups when the expedition CSV values are using UUID-like values as their output
 WF_String = namedtuple("WF_String", "value title")
 
 
@@ -126,10 +128,11 @@ def select_label_task(task: dict, row: Row, task_id: str) -> None:
 
 
 def mark_index_task(task: dict, row, strings, task_id: str) -> None:
+    strings_key = f'{task["task"]}.{task["value"]}'
     field = MarkIndexField(
         name=task["taskType"],
         task_id=task_id,
-        value=strings[task_id][task["value"]][0],
+        value=strings[strings_key],
         index=task["markIndex"],
     )
     row.add(field)
@@ -280,10 +283,17 @@ def get_workflow_strings(workflow_csv, workflow_id) -> dict[str, WF_String]:
     for key, value in json.loads(workflow["strings"]).items():
         strings[key] = WF_String(value=value, title="")
 
+        # *Sigh* Handle abbreviated string IDs too
+        parts = key.split(".")
+        match parts:
+            case[_, "tools", __, "details", ___, "answers", *____]:
+                strings[f"{parts[0]}.{parts[2]}.{parts[4]}.{parts[6]}"] = value
+
+    # Sometimes strings have a 2-level index: level 1 in task field, level 2 in strings
     tasks = json.loads(workflow["tasks"])
 
     new: dict[str, WF_String] = {}
-    for match in parse("$.T0.tools[*].details[*].selects[*]").find(tasks):
+    for match in parse("$..tools[*].details[*].selects[*]").find(tasks):
         title = match.value["title"]
         for match2 in parse("$.options.'*'[*]").find(match.value):
             label = match2.value['label']
@@ -292,5 +302,4 @@ def get_workflow_strings(workflow_csv, workflow_id) -> dict[str, WF_String]:
             new[key] = WF_String(value=value.value, title=title)
 
     strings |= new
-
     return strings
