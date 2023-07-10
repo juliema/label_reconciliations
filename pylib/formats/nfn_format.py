@@ -37,8 +37,7 @@ def read(args):
 
         row.add(
             SameField(
-                name=args.group_by,
-                value=raw_row["subject_ids"].split(",", 1)[0],
+                name=args.group_by, value=raw_row["subject_ids"].split(",", 1)[0],
             )
         )
 
@@ -103,6 +102,9 @@ def flatten_task(task: dict, row: Row, strings: dict, args, task_id: str = ""):
         case {"x": _, "y": _, **__}:
             point_task(task, row, strings, task_id)
 
+        case {"task_type": "dropdown-simple", **__}:
+            dropdown_task(task, row, task_id)
+
         case _:
             print(f"Annotation type not found: {task}\n")
 
@@ -124,6 +126,16 @@ def select_label_task(task: dict, row: Row, task_id: str) -> None:
     option = task.get("option")
     value = task.get("label", "") if option else task.get("value", "")
     field = SelectField(name=task["select_label"], task_id=task_id, value=value)
+    row.add(field)
+
+
+def dropdown_task(task: dict, row: Row, task_id: str) -> None:
+    value = task["value"]
+    field = SelectField(
+        name=value["select_label"],
+        value=value["label"],
+        task_id=task_id,
+    )
     row.add(field)
 
 
