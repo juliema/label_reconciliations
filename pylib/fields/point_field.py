@@ -12,12 +12,12 @@ class PointField(BaseField):
     x: float = 0.0
     y: float = 0.0
 
-    def to_dict(self, reconciled=False, add_note=False) -> dict[str, Any]:
+    def to_dict(self, reconciled=False) -> dict[str, Any]:
         field_dict = {
             self.header("x"): int(round(self.x)),
             self.header("y"): int(round(self.y)),
         }
-        return self.decorate_dict(field_dict, add_note)
+        return field_dict
 
     @classmethod
     def reconcile(cls, group, row_count, args=None):

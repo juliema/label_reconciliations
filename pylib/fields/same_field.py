@@ -9,9 +9,9 @@ from pylib.flag import Flag
 class SameField(BaseField):
     value: str = ""
 
-    def to_dict(self, reconciled=False, add_note=False) -> dict[str, Any]:
+    def to_dict(self, reconciled=False) -> dict[str, Any]:
         field_dict = {self.header(): self.value}
-        return self.decorate_dict(field_dict, add_note)
+        return field_dict
 
     def add_note(self, field_dict: dict[str, Any]) -> dict[str, Any]:
         if self.flag != Flag.OK:

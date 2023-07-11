@@ -66,11 +66,17 @@ class Table:
 
             for field_name, default_field in self.types.items():
 
-                if default_field.field_set and default_field.field_set not in used_field_sets:
+                if (
+                        default_field.field_set
+                        and default_field.field_set not in used_field_sets
+                ):
                     group = []
 
                     for row in row_group:
-                        fields = [f for f in row.fields if f.field_set == default_field.field_set]
+                        fields = [
+                            f for f in row.fields
+                            if f.field_set == default_field.field_set
+                        ]
                         group.append(fields)
 
                     used_field_sets.add(default_field.field_set)
@@ -99,10 +105,7 @@ class Table:
 
     @staticmethod
     def all_blank(default_field, new_row, row_count):
-        note = (
-            f"{P('The', row_count)} {row_count} {P('record', row_count)} "
-            f"{P('is', row_count)} blank"
-        )
+        note = f"The {row_count} {P('record', row_count)} {P('is', row_count)} blank"
         new_row.add(
             default_field.copy_name(
                 note=note,

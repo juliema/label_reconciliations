@@ -24,7 +24,7 @@ def controlled_vocab(cls, group, row_count):
             note = (
                 f"All {row_count} {P('record', row_count)} {P('is', row_count)} blank"
             )
-            return cls(note=note, flag=Flag.ALL_BLANK)
+            return cls.like(group, note=note, flag=Flag.ALL_BLANK)
 
         # Everyone chose the same value
         case [c0] if len(c0) > 1 and len(c0) == row_count:

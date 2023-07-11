@@ -10,9 +10,9 @@ class MarkIndexField(BaseField):
     value: str = ""
     index: int = -1
 
-    def to_dict(self, reconciled=False, add_note=False) -> dict[str, Any]:
+    def to_dict(self, reconciled=False) -> dict[str, Any]:
         field_dict = {self.header(): self.value}
-        return self.decorate_dict(field_dict, add_note)
+        return field_dict
 
     @classmethod
     def reconcile(cls, group, row_count, args=None):

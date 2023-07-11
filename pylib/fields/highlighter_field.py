@@ -42,12 +42,12 @@ class HighlightField(BaseField):
         HighlightField._strip(highlights)
         return highlights
 
-    def to_dict(self, reconciled=False, add_note=False) -> dict[str, Any]:
+    def to_dict(self, reconciled=False) -> dict[str, Any]:
         field_dict = {
             self.header("text"): self.text,
             self.header("position"): f"({self.start}, {self.end})",
         }
-        return self.decorate_dict(field_dict, add_note)
+        return field_dict
 
     @staticmethod
     def _join(

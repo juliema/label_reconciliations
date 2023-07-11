@@ -14,10 +14,10 @@ from pylib.utils import Point
 class PolygonField(BaseField):
     points: list[Point] = field(default_factory=list)
 
-    def to_dict(self, reconciled=False, add_note=False) -> dict[str, Any]:
+    def to_dict(self, reconciled=False) -> dict[str, Any]:
         points = [{"x": int(round(p.x)), "y": int(round(p.y))} for p in self.points]
         field_dict = {self.header("points"): json.dumps(points)}
-        return self.decorate_dict(field_dict, add_note)
+        return field_dict
 
     @classmethod
     def reconcile(cls, group, row_count, args=None):

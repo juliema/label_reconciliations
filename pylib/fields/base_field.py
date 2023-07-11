@@ -14,7 +14,7 @@ class BaseField:
     suffix: Union[int, float] = 0  # When columns have same name break the tie with this
     task_id: str = ""
 
-    def to_dict(self, reconciled=False, add_note=False) -> dict[str, Any]:
+    def to_dict(self, reconciled=False) -> dict[str, Any]:
         raise NotImplementedError()
 
     @classmethod
@@ -33,11 +33,8 @@ class BaseField:
         header = f"{self.field_name}: {attr}" if attr else self.field_name
         return header
 
-    def decorate_dict(
-        self, field_dict: dict[str, Any], add_note=False
-    ) -> dict[str, Any]:
-        if add_note:
-            field_dict[self.header("Explanation")] = self.note
+    def decorate_dict(self, field_dict: dict[str, Any]) -> dict[str, Any]:
+        field_dict[self.header("Explanation")] = self.note
         return field_dict
 
     @classmethod

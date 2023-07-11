@@ -50,7 +50,7 @@ class Row:
 
     @property
     def tasks(self):
-        return [f for f in self.fields if isinstance(f, TaskField)]
+        return [f for f in self.fields.values() if isinstance(f, TaskField)]
 
     def to_dict(self, add_note=False, reconciled=False) -> dict[str, Any]:
 

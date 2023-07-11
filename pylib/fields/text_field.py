@@ -21,7 +21,7 @@ class TextField(BaseField):
 
     def to_dict(self, reconciled=False, add_note=False) -> dict[str, Any]:
         field_dict = {self.header(): self.value}
-        return self.decorate_dict(field_dict, add_note)
+        return field_dict
 
     @classmethod
     def reconcile(cls, group, row_count, args=None):
@@ -32,7 +32,7 @@ class TextField(BaseField):
             # No matches
             case []:
                 note = (
-                    f"{P('The', row_count)} {row_count} "
+                    f"The {row_count} "
                     f"{P('record', row_count)} {P('is', row_count)} blank"
                 )
                 return cls.like(group, note=note, flag=Flag.ALL_BLANK)
@@ -73,10 +73,10 @@ class TextField(BaseField):
             # No matches
             case []:
                 note = (
-                    f"{P('The', row_count)} {row_count} normalized "
+                    f"The {row_count} normalized "
                     f"{P('record', row_count)} {P('is', row_count)} blank"
                 )
-                return cls(note=note, flag=Flag.NO_MATCH)
+                return cls.like(group, note=note, flag=Flag.NO_MATCH)
 
             # Everyone chose the same value
             case [c0] if len(c0) > 1 and len(c0) == row_count:
@@ -205,7 +205,7 @@ def top_token_set_ratio(group):
             field = c1
             tokens = tokens_1
         else:
-            field = c0 if len(c0) <= len(c1) else c1
+            field = c0 if len(c0.value) <= len(c1.value) else c1
             tokens = tokens_0
         scores.append(FuzzySetScore(score, tokens, field))
 

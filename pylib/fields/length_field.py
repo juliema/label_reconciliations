@@ -27,7 +27,7 @@ class LengthField(BaseField):
     units: str = ""
     is_scale: bool = False
 
-    def to_dict(self, reconciled=False, add_note=False) -> dict[str, Any]:
+    def to_dict(self, reconciled=False) -> dict[str, Any]:
         field_dict = {
             self.header("x1"): int(round(self.x1)),
             self.header("y1"): int(round(self.y1)),
@@ -41,7 +41,7 @@ class LengthField(BaseField):
                 name = self.header(f"length {self.units}")
                 field_dict[name] = round(self.length, 2)
 
-        return self.decorate_dict(field_dict, add_note)
+        return field_dict
 
     @classmethod
     def reconcile(cls, group, row_count, _=None):

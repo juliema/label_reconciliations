@@ -14,14 +14,14 @@ class BoxField(BaseField):
     top: float = 0.0
     bottom: float = 0.0
 
-    def to_dict(self, reconciled=False, add_note=False) -> dict[str, Any]:
+    def to_dict(self, reconciled=False) -> dict[str, Any]:
         field_dict = {
             self.header("left"): int(round(self.left)),
             self.header("right"): int(round(self.right)),
             self.header("top"): int(round(self.top)),
             self.header("bottom"): int(round(self.bottom)),
         }
-        return self.decorate_dict(field_dict, add_note)
+        return field_dict
 
     @classmethod
     def reconcile(cls, group, row_count, args=None):

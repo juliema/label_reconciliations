@@ -11,7 +11,7 @@ class TestTextField(unittest.TestCase):
         group = [TextField(), TextField(), TextField()]
         self.assertEqual(
             TextField.reconcile(group, row_count=len(group)),
-            TextField(note="All 3 records are blank", flag=Flag.ALL_BLANK),
+            TextField(note="The 3 records are blank", flag=Flag.ALL_BLANK),
         )
 
     def test_reconcile_02(self):
@@ -74,7 +74,7 @@ class TestTextField(unittest.TestCase):
         self.assertEqual(
             TextField.reconcile(group, row_count=len(group)),
             TextField(
-                note="All 3 normalized records are blank",
+                note="The 3 normalized records are blank",
                 value="",
                 flag=Flag.NO_MATCH,
             ),
