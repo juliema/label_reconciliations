@@ -88,7 +88,7 @@ def flatten_task(task: dict, row: Row, strings: dict, args, task_id: str = ""):
             task_label_task(task, row, task_id)
 
         case {"tool_label": _, "width": __, **___}:
-            box_task(task, row, task_id)
+            box_task(task, row, strings, task_id)
 
         case {"tool_label": _, "x1": __, **___}:
             length_task(task, row, task_id)
@@ -157,18 +157,6 @@ def task_label_task(task: dict, row: Row, task_id: str) -> None:
     row.add(field)
 
 
-def box_task(task: dict, row: Row, task_id: str) -> None:
-    field = BoxField(
-        name=task["tool_label"],
-        task_id=task_id,
-        left=round(task["x"]),
-        right=round(task["x"] + task["width"]),
-        top=round(task["y"]),
-        bottom=round(task["y"] + task["height"]),
-    )
-    row.add(field)
-
-
 def length_task(task: dict, row: Row, task_id: str) -> None:
     field = LengthField(
         name=task["tool_label"],
@@ -182,23 +170,27 @@ def length_task(task: dict, row: Row, task_id: str) -> None:
     row.add(field)
 
 
+def box_task(task: dict, row: Row, strings, task_id: str) -> None:
+    name = task["tool_label"]
+    field = BoxField(
+        name=name,
+        task_id=task_id,
+        left=round(task["x"]),
+        right=round(task["x"] + task["width"]),
+        top=round(task["y"]),
+        bottom=round(task["y"] + task["height"]),
+    )
+    row.add(field)
+    detail_tasks(task, row, strings, task_id, name)
+
+
 def point_task(task: dict, row: Row, strings, task_id: str) -> None:
     name = task.get("tool_label", task.get("toolType"))
     field = PointField(
         name=name, task_id=task_id, x=round(task["x"]), y=round(task["y"])
     )
     row.add(field)
-
-    for detail in task.get("details", []):
-        for detail_value in detail.get("value", []):
-            value = detail_value.get("value")
-            try:
-                string = strings[value]
-                name2 = f"{name} {string.title}"
-                field = SelectField(name=name2, task_id=task_id, value=string.value)
-                row.add(field)
-            except KeyError:
-                pass
+    detail_tasks(task, row, strings, task_id, name)
 
 
 def polygon_task(task: dict, row: Row, task_id: str) -> None:
@@ -211,6 +203,20 @@ def highlighter_task(task, row, args, task_id: str):
     fields = HighlightField.unreconciled_list(task, task_id, args)
     for field in fields:
         row.add(field)
+
+
+def detail_tasks(task: dict, row: Row, strings, task_id: str, name: str):
+    """Extract subtasks that are stuffed in a 'detail' field."""
+    for detail in task.get("details", []):
+        for detail_value in detail.get("value", []):
+            try:
+                value = detail_value.get("value")
+                string = strings[value]
+                name2 = f"{name} {string.title}"
+                field = SelectField(name=name2, task_id=task_id, value=string.value)
+                row.add(field)
+            except (KeyError, AttributeError):
+                pass
 
 
 # #############################################################################
