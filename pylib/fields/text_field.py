@@ -139,6 +139,7 @@ def exact_matches(group, row_count) -> tuple[int, int, list[list]]:
     # Sort the fields by values
     filled = defaultdict(list)
     for field in group:
+        field.value = field.value if field.value else ""
         if key := " ".join(field.value.split()):
             filled[key].append(field)
 
@@ -165,6 +166,7 @@ def normalized_exact_matches(group, row_count) -> tuple[int, int, list[list]]:
     # Sort the fields by normalized values
     filled = defaultdict(list)
     for field in group:
+        field.value = field.value if field.value else ""
         if key := re.sub(r"\W+", "", field.value).lower():
             filled[key].append(field)
 

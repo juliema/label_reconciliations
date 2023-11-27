@@ -73,10 +73,10 @@ class Table:
                     group = []
 
                     for row in row_group:
-                        fields = [
-                            f for f in row.fields
-                            if f.field_set == default_field.field_set
-                        ]
+                        fields = []
+                        for f in row.fields.values():
+                            if f.field_set == default_field.field_set:
+                                fields.append(f)
                         group.append(fields)
 
                     used_field_sets.add(default_field.field_set)
