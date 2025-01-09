@@ -7,9 +7,17 @@ from dateutil.parser import parse as date_parse
 from jsonpath_ng import parse
 
 from pylib import utils
+from pylib.row import BoxField
+from pylib.row import HighlightField
+from pylib.row import LengthField
+from pylib.row import MarkIndexField
+from pylib.row import NoOpField
+from pylib.row import PointField
+from pylib.row import PolygonField
 from pylib.row import Row
-from pylib.row import BoxField, HighlightField, LengthField, MarkIndexField, NoOpField
-from pylib.row import PointField, PolygonField, SameField, SelectField, TextField
+from pylib.row import SameField
+from pylib.row import SelectField
+from pylib.row import TextField
 from pylib.table import Table
 
 # WF_String = Strings and values gathered from the workflow CSV file used for table
@@ -37,7 +45,8 @@ def read(args):
 
         row.add(
             SameField(
-                name=args.group_by, value=raw_row["subject_ids"].split(",", 1)[0],
+                name=args.group_by,
+                value=raw_row["subject_ids"].split(",", 1)[0],
             )
         )
 
@@ -105,6 +114,9 @@ def flatten_task(task: dict, row: Row, strings: dict, args, task_id: str = ""):
         case {"task_type": "dropdown-simple", **__}:
             dropdown_task(task, row, task_id)
 
+        case {"taskType": "textFromSubject", **__}:
+            pass
+
         case _:
             print(f"Annotation type not found: {task}\n")
 
@@ -133,7 +145,7 @@ def dropdown_task(task: dict, row: Row, task_id: str) -> None:
     value = task["value"]
     field = SelectField(
         name=value["select_label"],
-        value=value["label"],
+        value=value.get("label", ""),
         task_id=task_id,
     )
     row.add(field)
@@ -152,7 +164,9 @@ def mark_index_task(task: dict, row, strings, task_id: str) -> None:
 
 def task_label_task(task: dict, row: Row, task_id: str) -> None:
     field = TextField(
-        name=task["task_label"], task_id=task_id, value=task.get("value", ""),
+        name=task["task_label"],
+        task_id=task_id,
+        value=task.get("value", ""),
     )
     row.add(field)
 
@@ -304,7 +318,7 @@ def get_workflow_strings(workflow_csv, workflow_id) -> dict[str, WF_String]:
         # *Sigh* Handle abbreviated string IDs too
         parts = key.split(".")
         match parts:
-            case[_, "tools", __, "details", ___, "answers", *____]:
+            case [_, "tools", __, "details", ___, "answers", *____]:
                 strings[f"{parts[0]}.{parts[2]}.{parts[4]}.{parts[6]}"] = value
 
     # Sometimes strings have a 2-level index: level 1 in task field, level 2 in strings
@@ -314,8 +328,8 @@ def get_workflow_strings(workflow_csv, workflow_id) -> dict[str, WF_String]:
     for match in parse("$..tools[*].details[*].selects[*]").find(tasks):
         title = match.value["title"]
         for match2 in parse("$.options.'*'[*]").find(match.value):
-            label = match2.value['label']
-            key = match2.value['value']
+            label = match2.value["label"]
+            key = match2.value["value"]
             value = strings[label]
             new[key] = WF_String(value=value.value, title=title)
 

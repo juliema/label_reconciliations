@@ -10,7 +10,9 @@ from jinja2 import PackageLoader
 from pandas.io.formats.style import Styler
 
 from pylib.fields.base_field import Flag
-from pylib.flag import PROBLEM, FLAG_END, flag_labels
+from pylib.flag import FLAG_END
+from pylib.flag import flag_labels
+from pylib.flag import PROBLEM
 from pylib.table import Table
 
 ALIAS = "__alias__"
@@ -162,7 +164,8 @@ def get_chart(args, transcribers_df):
 
 def get_results(args, flag_df):
     data = []
-    for col in flag_df.columns:
+    columns = [c for c in flag_df.columns if c not in [args.group_by, ALIAS, ROW_TYPE]]
+    for col in columns:
         datum = flag_df[col].apply(get_flag_field, field="flag").value_counts()
         data.append(datum)
     df = pd.concat(data, axis=1)
@@ -184,7 +187,7 @@ def get_results(args, flag_df):
     renames = {k: v for k, v in flag_labels().items()}
     df = df.rename(columns=renames)
     df.insert(0, "Field", list(df.index))
-    df = df.drop([args.group_by, ALIAS, ROW_TYPE], axis=0)
+    # df = df.drop([args.group_by, ALIAS, ROW_TYPE], axis=0)
 
     style = df.style.set_table_styles(
         [
