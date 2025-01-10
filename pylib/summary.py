@@ -167,6 +167,7 @@ def get_results(args, flag_df):
     columns = [c for c in flag_df.columns if c not in [args.group_by, ALIAS, ROW_TYPE]]
     for col in columns:
         datum = flag_df[col].apply(get_flag_field, field="flag").value_counts()
+        datum = datum.rename(col)
         data.append(datum)
     df = pd.concat(data, axis=1)
 
@@ -202,7 +203,7 @@ def get_results(args, flag_df):
     ).hide(axis="index")
 
     style = style.apply(align, axis=0)
-    style = style.applymap_index(align_index, axis=1)
+    style = style.map_index(align_index, axis=1)
     return style.to_html()
 
 
@@ -272,7 +273,7 @@ def merge_dataframes(args, unreconciled_df, reconciled_df, flag_df):
 
     flag_df[ROW_TYPE] = 2
     note_df = flag_df.copy()
-    note_df = note_df.applymap(get_flag_field, field="note")
+    note_df = note_df.map(get_flag_field, field="note")
 
     unreconciled_df[ROW_TYPE] = 3
 
@@ -285,7 +286,7 @@ def merge_dataframes(args, unreconciled_df, reconciled_df, flag_df):
     df = df.reset_index(drop=True)
     df = df[keys + [c for c in df.columns if c not in keys]]
     df = df.sort_values(keys)
-    df = df.applymap(create_link)
+    df = df.map(create_link)
     df = df.reset_index(drop=True)
 
     return df

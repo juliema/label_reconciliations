@@ -115,7 +115,7 @@ def flatten_task(task: dict, row: Row, strings: dict, args, task_id: str = ""):
             dropdown_task(task, row, task_id)
 
         case {"taskType": "textFromSubject", **__}:
-            pass
+            subject_text_task(task, row, task_id)
 
         case _:
             print(f"Annotation type not found: {task}\n")
@@ -126,6 +126,14 @@ def breakup_task(task, row, strings, args, task_id):
     task_id = task.get("task", task_id)
     for subtask in task["value"]:
         flatten_task(subtask, row, strings, args, task_id)
+
+def subject_text_task(task: dict, row: Row, task_id: str) -> None:
+    field = TextField(
+        name=task["taskType"],
+        value=task.get("value", ""),
+        task_id=task_id,
+    )
+    row.add(field)
 
 
 def list_task(task: dict, row: Row, task_id: str) -> None:
