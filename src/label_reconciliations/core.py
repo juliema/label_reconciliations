@@ -333,9 +333,10 @@ def run_on_dataframe(
         )
         unreconciled_tbl = out.get("unreconciled")
         reconciled_tbl = out.get("reconciled")
+        summary_html = out.get("summary_html")
         unrec_df = _table_to_dataframe(unreconciled_tbl, args) if unreconciled_tbl is not None else None
         rec_df   = _table_to_dataframe(reconciled_tbl,    args) if reconciled_tbl is not None else None
-        return unrec_df, rec_df
+        return unrec_df, rec_df, summary_html
     finally:
         try:
             os.remove(tmp_in_path)
