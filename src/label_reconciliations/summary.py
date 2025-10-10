@@ -32,8 +32,8 @@ def report(args, unreconciled: Table, reconciled: Table):
     transcribers_df = get_transcribers_df(args, unreconciled_df)
     transcribers = get_transcribers_table(transcribers_df)
 
-    env = Environment(loader=PackageLoader("reconcile", "."))
-    template = env.get_template("pylib/summary/summary.html")
+    env = Environment(loader=PackageLoader("label_reconciliations", "."))
+    template = env.get_template("summary/summary.html")
 
     filters = {}
     skeleton, groups = None, {}

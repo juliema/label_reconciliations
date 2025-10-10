@@ -11,6 +11,7 @@ import json
 from os.path import basename
 from typing import Optional, Tuple, Union, Dict, Iterable
 
+
 import pandas as pd
 
 from . import summary, utils
@@ -131,6 +132,7 @@ def run(args, return_summary = False) -> dict:
     write_unreconciled(args, unreconciled)
 
     reconciled = None
+    summary_html = None
     needs_reconcile = bool(
         getattr(args, "reconciled", None)
         or getattr(args, "summary", None)
@@ -177,15 +179,17 @@ def _build_args(
     join_distance: int,
     page_size: int,
     no_summary_detail: bool,
+    return_summary: bool,
     explanations: bool,
     workflow_csv: str,
 ) -> argparse.Namespace:
     """Create the argparse-like Namespace used by the pipeline."""
+    default_summary_path = f"summary/summary_{os.path.splitext(os.path.basename(input_path))[0]}.html"
     args = argparse.Namespace(
         input_file=input_path,
         unreconciled=None,
         reconciled=None,
-        summary=None,
+        summary= None if not return_summary else default_summary_path,
         explanations=bool(explanations),
         zip=None,
         zip_keep=None,
@@ -256,6 +260,7 @@ def _run_with_input_path(
         join_distance=join_distance,
         page_size=page_size,
         no_summary_detail=no_summary_detail,
+        return_summary= return_summary,
         explanations=explanations,
         workflow_csv=workflow_csv,
     )
@@ -335,7 +340,7 @@ def run_on_dataframe(
         reconciled_tbl = out.get("reconciled")
         summary_html = out.get("summary_html")
         unrec_df = _table_to_dataframe(unreconciled_tbl, args) if unreconciled_tbl is not None else None
-        rec_df   = _table_to_dataframe(reconciled_tbl,    args) if reconciled_tbl is not None else None
+        rec_df = _table_to_dataframe(reconciled_tbl, args) if reconciled_tbl is not None else None
         return unrec_df, rec_df, summary_html
     finally:
         try:
