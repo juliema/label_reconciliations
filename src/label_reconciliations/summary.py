@@ -61,7 +61,6 @@ def report(args, unreconciled: Table, reconciled: Table):
         skeleton=skeleton,
         print_detail=print_detail,
     )
-    print(args.summary_path)
     with open(args.summary_path, "w", encoding="utf-8") as out_file:
         out_file.write(summary)
 
